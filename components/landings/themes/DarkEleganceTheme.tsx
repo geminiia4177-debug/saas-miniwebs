@@ -184,6 +184,8 @@ export default function DarkEleganceTheme(props: { negocio: any; media?: any[]; 
         </div>
       </section>
 
+      {/* ─── GALERIA ─── */}
+      {gallery.length > 0 && (
         <section id="galeria" className="py-32 px-6 max-w-7xl mx-auto">
           <div className="text-center mb-24 flex flex-col items-center">
             <span className="text-sm font-bold tracking-widest uppercase mb-4" style={{ color: primary }}>Portafolio</span>
