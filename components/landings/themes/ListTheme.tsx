@@ -173,7 +173,7 @@ export default function ListTheme(props: { negocio: any; media?: any[]; business
           </div>
         )}
 
-        <p className="text-xs text-slate-400 font-medium">
+        <p className="text-xs font-medium" style={{ color: config.footerTextColor || "#94a3b8" }}>
           © {new Date().getFullYear()} {negocio.name}.
         </p>
       </div>

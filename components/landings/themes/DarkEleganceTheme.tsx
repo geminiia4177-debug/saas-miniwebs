@@ -207,11 +207,11 @@ export default function DarkEleganceTheme(props: { negocio: any; media?: any[]; 
       )}
 
       {/* ─── FOOTER ─── */}
-      <footer className="bg-[#050505] text-[#888] pt-24 pb-12 px-6 border-t border-white/5">
+      <footer className="pt-24 pb-12 px-6 border-t border-white/5" style={{ backgroundColor: config.footerBgColor || "#050505", color: config.footerTextColor || "#888888" }}>
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-16">
           
           <div className="flex flex-col items-start">
-            <h4 className="text-white text-2xl font-light tracking-widest uppercase mb-6">{negocio.name}</h4>
+            <h4 className="text-2xl font-light tracking-widest uppercase mb-6" style={{ color: config.footerTextColor || "#ffffff" }}>{negocio.name}</h4>
             <p className="text-sm mb-8 font-light leading-relaxed max-w-sm">{negocio.description || "Tu mejor opción."}</p>
             <div className="flex gap-6">
               {negocio.instagram && <a href={negocio.instagram} target="_blank" className="hover:text-white transition-colors"><Ico n="instagram" /></a>}

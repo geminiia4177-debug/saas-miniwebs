@@ -284,6 +284,26 @@ export default function EditorTab({
                 </div>
               </div>
 
+              <div className="px-3 pt-3 pb-1">
+                <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest px-0.5 mb-2">Colores del Contacto (Pie de página)</p>
+                <div className="flex gap-2 items-center">
+                  <div className="flex-1 flex flex-col items-center gap-1">
+                    <span className="text-[9px] text-slate-600">Fondo</span>
+                    <ColorPickerPopup 
+                      color={biz.layoutConfig?.footerBgColor || "#050505"} 
+                      onChange={c => setBiz((prev: any) => ({ ...prev, layoutConfig: { ...prev.layoutConfig, footerBgColor: c } }))} 
+                    />
+                  </div>
+                  <div className="flex-1 flex flex-col items-center gap-1">
+                    <span className="text-[9px] text-slate-600">Texto</span>
+                    <ColorPickerPopup 
+                      color={biz.layoutConfig?.footerTextColor || "#888888"} 
+                      onChange={c => setBiz((prev: any) => ({ ...prev, layoutConfig: { ...prev.layoutConfig, footerTextColor: c } }))} 
+                    />
+                  </div>
+                </div>
+              </div>
+
               <div className="px-3 pt-2 pb-2">
                 <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-2">Fuente de Letra (Google Fonts)</p>
                 <select

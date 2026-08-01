@@ -194,11 +194,11 @@ export default function ModernTheme(props: { negocio: any; media?: any[]; busine
       )}
 
       {/* ─── FOOTER ─── */}
-      <footer className="bg-slate-950 text-slate-400 py-16 px-6 border-t border-slate-900">
+      <footer className="py-16 px-6 border-t border-slate-900" style={{ backgroundColor: config.footerBgColor || "#020617", color: config.footerTextColor || "#94a3b8" }}>
         <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-12">
           
           <div>
-            <h4 className="text-white text-xl font-bold mb-4 tracking-tight">{negocio.name}</h4>
+            <h4 className="text-xl font-bold mb-4 tracking-tight" style={{ color: config.footerTextColor || "#ffffff" }}>{negocio.name}</h4>
             <p className="text-sm mb-6">{negocio.description || "Tu mejor opción."}</p>
             <div className="flex gap-4">
               {negocio.instagram && <a href={negocio.instagram} target="_blank" className="hover:text-white transition-colors"><Ico n="instagram" /></a>}
@@ -207,7 +207,7 @@ export default function ModernTheme(props: { negocio: any; media?: any[]; busine
           </div>
           
           <div>
-            <h4 className="text-white text-lg font-bold mb-4">Contacto</h4>
+            <h4 className="text-lg font-bold mb-4" style={{ color: config.footerTextColor || "#ffffff" }}>Contacto</h4>
             <ul className="space-y-4 text-sm">
               {negocio.whatsapp && (
                 <li className="flex items-center gap-3">
