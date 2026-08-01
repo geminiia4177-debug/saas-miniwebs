@@ -179,6 +179,7 @@ export default function DarkEleganceTheme(props: { negocio: any; media?: any[]; 
               businessId={businessId || negocio.id} 
               services={items.map((s:any) => s.name)} 
               primaryColor={primary}
+              theme="dark"
             />
           </div>
         </div>
