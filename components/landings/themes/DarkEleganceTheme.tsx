@@ -49,8 +49,21 @@ export default function DarkEleganceTheme(props: { negocio: any; media?: any[]; 
   const items = getItems();
   const gallery = media.filter((m: any) => m.type === "image") || [];
 
+  const bgType = negocio?.backgroundType || "color";
+  const secondary = negocio?.secondaryColor || "#db2777";
+
+  const getBackground = () => {
+    if (bgType === "image" && negocio.backgroundImageUrl) {
+      return { backgroundImage: `url(${negocio.backgroundImageUrl})`, backgroundSize: "cover", backgroundPosition: "center", backgroundAttachment: "fixed" as const };
+    }
+    if (bgType === "gradient") {
+      return { background: `linear-gradient(135deg, ${primary}10, ${secondary}30)`, backgroundColor: negocio.accentColor || "#0a0a0a" };
+    }
+    return { backgroundColor: negocio.accentColor || "#0a0a0a" };
+  };
+
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-[#ededed]" style={{ fontFamily }}>
+    <div className="min-h-screen text-[#ededed]" style={{ fontFamily, ...getBackground() }}>
       
       {/* ─── NAVBAR ─── */}
       <nav className={`fixed top-0 w-full z-50 transition-all duration-500 border-b ${scrolled ? "bg-black/90 backdrop-blur-md py-4 border-white/10" : "bg-transparent py-6 border-transparent"}`}>

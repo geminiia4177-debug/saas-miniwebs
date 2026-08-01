@@ -50,8 +50,21 @@ export default function ModernTheme(props: { negocio: any; media?: any[]; busine
   const items = getItems();
   const gallery = media.filter((m: any) => m.type === "image") || [];
 
+  const bgType = negocio?.backgroundType || "color";
+  const secondary = negocio?.secondaryColor || "#db2777";
+
+  const getBackground = () => {
+    if (bgType === "image" && negocio.backgroundImageUrl) {
+      return { backgroundImage: `url(${negocio.backgroundImageUrl})`, backgroundSize: "cover", backgroundPosition: "center", backgroundAttachment: "fixed" as const };
+    }
+    if (bgType === "gradient") {
+      return { background: `linear-gradient(135deg, ${primary}10, ${secondary}30)`, backgroundColor: negocio.accentColor || "#f8fafc" };
+    }
+    return { backgroundColor: negocio.accentColor || "#f8fafc" };
+  };
+
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900" style={{ fontFamily }}>
+    <div className="min-h-screen text-slate-900" style={{ fontFamily, ...getBackground() }}>
       
       {/* ─── NAVBAR ─── */}
       <nav className={`fixed top-0 w-full z-50 transition-all duration-300 ${scrolled ? "bg-white/80 backdrop-blur-md shadow-sm py-3" : "bg-transparent py-5"}`}>

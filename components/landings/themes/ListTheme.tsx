@@ -49,9 +49,9 @@ export default function ListTheme(props: { negocio: any; media?: any[]; business
       return { backgroundImage: `url(${negocio.backgroundImageUrl})`, backgroundSize: "cover", backgroundPosition: "center", backgroundAttachment: "fixed" as const };
     }
     if (bgType === "gradient") {
-      return { background: `linear-gradient(135deg, ${primary}10, ${secondary}30)` };
+      return { background: `linear-gradient(135deg, ${primary}10, ${secondary}30)`, backgroundColor: negocio.accentColor || "#f8fafc" };
     }
-    return { backgroundColor: "#f8fafc" };
+    return { backgroundColor: negocio.accentColor || "#f8fafc" };
   };
 
   return (
