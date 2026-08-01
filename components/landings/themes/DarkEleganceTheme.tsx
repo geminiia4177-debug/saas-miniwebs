@@ -114,7 +114,7 @@ export default function DarkEleganceTheme(props: { negocio: any; media?: any[]; 
             <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, rgba(10,10,10,0.3) 0%, rgba(10,10,10,1) 100%)" }}></div>
           </div>
         ) : (
-          <div className="absolute inset-0 z-0 bg-[#0a0a0a]">
+          <div className="absolute inset-0 z-0 bg-black/10">
             <div className="absolute inset-0 opacity-20" style={{ backgroundImage: `radial-gradient(circle at center, ${primary} 0%, transparent 70%)` }}></div>
           </div>
         )}
@@ -149,7 +149,7 @@ export default function DarkEleganceTheme(props: { negocio: any; media?: any[]; 
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {items.filter((s:any) => s.active !== false).map((item: any, i: number) => (
-              <div key={i} className="group relative p-8 flex flex-col overflow-hidden bg-[#111] hover:bg-[#151515] transition-colors border border-white/5">
+              <div key={i} className="group relative p-8 flex flex-col overflow-hidden bg-black/20 hover:bg-black/40 transition-colors border border-white/5">
                 <div className="absolute top-0 left-0 w-full h-1 scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-500" style={{ backgroundColor: primary }}></div>
                 
                 <div className="mb-8 overflow-hidden">
@@ -177,9 +177,9 @@ export default function DarkEleganceTheme(props: { negocio: any; media?: any[]; 
         </section>
       )}
 
-        <section id="booking" className="py-32 px-6 bg-black relative border-y border-white/5">
+        <section id="booking" className="py-32 px-6 relative border-y border-white/5" style={{ backgroundColor: 'rgba(0,0,0,0.3)' }}>
           <div className="absolute inset-0 opacity-5" style={{ backgroundImage: `repeating-linear-gradient(45deg, ${primary} 0, ${primary} 1px, transparent 0, transparent 50%)`, backgroundSize: "30px 30px" }}></div>
-          <div className="relative z-10 max-w-4xl mx-auto bg-[#0a0a0a] p-10 md:p-16 border border-white/10 shadow-2xl">
+          <div className="relative z-10 max-w-4xl mx-auto bg-black/40 p-10 md:p-16 border border-white/10 shadow-2xl">
             <div className="text-center mb-16">
               <h2 className="text-3xl md:text-4xl font-light mb-4 tracking-widest uppercase text-white">
                 <span style={{ fontSize: `${scaleTitles}em` }}>Reserva tu lugar</span>
@@ -187,7 +187,7 @@ export default function DarkEleganceTheme(props: { negocio: any; media?: any[]; 
               <div className="w-12 h-[1px] mx-auto mt-6" style={{ backgroundColor: primary }}></div>
             </div>
           
-          <div className="bg-[#111] p-4 border border-white/5">
+          <div className="bg-black/30 p-4 border border-white/5">
             <BookingForm 
               businessId={businessId || negocio.id} 
               services={items.map((s:any) => s.name)} 
@@ -210,7 +210,7 @@ export default function DarkEleganceTheme(props: { negocio: any; media?: any[]; 
           
           <div className="columns-1 sm:columns-2 md:columns-3 gap-1 space-y-1">
             {gallery.map((img: any, i: number) => (
-              <div key={i} className="break-inside-avoid relative group overflow-hidden bg-[#111]">
+              <div key={i} className="break-inside-avoid relative group overflow-hidden bg-transparent">
                 <img src={img.url} alt={`Gallery ${i}`} className="w-full h-auto object-cover opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-all duration-700 filter grayscale group-hover:grayscale-0" />
                 <div className="absolute inset-0 border border-white/0 group-hover:border-white/20 transition-colors z-10 pointer-events-none"></div>
               </div>

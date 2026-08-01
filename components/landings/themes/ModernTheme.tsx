@@ -115,7 +115,7 @@ export default function ModernTheme(props: { negocio: any; media?: any[]; busine
             <div className="absolute inset-0" style={{ backgroundColor: `rgba(0,0,0,${(config.bannerOpacity ?? 60)/100})` }}></div>
           </div>
         ) : (
-          <div className="absolute inset-0 z-0 bg-slate-900"></div>
+          <div className="absolute inset-0 z-0 bg-black/5"></div>
         )}
         
         <div className="relative z-10 max-w-4xl mx-auto">
@@ -133,7 +133,7 @@ export default function ModernTheme(props: { negocio: any; media?: any[]; busine
 
       {/* ─── SERVICIOS / ITEMS ─── */}
       {items.length > 0 && (
-        <section id="servicios" className="py-24 px-6 bg-white relative">
+        <section id="servicios" className="py-24 px-6 bg-transparent relative">
           <div className="max-w-6xl mx-auto text-center mb-20">
             <h2 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight">
               <span style={{ fontSize: `${scaleTitles}em` }}>Nuestros Servicios</span>
@@ -143,7 +143,7 @@ export default function ModernTheme(props: { negocio: any; media?: any[]; busine
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {items.filter((s:any) => s.active !== false).map((item: any, i: number) => (
-              <div key={i} className="bg-white rounded-3xl p-8 shadow-sm hover:shadow-xl transition-shadow border border-slate-100 flex flex-col group">
+              <div key={i} className="bg-white/80 backdrop-blur-sm rounded-3xl p-8 shadow-sm hover:shadow-xl transition-shadow border border-slate-100 flex flex-col group">
                 <div className="w-14 h-14 rounded-2xl mb-6 flex items-center justify-center group-hover:scale-110 transition-transform" style={{ backgroundColor: `${primary}15`, color: primary }}>
                   {item.imageUrl ? (
                     <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover rounded-2xl" />
@@ -188,7 +188,7 @@ export default function ModernTheme(props: { negocio: any; media?: any[]; busine
 
       {/* ─── GALERIA ─── */}
       {gallery.length > 0 && (
-        <section id="galeria" className="py-24 px-6 bg-slate-50">
+        <section id="galeria" className="py-24 px-6 bg-black/5">
           <div className="max-w-6xl mx-auto text-center mb-20">
             <h2 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight">
               <span style={{ fontSize: `${scaleTitles}em` }}>Nuestra Galería</span>
