@@ -285,20 +285,27 @@ export default function EditorTab({
               </div>
 
               <div className="px-3 pt-3 pb-1">
-                <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest px-0.5 mb-2">Colores del Contacto (Pie de página)</p>
+                <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest px-0.5 mb-2">Colores Adicionales</p>
                 <div className="flex gap-2 items-center">
                   <div className="flex-1 flex flex-col items-center gap-1">
-                    <span className="text-[9px] text-slate-600">Fondo</span>
+                    <span className="text-[9px] text-slate-600 text-center">Fondo<br/>Contacto</span>
                     <ColorPickerPopup 
                       color={biz.layoutConfig?.footerBgColor || "#050505"} 
                       onChange={c => setBiz((prev: any) => ({ ...prev, layoutConfig: { ...prev.layoutConfig, footerBgColor: c } }))} 
                     />
                   </div>
                   <div className="flex-1 flex flex-col items-center gap-1">
-                    <span className="text-[9px] text-slate-600">Texto</span>
+                    <span className="text-[9px] text-slate-600 text-center">Texto<br/>Contacto</span>
                     <ColorPickerPopup 
                       color={biz.layoutConfig?.footerTextColor || "#888888"} 
                       onChange={c => setBiz((prev: any) => ({ ...prev, layoutConfig: { ...prev.layoutConfig, footerTextColor: c } }))} 
+                    />
+                  </div>
+                  <div className="flex-1 flex flex-col items-center gap-1">
+                    <span className="text-[9px] text-slate-600 text-center">Caja<br/>Reservas</span>
+                    <ColorPickerPopup 
+                      color={biz.layoutConfig?.bookingBgColor || "#111111"} 
+                      onChange={c => setBiz((prev: any) => ({ ...prev, layoutConfig: { ...prev.layoutConfig, bookingBgColor: c } }))} 
                     />
                   </div>
                 </div>

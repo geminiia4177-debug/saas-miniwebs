@@ -168,7 +168,7 @@ export default function ModernTheme(props: { negocio: any; media?: any[]; busine
 
       {/* ─── BOOKING ─── */}
       <section id="booking" className="py-24 px-6 relative border-y border-slate-200" style={{ backgroundColor: `${primary}10` }}>
-        <div className="max-w-4xl mx-auto bg-white rounded-3xl shadow-xl overflow-hidden flex flex-col md:flex-row border border-white">
+        <div className="max-w-4xl mx-auto rounded-3xl shadow-xl overflow-hidden flex flex-col md:flex-row border border-slate-100" style={{ backgroundColor: config.bookingBgColor || "#ffffff" }}>
           <div className="p-10 md:p-14 flex-1">
             <h2 className="text-2xl md:text-3xl font-black text-slate-900 mb-4">
               <span style={{ fontSize: `${scaleTitles}em` }}>Reserva tu lugar</span>
@@ -176,7 +176,7 @@ export default function ModernTheme(props: { negocio: any; media?: any[]; busine
             <p className="text-slate-500 mb-8"><span style={{ fontSize: `${scaleBody}em` }}>Elige tu servicio y agenda en segundos.</span></p>
           </div>
           
-          <div className="bg-white rounded-3xl overflow-hidden text-slate-900">
+          <div className="rounded-3xl overflow-hidden text-slate-900 bg-transparent">
             <BookingForm 
               businessId={businessId || negocio.id} 
               services={items.map((s:any) => s.name)} 

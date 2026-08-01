@@ -178,8 +178,7 @@ export default function DarkEleganceTheme(props: { negocio: any; media?: any[]; 
       )}
 
         <section id="booking" className="py-32 px-6 relative border-y border-white/5" style={{ backgroundColor: 'rgba(0,0,0,0.3)' }}>
-          <div className="absolute inset-0 opacity-5" style={{ backgroundImage: `repeating-linear-gradient(45deg, ${primary} 0, ${primary} 1px, transparent 0, transparent 50%)`, backgroundSize: "30px 30px" }}></div>
-          <div className="relative z-10 max-w-4xl mx-auto bg-black/40 p-10 md:p-16 border border-white/10 shadow-2xl">
+          <div className="relative z-10 max-w-4xl mx-auto p-10 md:p-16 border border-white/10 shadow-2xl rounded-2xl" style={{ backgroundColor: config.bookingBgColor || "rgba(0,0,0,0.4)" }}>
             <div className="text-center mb-16">
               <h2 className="text-3xl md:text-4xl font-light mb-4 tracking-widest uppercase text-white">
                 <span style={{ fontSize: `${scaleTitles}em` }}>Reserva tu lugar</span>

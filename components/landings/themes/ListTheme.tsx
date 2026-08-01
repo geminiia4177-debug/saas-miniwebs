@@ -147,7 +147,7 @@ export default function ListTheme(props: { negocio: any; media?: any[]; business
         )}
 
         {/* ─── BOOKING ─── */}
-        <div id="booking" className="w-full bg-white/90 backdrop-blur-xl rounded-[2rem] shadow-2xl p-6 md:p-8 border border-white/50 mb-10">
+        <div id="booking" className="w-full backdrop-blur-xl rounded-[2rem] shadow-2xl p-6 md:p-8 border border-white/50 mb-10" style={{ backgroundColor: config.bookingBgColor || "rgba(255,255,255,0.9)" }}>
           <h2 className="text-2xl font-black text-center text-slate-900 mb-2">
             <span style={{ fontSize: `${scaleTitles}em` }}>Reservar Turno</span>
           </h2>
