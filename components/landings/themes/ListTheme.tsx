@@ -26,6 +26,9 @@ export default function ListTheme(props: { negocio: any; media?: any[]; business
   const secondary = negocio?.secondaryColor || "#db2777";
   const fontFamily = negocio?.fontFamily || "sans";
   const bgType = negocio?.backgroundType || "color";
+  const scaleHero = (config.fontSizeHero || 100) / 100;
+  const scaleTitles = (config.fontSizeTitles || 100) / 100;
+  const scaleBody = (config.fontSizeBody || 100) / 100;
   
   const getItems = () => {
     if (negocio.type === "barberia") return config.barberiaServices || [];
@@ -71,10 +74,10 @@ export default function ListTheme(props: { negocio: any; media?: any[]; business
         
         {/* INFO BÁSICA */}
         <h1 className="text-3xl font-extrabold text-center mb-2 tracking-tight text-slate-900 drop-shadow-sm" style={{ color: config.heroTitleColor || "" }}>
-          {config.heroTitle || negocio.name}
+          <span style={{ fontSize: `${scaleHero}em` }}>{config.heroTitle || negocio.name}</span>
         </h1>
         <p className="text-center text-slate-600 font-medium max-w-sm mb-6 leading-relaxed">
-          {config.heroText || negocio.description || "Tu mejor opción."}
+          <span style={{ fontSize: `${scaleBody}em` }}>{config.heroText || negocio.description || "Tu mejor opción."}</span>
         </p>
         
         {/* REDES SOCIALES (ICONOS RAPIDOS) */}
@@ -99,7 +102,9 @@ export default function ListTheme(props: { negocio: any; media?: any[]; business
         {/* ─── SERVICIOS LISTA (ACCORDION) ─── */}
         {items.length > 0 && (
           <div className="w-full space-y-3 mb-10">
-            <h2 className="text-sm font-black uppercase tracking-widest text-slate-400 text-center mb-4">Servicios & Precios</h2>
+            <h2 className="text-sm font-black uppercase tracking-widest text-slate-400 text-center mb-4">
+              <span style={{ fontSize: `${scaleTitles}em` }}>Servicios & Precios</span>
+            </h2>
             
             {items.map((item: any, i: number) => {
               const isExpanded = expandedItem === i;
@@ -118,7 +123,7 @@ export default function ListTheme(props: { negocio: any; media?: any[]; business
                         </div>
                       )}
                       <div>
-                        <h3 className="font-bold text-slate-800">{item.name}</h3>
+                        <h3 className="font-bold text-slate-800"><span style={{ fontSize: `${scaleBody}em` }}>{item.name}</span></h3>
                         <p className="text-xs font-bold mt-1" style={{ color: primary }}>{item.price ? `$${item.price}` : "Consultar"}</p>
                       </div>
                     </div>
@@ -129,7 +134,7 @@ export default function ListTheme(props: { negocio: any; media?: any[]; business
                   
                   {isExpanded && (
                     <div className="px-4 pb-4 pt-2 border-t border-slate-100 bg-white/50 text-sm text-slate-600">
-                      <p className="mb-4">{item.description || "Sin descripción disponible."}</p>
+                      <p className="mb-4"><span style={{ fontSize: `${scaleBody}em` }}>{item.description || "Sin descripción disponible."}</span></p>
                       <a href="#booking" className="inline-flex items-center justify-center w-full py-2.5 rounded-xl text-white font-bold text-sm shadow-md" style={{ backgroundColor: primary }}>
                         Reservar esto
                       </a>
@@ -143,8 +148,10 @@ export default function ListTheme(props: { negocio: any; media?: any[]; business
 
         {/* ─── BOOKING ─── */}
         <div id="booking" className="w-full bg-white/90 backdrop-blur-xl rounded-[2rem] shadow-2xl p-6 md:p-8 border border-white/50 mb-10">
-          <h2 className="text-2xl font-black text-center text-slate-900 mb-2">Reservar Turno</h2>
-          <p className="text-center text-slate-500 text-sm mb-6">Completa el formulario para agendar.</p>
+          <h2 className="text-2xl font-black text-center text-slate-900 mb-2">
+            <span style={{ fontSize: `${scaleTitles}em` }}>Reservar Turno</span>
+          </h2>
+          <p className="text-center text-slate-500 text-sm mb-6"><span style={{ fontSize: `${scaleBody}em` }}>Completa el formulario para agendar.</span></p>
           <BookingForm 
             businessId={businessId || negocio.id} 
             services={items.map((s:any) => s.name)} 
@@ -155,7 +162,9 @@ export default function ListTheme(props: { negocio: any; media?: any[]; business
         {/* ─── GALERIA RAPIDA (MINI) ─── */}
         {gallery.length > 0 && (
           <div className="w-full mb-10">
-            <h2 className="text-sm font-black uppercase tracking-widest text-slate-400 text-center mb-4">Nuestros Trabajos</h2>
+            <h2 className="text-sm font-black uppercase tracking-widest text-slate-400 text-center mb-4">
+              <span style={{ fontSize: `${scaleTitles}em` }}>Nuestros Trabajos</span>
+            </h2>
             <div className="flex overflow-x-auto gap-3 pb-4 snap-x snap-mandatory custom-scrollbar">
               {gallery.map((img: any, i: number) => (
                 <img key={i} src={img.url} alt="Gallery" className="w-48 h-48 object-cover rounded-2xl flex-shrink-0 snap-center shadow-sm" />

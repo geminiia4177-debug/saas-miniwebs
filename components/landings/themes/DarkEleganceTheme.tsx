@@ -33,6 +33,9 @@ export default function DarkEleganceTheme(props: { negocio: any; media?: any[]; 
   const config = negocio?.layoutConfig || {};
   const primary = negocio?.primaryColor || "#d4af37"; // default gold
   const fontFamily = negocio?.fontFamily || "sans";
+  const scaleHero = (config.fontSizeHero || 100) / 100;
+  const scaleTitles = (config.fontSizeTitles || 100) / 100;
+  const scaleBody = (config.fontSizeBody || 100) / 100;
   
   const getItems = () => {
     if (negocio.type === "barberia") return config.barberiaServices || [];
@@ -106,10 +109,10 @@ export default function DarkEleganceTheme(props: { negocio: any; media?: any[]; 
         <div className="relative z-10 max-w-4xl mx-auto flex flex-col items-center">
           <div className="w-[1px] h-20 mb-8" style={{ backgroundColor: primary }}></div>
           <h1 className="text-5xl md:text-8xl font-light text-white mb-6 tracking-tight uppercase" style={{ color: config.heroTitleColor || "#fff" }}>
-            {config.heroTitle || negocio.name}
+            <span style={{ fontSize: `${scaleHero}em` }}>{config.heroTitle || negocio.name}</span>
           </h1>
           <p className="text-lg md:text-xl text-[#a1a1aa] mb-12 font-light max-w-2xl mx-auto tracking-wide">
-            {config.heroText || "Elegancia y perfección en cada detalle."}
+            <span style={{ fontSize: `${scaleBody}em` }}>{config.heroText || "Elegancia y perfección en cada detalle."}</span>
           </p>
           <a href="#booking" className="flex items-center gap-4 px-10 py-4 text-sm font-bold tracking-widest uppercase transition-all duration-300 hover:scale-105" style={{ backgroundColor: primary, color: "#000" }}>
             Hacer reserva
@@ -126,7 +129,9 @@ export default function DarkEleganceTheme(props: { negocio: any; media?: any[]; 
         <section id="servicios" className="py-32 px-6 max-w-7xl mx-auto">
           <div className="text-center mb-24 flex flex-col items-center">
             <span className="text-sm font-bold tracking-widest uppercase mb-4" style={{ color: primary }}>Experiencia</span>
-            <h2 className="text-4xl md:text-5xl font-light text-white tracking-widest uppercase">Nuestros Servicios</h2>
+            <h2 className="text-4xl md:text-5xl font-light text-white tracking-widest uppercase">
+              <span style={{ fontSize: `${scaleTitles}em` }}>Nuestros Servicios</span>
+            </h2>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -144,8 +149,8 @@ export default function DarkEleganceTheme(props: { negocio: any; media?: any[]; 
                   )}
                 </div>
                 
-                <h3 className="text-2xl font-light text-white mb-4 tracking-wide">{item.name}</h3>
-                <p className="text-[#888] text-sm mb-8 flex-1 leading-relaxed font-light">{item.description}</p>
+                <h3 className="text-2xl font-light text-white mb-4 tracking-wide"><span style={{ fontSize: `${scaleBody}em` }}>{item.name}</span></h3>
+                <p className="text-[#888] text-sm mb-8 flex-1 leading-relaxed font-light"><span style={{ fontSize: `${scaleBody}em` }}>{item.description}</span></p>
                 
                 <div className="flex items-center justify-between mt-auto pt-6 border-t border-white/10">
                   <span className="font-medium text-xl" style={{ color: primary }}>
@@ -159,14 +164,15 @@ export default function DarkEleganceTheme(props: { negocio: any; media?: any[]; 
         </section>
       )}
 
-      {/* ─── BOOKING ─── */}
-      <section id="booking" className="py-32 px-6 bg-black relative border-y border-white/5">
-        <div className="absolute inset-0 opacity-5" style={{ backgroundImage: `repeating-linear-gradient(45deg, ${primary} 0, ${primary} 1px, transparent 0, transparent 50%)`, backgroundSize: "30px 30px" }}></div>
-        <div className="relative z-10 max-w-4xl mx-auto bg-[#0a0a0a] p-10 md:p-16 border border-white/10 shadow-2xl">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-light mb-4 tracking-widest uppercase text-white">Reserva tu lugar</h2>
-            <div className="w-12 h-[1px] mx-auto mt-6" style={{ backgroundColor: primary }}></div>
-          </div>
+        <section id="booking" className="py-32 px-6 bg-black relative border-y border-white/5">
+          <div className="absolute inset-0 opacity-5" style={{ backgroundImage: `repeating-linear-gradient(45deg, ${primary} 0, ${primary} 1px, transparent 0, transparent 50%)`, backgroundSize: "30px 30px" }}></div>
+          <div className="relative z-10 max-w-4xl mx-auto bg-[#0a0a0a] p-10 md:p-16 border border-white/10 shadow-2xl">
+            <div className="text-center mb-16">
+              <h2 className="text-3xl md:text-4xl font-light mb-4 tracking-widest uppercase text-white">
+                <span style={{ fontSize: `${scaleTitles}em` }}>Reserva tu lugar</span>
+              </h2>
+              <div className="w-12 h-[1px] mx-auto mt-6" style={{ backgroundColor: primary }}></div>
+            </div>
           
           <div className="bg-[#111] p-4 border border-white/5">
             <BookingForm 
@@ -178,12 +184,12 @@ export default function DarkEleganceTheme(props: { negocio: any; media?: any[]; 
         </div>
       </section>
 
-      {/* ─── GALERIA ─── */}
-      {gallery.length > 0 && (
         <section id="galeria" className="py-32 px-6 max-w-7xl mx-auto">
           <div className="text-center mb-24 flex flex-col items-center">
             <span className="text-sm font-bold tracking-widest uppercase mb-4" style={{ color: primary }}>Portafolio</span>
-            <h2 className="text-4xl md:text-5xl font-light text-white tracking-widest uppercase">Nuestra Galería</h2>
+            <h2 className="text-4xl md:text-5xl font-light text-white tracking-widest uppercase">
+              <span style={{ fontSize: `${scaleTitles}em` }}>Nuestra Galería</span>
+            </h2>
           </div>
           
           <div className="columns-1 sm:columns-2 md:columns-3 gap-1 space-y-1">

@@ -34,6 +34,9 @@ export default function ModernTheme(props: { negocio: any; media?: any[]; busine
   const config = negocio?.layoutConfig || {};
   const primary = negocio?.primaryColor || "#3b82f6";
   const fontFamily = negocio?.fontFamily || "sans";
+  const scaleHero = (config.fontSizeHero || 100) / 100;
+  const scaleTitles = (config.fontSizeTitles || 100) / 100;
+  const scaleBody = (config.fontSizeBody || 100) / 100;
   
   const getItems = () => {
     if (negocio.type === "barberia") return config.barberiaServices || [];
@@ -102,15 +105,12 @@ export default function ModernTheme(props: { negocio: any; media?: any[]; busine
           <div className="absolute inset-0 z-0 bg-slate-900"></div>
         )}
         
-        <div className="relative z-10 max-w-3xl mx-auto">
-          <span className="inline-block py-1 px-3 rounded-full bg-white/20 backdrop-blur-sm text-white text-xs font-semibold tracking-wider uppercase mb-6 border border-white/30">
-            {negocio.type || "Bienvenidos"}
-          </span>
-          <h1 className="text-5xl md:text-7xl font-extrabold text-white mb-6 leading-tight tracking-tighter" style={{ color: config.heroTitleColor || "#fff" }}>
-            {config.heroTitle || negocio.name}
+        <div className="relative z-10 max-w-4xl mx-auto">
+          <h1 className="text-5xl md:text-8xl font-black mb-6 tracking-tight drop-shadow-lg" style={{ color: config.heroTitleColor || "#ffffff" }}>
+            <span style={{ fontSize: `${scaleHero}em` }}>{config.heroTitle || negocio.name}</span>
           </h1>
-          <p className="text-lg md:text-2xl text-slate-200 mb-10 font-light max-w-2xl mx-auto leading-relaxed">
-            {config.heroText || "Brindando la mejor experiencia para vos."}
+          <p className="text-lg md:text-2xl text-white/90 mb-10 font-medium max-w-2xl mx-auto drop-shadow-md">
+            <span style={{ fontSize: `${scaleBody}em` }}>{config.heroText || "La mejor experiencia en un solo lugar."}</span>
           </p>
           <a href="#booking" className="inline-flex items-center gap-3 px-8 py-4 rounded-full text-white font-bold text-lg shadow-xl hover:-translate-y-1 transition-transform" style={{ backgroundColor: primary }}>
             Reservar Turno <Ico n="arrow-right" s={20} />
@@ -120,10 +120,12 @@ export default function ModernTheme(props: { negocio: any; media?: any[]; busine
 
       {/* ─── SERVICIOS / ITEMS ─── */}
       {items.length > 0 && (
-        <section id="servicios" className="py-24 px-6 max-w-6xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-5xl font-extrabold text-slate-900 tracking-tight mb-4">Nuestros Servicios</h2>
-            <div className="w-24 h-1 mx-auto rounded-full" style={{ backgroundColor: primary }}></div>
+        <section id="servicios" className="py-24 px-6 bg-white relative">
+          <div className="max-w-6xl mx-auto text-center mb-20">
+            <h2 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight">
+              <span style={{ fontSize: `${scaleTitles}em` }}>Nuestros Servicios</span>
+            </h2>
+            <div className="w-20 h-1.5 mx-auto mt-6 rounded-full" style={{ backgroundColor: primary }}></div>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -136,8 +138,8 @@ export default function ModernTheme(props: { negocio: any; media?: any[]; busine
                     <Ico n="star" s={28} />
                   )}
                 </div>
-                <h3 className="text-xl font-bold text-slate-900 mb-2">{item.name}</h3>
-                <p className="text-slate-500 text-sm mb-6 flex-1 line-clamp-3">{item.description}</p>
+                <h3 className="text-xl font-bold text-slate-800 mb-3"><span style={{ fontSize: `${scaleBody}em` }}>{item.name}</span></h3>
+                <p className="text-slate-500 text-sm mb-6 flex-1 leading-relaxed"><span style={{ fontSize: `${scaleBody}em` }}>{item.description}</span></p>
                 
                 <div className="flex items-center justify-between mt-auto pt-4 border-t border-slate-100">
                   <span className="font-extrabold text-lg text-slate-900">
@@ -152,11 +154,13 @@ export default function ModernTheme(props: { negocio: any; media?: any[]; busine
       )}
 
       {/* ─── BOOKING ─── */}
-      <section id="booking" className="py-24 px-6 bg-slate-900 text-white">
-        <div className="max-w-4xl mx-auto bg-slate-800/50 rounded-[3rem] p-8 md:p-16 border border-slate-700/50 backdrop-blur-md shadow-2xl">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-5xl font-extrabold mb-4 tracking-tight">Reserva tu lugar</h2>
-            <p className="text-slate-400">Completá tus datos y asegurá tu turno al instante.</p>
+      <section id="booking" className="py-24 px-6 relative border-y border-slate-200" style={{ backgroundColor: `${primary}10` }}>
+        <div className="max-w-4xl mx-auto bg-white rounded-3xl shadow-xl overflow-hidden flex flex-col md:flex-row border border-white">
+          <div className="p-10 md:p-14 flex-1">
+            <h2 className="text-2xl md:text-3xl font-black text-slate-900 mb-4">
+              <span style={{ fontSize: `${scaleTitles}em` }}>Reserva tu lugar</span>
+            </h2>
+            <p className="text-slate-500 mb-8"><span style={{ fontSize: `${scaleBody}em` }}>Elige tu servicio y agenda en segundos.</span></p>
           </div>
           
           <div className="bg-white rounded-3xl overflow-hidden text-slate-900">
@@ -171,10 +175,12 @@ export default function ModernTheme(props: { negocio: any; media?: any[]; busine
 
       {/* ─── GALERIA ─── */}
       {gallery.length > 0 && (
-        <section id="galeria" className="py-24 px-6 max-w-6xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-5xl font-extrabold text-slate-900 tracking-tight mb-4">Nuestra Galería</h2>
-            <div className="w-24 h-1 mx-auto rounded-full" style={{ backgroundColor: primary }}></div>
+        <section id="galeria" className="py-24 px-6 bg-slate-50">
+          <div className="max-w-6xl mx-auto text-center mb-20">
+            <h2 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight">
+              <span style={{ fontSize: `${scaleTitles}em` }}>Nuestra Galería</span>
+            </h2>
+            <div className="w-20 h-1.5 mx-auto mt-6 rounded-full" style={{ backgroundColor: primary }}></div>
           </div>
           
           <div className="columns-1 sm:columns-2 md:columns-3 gap-6 space-y-6">
