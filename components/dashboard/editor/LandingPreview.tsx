@@ -10,6 +10,10 @@ import TallerTemplate    from "@/components/landings/TallerTemplate";
 import LavaderoTemplate  from "@/components/landings/LavaderoTemplate";
 import GeneralTemplate   from "@/components/landings/GeneralTemplate";
 
+import ModernTheme from "@/components/landings/themes/ModernTheme";
+import DarkEleganceTheme from "@/components/landings/themes/DarkEleganceTheme";
+import ListTheme from "@/components/landings/themes/ListTheme";
+
 export const LandingPreview = ({
   biz, sections, media,
 }: {
@@ -19,6 +23,30 @@ export const LandingPreview = ({
 }) => {
   const containerClass = "w-full rounded-2xl overflow-y-auto h-[700px] border border-white/10 shadow-2xl custom-scrollbar relative";
   const containerStyle = { transform: "translateZ(0)" }; // Crea un bloque contenedor para elements con position: fixed
+
+  const themeVariant = biz.layoutConfig?.themeVariant || "classic";
+
+  if (themeVariant === "modern") {
+    return (
+      <div className={containerClass} style={containerStyle}>
+        <ModernTheme negocio={biz as any} media={media} businessId={biz.id} sections={sections} />
+      </div>
+    );
+  }
+  if (themeVariant === "dark") {
+    return (
+      <div className={containerClass} style={containerStyle}>
+        <DarkEleganceTheme negocio={biz as any} media={media} businessId={biz.id} sections={sections} />
+      </div>
+    );
+  }
+  if (themeVariant === "list") {
+    return (
+      <div className={containerClass} style={containerStyle}>
+        <ListTheme negocio={biz as any} media={media} businessId={biz.id} sections={sections} />
+      </div>
+    );
+  }
 
   if (biz.type === "barberia") {
     return (
