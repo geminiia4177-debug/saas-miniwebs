@@ -1,0 +1,228 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ─── MODELOS DE AUTENTICACIÓN (NEXTAUTH) ───
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model User {
+  id            String     @id @default(cuid())
+  name          String?
+  email         String?    @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?    // Para login manual
+  role          String     @default("USER")
+  accounts      Account[]
+  sessions      Session[]
+  businesses    Business[] 
+}
+
+// ─── MODELOS DEL SAAS (NEGOCIOS Y TURNOS) ───
+
+model Business {
+  id            String    @id @default(cuid())
+  name          String
+  subdomain     String    @unique
+  customDomain  String?   @unique
+  email         String?
+  phone         String?
+  description   String?
+  type          String?   @default("barberia")
+  status        String?   @default("DEMO")
+  accentColor String? @default("#f59e0b")
+  
+  // Facturación
+  paymentAmount Float?    @default(0)
+  paymentStatus String?   @default("pending")
+  demoExpiresAt DateTime?
+  nextPayment   DateTime?
+
+  // 🌟 NUEVOS CAMPOS DEL DASHBOARD 🌟
+  logoUrl        String?
+  bannerUrl      String?
+  primaryColor   String?   @default("#4f46e5")
+  secondaryColor String?   @default("#ffffff")
+  fontFamily     String?   @default("sans")
+  layoutConfig   Json?
+  paymentData    Json?
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relaciones
+  userId        String?
+  user          User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  appointments  Appointment[]
+  sales         Sale[]
+  employees     Employee[]
+  suppliers     Supplier[]
+  tables        Table[]
+  orders        Order[]
+  messages      Message[]
+}
+
+// 🌟 NUEVA TABLA PARA LOS TURNOS 🌟
+model Appointment {
+  id          String   @id @default(cuid())
+  businessId  String
+  clientName  String
+  clientPhone String
+  clientEmail String?
+  date        DateTime
+  status      String   @default("PENDING") // PENDING, CONFIRMED, CANCELLED, COMPLETED
+  serviceName String?
+  notes       String?
+  patente     String?
+  employeeId  String?
+  paymentMethod String? @default("LOCAL") // LOCAL, TRANSFER
+  paymentReference String? @unique
+  whatsappSent Boolean @default(false)
+  reminderSent Boolean @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  employee    Employee? @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+}
+
+// 🌟 NUEVOS MODELOS PARA EL CRM 🌟
+model Sale {
+  id          String   @id @default(cuid())
+  businessId  String
+  type        String   // "SERVICE" o "PRODUCT"
+  itemName    String
+  amount      Float
+  employeeId  String?
+  date        DateTime @default(now())
+
+  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  employee    Employee? @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+}
+
+model Employee {
+  id          String   @id @default(cuid())
+  businessId  String
+  name        String
+  role        String?
+  phone       String?
+
+  // Financial and HR
+  salaryType  String?  @default("FIXED") // FIXED, PERCENTAGE, HOURLY
+  salaryValue Float?   @default(0)
+  servicesDone Int?    @default(0)
+  hoursWorked Float?   @default(0)
+
+  // Public Profile for Landing
+  imageUrl    String?
+  bio         String?
+  isPublic    Boolean  @default(true)
+
+  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  sales       Sale[]
+  appointments Appointment[]
+}
+
+model Supplier {
+  id          String   @id @default(cuid())
+  businessId  String
+  name        String
+  phone       String?
+  products    String?
+
+  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+}
+
+// 🌟 NUEVOS MODELOS PARA GASTRONOMÍA (MENÚ) 🌟
+model Table {
+  id          String   @id @default(cuid())
+  businessId  String
+  number      Int
+  status      String   @default("CLOSED") // OPEN, CLOSED
+  qrCodeUrl   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  orders      Order[]
+}
+
+model Order {
+  id            String   @id @default(cuid())
+  businessId    String
+  tableId       String?
+  type          String   @default("TAKEAWAY") // TAKEAWAY, DELIVERY, LOCAL
+  status        String   @default("PENDING") // PENDING, CONFIRMED, COMPLETED, CANCELLED
+  customerName  String?
+  customerPhone String?
+  address       String?
+  items         Json     // Array de items del carrito
+  total         Float    @default(0)
+  paymentMethod String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  business      Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  table         Table?   @relation(fields: [tableId], references: [id], onDelete: SetNull)
+}
+
+// 🌟 NUEVOS MODELOS PARA SOPORTE Y ALERTAS 🌟
+
+model Message {
+  id         String   @id @default(cuid())
+  businessId String
+  content    String   @db.Text
+  senderType String   @default("USER") // USER, ADMIN
+  isRead     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+}
+
+model Alert {
+  id         String   @id @default(cuid())
+  content    String   @db.Text
+  type       String   @default("info") // info, warning, success
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+}

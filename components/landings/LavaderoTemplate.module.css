@@ -1,0 +1,111 @@
+.scrollProgress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 2px;
+  background: var(--accent);
+  box-shadow: 0 0 10px var(--accent);
+  z-index: 9999;
+  transition: width 0.1s linear;
+}
+
+.btnReserva {
+  background-color: var(--accent);
+  color: #000;
+  transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  position: relative;
+  overflow: hidden;
+}
+.btnReserva::after {
+  content: '';
+  position: absolute;
+  top: -50%; left: -50%; width: 200%; height: 200%;
+  background: radial-gradient(circle, rgba(255,255,255,0.3) 0%, transparent 60%);
+  opacity: 0; transition: opacity 0.3s;
+  pointer-events: none;
+}
+.btnReserva:hover::after { opacity: 1; }
+.btnReserva:hover {
+  filter: brightness(1.2);
+  transform: translateY(-2px);
+  box-shadow: 0 0 20px -5px var(--accent);
+}
+
+.glassCard {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+.glassCard:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-4px);
+}
+
+.serviceCardPremium {
+  position: relative;
+}
+.serviceCardPremium::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(to bottom right, rgba(255,255,255,0.2), transparent);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+.serviceCardPremium:hover {
+  box-shadow: 0 10px 40px -10px rgba(0,0,0,0.8);
+  border-color: var(--accent) !important;
+}
+.serviceCardPremium:hover :global(.service-price) {
+  color: var(--accent);
+  text-shadow: 0 0 15px var(--accent);
+}
+
+.galleryItem {
+  transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+.galleryItem:hover {
+  transform: scale(1.02);
+  z-index: 10;
+  box-shadow: 0 20px 40px -10px rgba(0,0,0,0.8);
+}
+.galleryItem img {
+  transition: transform 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+.galleryItem:hover img {
+  transform: scale(1.08);
+}
+
+.cyberGrid {
+  background-size: 40px 40px;
+  background-image: linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  mask-image: radial-gradient(circle at center, black 40%, transparent 80%);
+}
+
+.animateOnScroll {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94), transform 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+:global(.animate-visible) {
+  opacity: 1 !important;
+  transform: translateY(0) !important;
+}
+
+@keyframes fadeInUpPremium {
+  from { opacity: 0; transform: translateY(30px) scale(0.98); filter: blur(4px); }
+  to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+}
+.animateHero { animation: fadeInUpPremium 1s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; opacity: 0; }
+.delay100 { animation-delay: 0.1s; }
+.delay200 { animation-delay: 0.2s; }
+.delay300 { animation-delay: 0.3s; }
