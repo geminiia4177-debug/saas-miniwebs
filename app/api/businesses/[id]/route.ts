@@ -28,10 +28,20 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    if (!session?.user?.id) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
     // Esperamos a que Next.js nos desempaquete el ID
     const { id } = await params;
+    
+    // VERIFICACIÓN DE PROPIEDAD (IDOR FIX)
+    const existingBusiness = await prisma.business.findUnique({ where: { id } });
+    if (!existingBusiness) {
+      return NextResponse.json({ error: "Negocio no encontrado" }, { status: 404 });
+    }
+    const isAdmin = (session.user as any).role === 'ADMIN';
+    if (existingBusiness.userId !== session.user.id && !isAdmin) {
+      return NextResponse.json({ error: "Prohibido: No tienes permiso para editar este negocio" }, { status: 403 });
+    }
     const data = await req.json();
     
     // Limpiar el customDomain si lo envían
@@ -84,10 +94,20 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    if (!session?.user?.id) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
     // Esperamos el ID antes de borrar
     const { id } = await params;
+
+    // VERIFICACIÓN DE PROPIEDAD (IDOR FIX)
+    const existingBusiness = await prisma.business.findUnique({ where: { id } });
+    if (!existingBusiness) {
+      return NextResponse.json({ error: "Negocio no encontrado" }, { status: 404 });
+    }
+    const isAdmin = (session.user as any).role === 'ADMIN';
+    if (existingBusiness.userId !== session.user.id && !isAdmin) {
+      return NextResponse.json({ error: "Prohibido: No tienes permiso para borrar este negocio" }, { status: 403 });
+    }
 
     await prisma.business.delete({
       where: { id: id },

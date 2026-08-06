@@ -11,7 +11,14 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     redirect("/api/auth/signin");
   }
 
-  // 3. Si pasó el control, le mostramos tu hermoso panel (children)
+  // 3. Verificamos que el usuario tenga rol de ADMIN
+  const role = (session.user as any).role;
+  if (role !== 'ADMIN') {
+    // Si no es admin, no tiene nada que hacer acá, lo mandamos al dashboard
+    redirect("/dashboard");
+  }
+
+  // 4. Si pasó el control, le mostramos tu hermoso panel (children)
   return (
     <>
       {/* Agregamos una mini pastilla flotante abajo a la izquierda para que puedas cerrar sesión sin romper tu diseño */}

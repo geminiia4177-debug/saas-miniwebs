@@ -360,12 +360,17 @@ export default function ManagementTabs({
           </div>
 
           {appointments.length === 0 ? (
-            <div className="text-center py-24">
-              <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: "rgba(99,102,241,0.1)" }}>
-                <Ico n="calendar" s={28} c="text-indigo-400/50" />
+            <div className="text-center py-24 px-6 border-2 border-dashed border-white/5 rounded-3xl bg-[#131929]/50">
+              <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-5" style={{ background: "linear-gradient(135deg, rgba(99,102,241,0.2), rgba(168,85,247,0.2))" }}>
+                <Ico n="calendar" s={32} c="text-indigo-400" />
               </div>
-              <p className="text-slate-400 font-semibold mb-1">No hay turnos todavía</p>
-              <p className="text-sm text-slate-600">Cuando alguien reserve, aparecerá aquí.</p>
+              <h3 className="text-xl font-black text-white mb-2">¡Tu agenda está lista!</h3>
+              <p className="text-slate-400 max-w-sm mx-auto mb-6 text-sm">
+                Todavía no tenés turnos. ¡Empezá a compartir tu link personalizado con tus clientes en Instagram o WhatsApp para llenarla!
+              </p>
+              <a href={`https://${biz.customDomain || `${biz.subdomain}.saas-miniwebs.com`}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-sm font-bold text-white transition-transform hover:scale-105" style={{ background: "linear-gradient(135deg,#6366f1,#a855f7)" }}>
+                <Ico n="external-link" s={14} /> Ver y compartir mi página
+              </a>
             </div>
           ) : apptsViewMode === "list" ? (
             <div className="space-y-3">

@@ -168,7 +168,15 @@ export default function OrdersTablesTab({ biz, showToast }: { biz: any; showToas
 
           <div className="grid gap-4">
             {orders.length === 0 ? (
-              <div className="text-center py-16 text-slate-500 text-sm">No hay pedidos actualmente.</div>
+              <div className="text-center py-20 px-6 border-2 border-dashed border-white/5 rounded-3xl bg-[#131929]/50">
+                <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: "linear-gradient(135deg, rgba(99,102,241,0.2), rgba(236,72,153,0.2))" }}>
+                  <span className="text-2xl">🍽️</span>
+                </div>
+                <h3 className="text-lg font-bold text-white mb-2">Sin pedidos por ahora</h3>
+                <p className="text-slate-400 max-w-xs mx-auto text-sm">
+                  Los pedidos que hagan tus clientes desde el menú digital o escaneando los QR de las mesas aparecerán aquí automáticamente.
+                </p>
+              </div>
             ) : orders.map(order => (
               <div key={order.id} className="p-5 rounded-2xl bg-[#131929] border border-white/5 flex flex-col md:flex-row justify-between gap-4">
                 <div className="flex-1">
