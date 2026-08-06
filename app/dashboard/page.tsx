@@ -11,6 +11,7 @@ import CrmTab from "@/components/dashboard/CrmTab";
 import OrdersTablesTab from "@/components/dashboard/OrdersTablesTab"; // force IDE refresh
 import SupportTab from "@/components/dashboard/SupportTab";
 import BiolinksTab from "@/components/dashboard/BiolinksTab";
+import IntelligenceTab from "@/components/dashboard/IntelligenceTab";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 
 // ─────────────────────────────────────────────
@@ -499,6 +500,10 @@ export default function Dashboard() {
 
             {tab === "support" && (
               <SupportTab bizId={biz.id} showToast={pushToast} />
+            )}
+
+            {tab === "intelligence" && (
+              <IntelligenceTab businessId={biz.id} bizName={biz.name} />
             )}
           </div>
         </div>
