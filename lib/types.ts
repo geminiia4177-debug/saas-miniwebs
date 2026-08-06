@@ -97,6 +97,10 @@ export interface LayoutConfig {
   deliveryRadio?: string;
   reservaMesaActiva?: boolean;
 
+  // Chatbot config
+  chatbotEnabled?: boolean;
+  chatbotName?: string;
+
   [key: string]: any; // fallback
 }
 

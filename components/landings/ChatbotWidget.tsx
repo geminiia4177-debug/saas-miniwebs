@@ -2,16 +2,17 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { Ico } from "@/lib/constants"; // Assuming Ico is available in constants
+import { Bot } from "lucide-react";
 
 interface Message {
   role: "user" | "assistant";
   content: string;
 }
 
-export default function ChatbotWidget({ businessId, bizName, primaryColor = "#6366f1" }: { businessId: string, bizName: string, primaryColor?: string }) {
+export default function ChatbotWidget({ businessId, bizName, primaryColor = "#6366f1", chatbotName = "Asistente Virtual" }: { businessId: string, bizName: string, primaryColor?: string, chatbotName?: string }) {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
-    { role: "assistant", content: `¡Hola! Soy el asistente virtual de ${bizName}. ¿En qué te puedo ayudar hoy?` }
+    { role: "assistant", content: `¡Hola! Soy ${chatbotName} de ${bizName}. ¿En qué te puedo ayudar hoy?` }
   ]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -43,7 +44,7 @@ export default function ChatbotWidget({ businessId, bizName, primaryColor = "#63
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ businessId, messages: newMessages })
+        body: JSON.stringify({ businessId, messages: newMessages, chatbotName })
       });
 
       if (res.ok) {
@@ -67,7 +68,7 @@ export default function ChatbotWidget({ businessId, bizName, primaryColor = "#63
         className="fixed bottom-6 right-6 z-[9999] w-14 h-14 rounded-full flex items-center justify-center text-white shadow-2xl transition-transform hover:scale-110"
         style={{ background: primaryColor }}
       >
-        <Ico n={isOpen ? "x" : "message-circle"} s={24} />
+        {isOpen ? <Ico n="x" s={24} /> : <Bot size={28} />}
       </button>
 
       {/* Ventana de Chat */}
@@ -80,10 +81,10 @@ export default function ChatbotWidget({ businessId, bizName, primaryColor = "#63
           <div className="p-4 text-white flex justify-between items-center" style={{ background: primaryColor }}>
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-                <Ico n="cpu" s={16} />
+                <Bot size={18} />
               </div>
               <div>
-                <h3 className="font-bold text-sm leading-tight">Asistente Virtual</h3>
+                <h3 className="font-bold text-sm leading-tight">{chatbotName}</h3>
                 <p className="text-[10px] text-white/80">Respondemos al instante ⚡</p>
               </div>
             </div>
@@ -135,10 +136,10 @@ export default function ChatbotWidget({ businessId, bizName, primaryColor = "#63
             </button>
           </form>
           
-          <style dangerouslySetInnerHTML={{__html: `
+          <style dangerouslySetInnerHTML={{__html: \`
             @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
             .animate-slideUp { animation: slideUp 0.3s ease-out forwards; }
-          `}} />
+          \`}} />
         </div>
       )}
     </>

@@ -150,7 +150,9 @@ export default async function PublicLandingPage({ params }: { params: Promise<{ 
       <>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
         {TemplateComponent}
-        <ChatbotWidget businessId={biz.id} bizName={biz.name} primaryColor={biz.primaryColor || "#6366f1"} />
+        {biz.layoutConfig?.chatbotEnabled !== false && (
+          <ChatbotWidget businessId={biz.id} bizName={biz.name} primaryColor={biz.primaryColor || "#6366f1"} chatbotName={biz.layoutConfig?.chatbotName || "Asistente Virtual"} />
+        )}
       </>
     );
   }
@@ -166,7 +168,9 @@ export default async function PublicLandingPage({ params }: { params: Promise<{ 
   return (
     <>
       <DefaultTemplate negocio={biz} media={media} sections={sections} />
-      <ChatbotWidget businessId={biz.id} bizName={biz.name} primaryColor={biz.primaryColor || "#6366f1"} />
+      {layoutConfig.chatbotEnabled !== false && (
+        <ChatbotWidget businessId={biz.id} bizName={biz.name} primaryColor={biz.primaryColor || "#6366f1"} chatbotName={layoutConfig.chatbotName || "Asistente Virtual"} />
+      )}
     </>
   );
 }

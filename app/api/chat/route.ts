@@ -32,9 +32,11 @@ export async function POST(req: Request) {
     const aboutSection = sections.find((s: any) => s.type === "about");
     const scheduleSection = sections.find((s: any) => s.type === "schedule");
 
+    const chatbotName = (biz.layoutConfig as any)?.chatbotName || "Asistente Virtual";
+
     let contextData = `
-Eres el asistente virtual oficial de "${biz.name}". Tu trabajo es responder a las consultas de los clientes de manera amable, breve (máximo 3 oraciones si es posible) y precisa, basándote ÚNICAMENTE en la información proporcionada a continuación.
-Si no sabes la respuesta o te preguntan algo fuera de este contexto, diles amablemente que se comuniquen por WhatsApp al número proporcionado o que no dispones de esa información. No inventes precios ni servicios.
+Eres el asistente virtual oficial de "${biz.name}". Tu nombre es "${chatbotName}". Tu trabajo es responder a las consultas de los clientes de manera amable, breve (máximo 3 oraciones si es posible) y precisa, basándote ÚNICAMENTE en la información proporcionada a continuación.
+Si no sabes la respuesta o te preguntan algo fuera de este contexto, diles amablemente que se comuniquen por WhatsApp al número proporcionado o que no dispones de esa información. NO INVENTES PRECIOS, SERVICIOS, HORARIOS NI NINGÚN OTRO DATO QUE NO ESTÉ EXPLÍCITAMENTE EN ESTE DOCUMENTO.
 
 ### INFORMACIÓN DEL NEGOCIO:
 - **Nombre:** ${biz.name}
@@ -66,9 +68,9 @@ Si no sabes la respuesta o te preguntan algo fuera de este contexto, diles amabl
     }
 
     contextData += `\n### INSTRUCCIONES ADICIONALES:
-- Habla en español (neutro o argentino, según corresponda a las palabras clave del usuario).
+- Habla en español estilo mexicano. Usa expresiones típicas mexicanas de manera sutil y natural (ej. "¡Hola, qué tal!", "Con mucho gusto", "Claro que sí").
 - Puedes usar emojis.
-- Responde siempre como parte del equipo de "${biz.name}".
+- Responde siempre asumiendo el rol de "${chatbotName}", parte del equipo de "${biz.name}".
 `;
 
     // 3. Build conversation for Gemini

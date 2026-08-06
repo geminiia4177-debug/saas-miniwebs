@@ -581,6 +581,28 @@ export function ConfiguradorAvanzado({
                 className="w-full px-3 py-2 rounded-xl text-sm text-white bg-white/5 border border-white/10 focus:border-indigo-500/50 focus:outline-none resize-none"
               />
             </div>
+
+            <div className="h-px bg-white/5 mt-4" />
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-4">Chatbot de IA</p>
+            
+            <label className="flex items-center gap-3 cursor-pointer mt-2 mb-4">
+              <div onClick={() => updateLayout({ chatbotEnabled: layoutConfig.chatbotEnabled === false ? true : false })}
+                className="w-10 h-5 rounded-full relative transition-colors cursor-pointer flex-shrink-0"
+                style={{ background: layoutConfig.chatbotEnabled !== false ? "#6366f1" : "rgba(255,255,255,0.08)" }}>
+                <div className="w-4 h-4 bg-white rounded-full absolute top-0.5 transition-all" style={{ left: layoutConfig.chatbotEnabled !== false ? "22px" : "2px" }} />
+              </div>
+              <span className="text-xs text-white">Habilitar Chatbot de IA</span>
+            </label>
+
+            <div>
+              <label className="text-[9px] font-bold text-slate-500 uppercase mb-1.5 block">Nombre del Robot</label>
+              <input
+                value={layoutConfig.chatbotName || ""} placeholder="Ej: Robotito"
+                onChange={e => updateLayout({ chatbotName: e.target.value })}
+                className="w-full px-3 py-2 rounded-xl text-sm text-white bg-white/5 border border-white/10 focus:border-indigo-500/50 focus:outline-none"
+                disabled={layoutConfig.chatbotEnabled === false}
+              />
+            </div>
             
             <div className="h-px bg-white/5 mt-4" />
           </div>
