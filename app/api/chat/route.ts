@@ -155,12 +155,18 @@ Ejemplo correcto:
         }
 
         if (parts[0] === "CREAR_TURNO") {
-          const [, clientName, clientPhone, serviceName, date, time] = parts;
+          // Format: CREAR_TURNO:NombreCliente:Telefono:Servicio:YYYY-MM-DD:HH:MM
+          // NOTE: splitting by ":" means "11:00" becomes two parts (parts[5]="11", parts[6]="00")
+          const clientName = parts[1] || "";
+          const clientPhone = parts[2] || "";
+          const serviceName = parts[3] || "";
+          const date = parts[4] || "";
+          const time = `${parts[5] || "09"}:${parts[6] || "00"}`; // reconstruct HH:MM
           const result = await createAppointment(businessId, clientName, clientPhone, serviceName, date, time);
           if (result.success) {
-            responseText += `\n\n✅ ¡Tu turno quedó confirmado!\n📅 ${date} a las ${time}hs\n💈 Servicio: ${serviceName}\n\n¡Te esperamos, ${clientName}! Si necesitas cancelar o cambiar, comunícate con nosotros.`;
+            responseText += `\n\n✅ ¡Tu turno quedó confirmado!\n📅 ${date} a las ${time}hs\n💈 Servicio: ${serviceName}\n\n¡Te esperamos, ${clientName}! Si necesitas cancelar o cambiar, llámanos.`;
           } else {
-            responseText += `\n\n😕 Hubo un problema al reservar. Por favor intenta de nuevo o comunícate con nosotros.`;
+            responseText += `\n\n😕 Hubo un problema al guardar el turno. ¿Me repites los datos?`;
           }
         }
       }
