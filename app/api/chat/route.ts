@@ -92,8 +92,8 @@ Si no sabes la respuesta o te preguntan algo fuera de este contexto, diles amabl
 
     return NextResponse.json({ message: responseText });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error in Chat API:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return NextResponse.json({ error: "Internal Server Error", details: error.message, stack: error.stack }, { status: 500 });
   }
 }
