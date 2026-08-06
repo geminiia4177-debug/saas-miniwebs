@@ -76,7 +76,8 @@ Si no sabes la respuesta o te preguntan algo fuera de este contexto, diles amabl
     // 3. Prepare Gemini Chat History
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash", systemInstruction: contextData });
     
-    const formattedHistory = messages.slice(0, -1).map((msg: any) => ({
+    // Skip the first message (greeting) because Gemini chat history MUST start with a "user" role, not "model".
+    const formattedHistory = messages.slice(1, -1).map((msg: any) => ({
       role: msg.role === "assistant" ? "model" : "user",
       parts: [{ text: msg.content }],
     }));
