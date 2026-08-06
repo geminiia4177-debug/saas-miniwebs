@@ -78,6 +78,31 @@ export default function Dashboard() {
     { text: "¡Hola! ¿En qué podemos ayudarte?", isUser: false }
   ]);
   const [supportInput, setSupportInput] = useState("");
+  const [supportLoading, setSupportLoading] = useState(false);
+
+  const handleSendSupport = async () => {
+    if (!supportInput.trim() || supportLoading) return;
+    const msg = supportInput.trim();
+    const newMsgs = [...supportMsgs, { text: msg, isUser: true }];
+    setSupportMsgs(newMsgs);
+    setSupportInput("");
+    setSupportLoading(true);
+
+    try {
+      const res = await fetch("/api/support", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ businessId: biz?.id, businessName: biz?.name, messages: newMsgs })
+      });
+      const data = await res.json();
+      if (data.message) {
+        setSupportMsgs(prev => [...prev, { text: data.message, isUser: false }]);
+      }
+    } catch {
+      setSupportMsgs(prev => [...prev, { text: "Error de conexión con el soporte.", isUser: false }]);
+    }
+    setSupportLoading(false);
+  };
 
   // ── PAGOS MODAL STATE ──
   const [payModalOpen, setPayModalOpen] = useState(false);
@@ -523,10 +548,16 @@ export default function Dashboard() {
             </div>
             <div className="flex-1 p-4 overflow-y-auto flex flex-col gap-3 custom-scrollbar bg-[#050810]">
               {supportMsgs.map((m, i) => (
-                <div key={i} className={`max-w-[85%] p-3 rounded-xl text-sm ${m.isUser ? "bg-indigo-500/20 text-indigo-100 self-end rounded-br-sm border border-indigo-500/30" : "bg-white/5 text-slate-300 self-start rounded-bl-sm border border-white/10"}`}>
+                <div key={i} className={`max-w-[85%] p-3 rounded-xl text-sm ${m.isUser ? "bg-indigo-500/20 text-indigo-100 self-end rounded-br-sm border border-indigo-500/30" : "bg-white/5 text-slate-300 self-start rounded-bl-sm border border-white/10 whitespace-pre-line"}`}>
                   {m.text}
                 </div>
               ))}
+              {supportLoading && (
+                <div className="max-w-[85%] p-3 rounded-xl text-sm bg-white/5 text-slate-400 self-start rounded-bl-sm border border-white/10 flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin"></div>
+                  Escribiendo...
+                </div>
+              )}
             </div>
             <div className="p-3 bg-[#131929] border-t border-white/5 flex gap-2">
               <input 
@@ -534,40 +565,16 @@ export default function Dashboard() {
                 value={supportInput}
                 onChange={e => setSupportInput(e.target.value)}
                 onKeyDown={e => {
-                  if (e.key === "Enter" && supportInput.trim()) {
-                    const msg = supportInput.trim();
-                    setSupportMsgs(prev => [...prev, { text: msg, isUser: true }]);
-                    setSupportInput("");
-                    fetch("/api/support", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ businessId: biz?.id, businessName: biz?.name, message: msg })
-                    });
-                    setTimeout(() => {
-                      setSupportMsgs(prev => [...prev, { text: "Recibimos tu mensaje. Un asesor lo revisará a la brevedad.", isUser: false }]);
-                    }, 1500);
-                  }
+                  if (e.key === "Enter") handleSendSupport();
                 }}
+                disabled={supportLoading}
                 placeholder="Escribe tu consulta..."
-                className="flex-1 bg-[#050810] text-sm text-white px-3 py-2 rounded-lg border border-white/10 focus:border-indigo-500 focus:outline-none"
+                className="flex-1 bg-[#050810] text-sm text-white px-3 py-2 rounded-lg border border-white/10 focus:border-indigo-500 focus:outline-none disabled:opacity-50"
               />
               <button 
-                onClick={() => {
-                  if (supportInput.trim()) {
-                    const msg = supportInput.trim();
-                    setSupportMsgs(prev => [...prev, { text: msg, isUser: true }]);
-                    setSupportInput("");
-                    fetch("/api/support", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ businessId: biz?.id, businessName: biz?.name, message: msg })
-                    });
-                    setTimeout(() => {
-                      setSupportMsgs(prev => [...prev, { text: "Recibimos tu mensaje. Un asesor lo revisará a la brevedad.", isUser: false }]);
-                    }, 1500);
-                  }
-                }}
-                className="w-10 h-10 bg-indigo-500 rounded-lg flex items-center justify-center text-white hover:bg-indigo-400 transition-colors"
+                onClick={handleSendSupport}
+                disabled={supportLoading}
+                className="w-10 h-10 bg-indigo-500 rounded-lg flex items-center justify-center text-white hover:bg-indigo-400 transition-colors disabled:opacity-50"
               >
                 <Ico n="send" s={16} />
               </button>
