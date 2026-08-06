@@ -3,6 +3,7 @@
 import React, { useState, useRef, useCallback } from "react";
 import { Biz, MediaItem, Appointment, Ico, DEFAULT_HOURS } from "@/lib/constants";
 import { DropZone } from "./editor/DropZone";
+import IntelligenceTab from "./IntelligenceTab";
 
 // ─────────────────────────────────────────────
 // IMGBB UPLOAD (Aislado para el panel de gestión)
@@ -802,6 +803,11 @@ export default function ManagementTabs({
             </button>
           </div>
         </div>
+      )}
+
+      {/* ── INTELIGENCIA ── */}
+      {tab === "intelligence" && (
+        <IntelligenceTab businessId={biz.id} bizName={biz.name} />
       )}
 
       {/* MODAL ELIMINAR TIENDA */}

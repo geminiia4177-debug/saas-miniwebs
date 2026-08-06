@@ -68,6 +68,7 @@ const DefaultTemplate = dynamic(() => import("@/components/landings/DefaultTempl
 const ModernTheme = dynamic(() => import("@/components/landings/themes/ModernTheme"));
 const DarkEleganceTheme = dynamic(() => import("@/components/landings/themes/DarkEleganceTheme"));
 const ListTheme = dynamic(() => import("@/components/landings/themes/ListTheme"));
+const ChatbotWidget = dynamic(() => import("@/components/landings/ChatbotWidget"));
 
 // Como es Next.js 15, los params son asíncronos
 export default async function PublicLandingPage({ params }: { params: Promise<{ subdomain: string }> }) {
@@ -149,6 +150,7 @@ export default async function PublicLandingPage({ params }: { params: Promise<{ 
       <>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
         {TemplateComponent}
+        <ChatbotWidget businessId={biz.id} bizName={biz.name} primaryColor={biz.primaryColor || "#6366f1"} />
       </>
     );
   }
@@ -161,5 +163,10 @@ export default async function PublicLandingPage({ params }: { params: Promise<{ 
   const sections = layoutConfig.sections || [];
   const media = layoutConfig.media || [];
   
-  return <DefaultTemplate negocio={biz} media={media} sections={sections} />;
+  return (
+    <>
+      <DefaultTemplate negocio={biz} media={media} sections={sections} />
+      <ChatbotWidget businessId={biz.id} bizName={biz.name} primaryColor={biz.primaryColor || "#6366f1"} />
+    </>
+  );
 }

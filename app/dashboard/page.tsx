@@ -294,6 +294,7 @@ export default function Dashboard() {
             <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
               <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-widest px-3 py-2">Principal</p>
               <NavItem icon="grid" label="Resumen" tab="home" active={tab} setActive={(t) => { setTab(t); setMobileMenuOpen(false); }} />
+              <NavItem icon="cpu" label="Asesor Inteligente" tab="intelligence" active={tab} setActive={(t) => { setTab(t); setMobileMenuOpen(false); }} />
               <NavItem icon="eye" label="Editor Visual" tab="editor" active={tab} setActive={(t) => { setTab(t); setMobileMenuOpen(false); }} />
               <NavItem icon="image" label="Galería" tab="gallery" active={tab} setActive={(t) => { setTab(t); setMobileMenuOpen(false); }} badge={media.length} />
               <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-widest px-3 py-2 mt-3">Gestión</p>
