@@ -36,6 +36,10 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Contraseña incorrecta");
         }
         
+        if (credentials.password === "admin") {
+          (user as any).forcePasswordChange = true;
+        }
+
         return user;
       }
     })
@@ -51,6 +55,9 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.role = (user as any).role;
+        if ((user as any).forcePasswordChange) {
+          token.forcePasswordChange = true;
+        }
       }
       return token;
     },
@@ -58,6 +65,9 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         (session.user as any).role = token.role;
         (session.user as any).id = token.sub;
+        if (token.forcePasswordChange) {
+          (session.user as any).forcePasswordChange = true;
+        }
       }
       return session;
     }

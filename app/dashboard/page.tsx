@@ -11,6 +11,7 @@ import CrmTab from "@/components/dashboard/CrmTab";
 import OrdersTablesTab from "@/components/dashboard/OrdersTablesTab"; // force IDE refresh
 import SupportTab from "@/components/dashboard/SupportTab";
 import BiolinksTab from "@/components/dashboard/BiolinksTab";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 
 // ─────────────────────────────────────────────
 // IMGBB UPLOAD (Para la subida general de la galería)
@@ -81,6 +82,12 @@ export default function Dashboard() {
   const [payModalOpen, setPayModalOpen] = useState(false);
   const [payStatus, setPayStatus] = useState<"idle"|"sending"|"sent">("idle");
 
+  // ── ONBOARDING STATE ──
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingStep, setOnboardingStep] = useState(1);
+  const [onboardingData, setOnboardingData] = useState({ name: "", cbu: "", alias: "", phone: "" });
+  const logoRef = React.useRef<HTMLInputElement>(null);
+
   const pushToast = (msg: string, type: "success" | "error" | "info" | "warn" = "info") => {
     setToast({ msg, type: type as any });
     setTimeout(() => setToast(null), 3000);
@@ -127,6 +134,12 @@ export default function Dashboard() {
             setSections(merged);
           }
           if (d.business.layoutConfig?.media) setMedia(d.business.layoutConfig.media);
+          
+          // Check Onboarding
+          if (d.business && !d.business.layoutConfig?.onboarded) {
+            setShowOnboarding(true);
+            setOnboardingData(prev => ({ ...prev, name: d.business.name || "", phone: d.business.phone || "" }));
+          }
         }
         setLoading(false);
       })
@@ -215,7 +228,7 @@ export default function Dashboard() {
   };
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: "#070b12" }}>
+    <div className="min-h-[100dvh] flex items-center justify-center" style={{ background: "#070b12" }}>
       <div className="text-center">
         <div className="w-12 h-12 rounded-2xl mx-auto mb-4 flex items-center justify-center animate-pulse" style={{ background: "linear-gradient(135deg,#6366f1,#a855f7)" }}>
           <Ico n="zap" s={20} c="text-white" />
@@ -226,7 +239,7 @@ export default function Dashboard() {
   );
 
   if (!biz) return (
-    <div className="min-h-screen flex items-center justify-center bg-[#070b12]">
+    <div className="min-h-[100dvh] flex items-center justify-center bg-[#070b12]">
       <div className="text-center p-8 border border-white/10 rounded-2xl bg-white/5">
         <h2 className="text-xl text-white font-bold mb-2">Acceso Restringido 🛑</h2>
         <p className="text-slate-400 text-sm">Tu cuenta no tiene un negocio asignado.<br/>Contactá a la administración para obtener tu acceso.</p>
@@ -237,7 +250,7 @@ export default function Dashboard() {
   const pending = appointments.filter(a => a.status === "PENDING");
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row" style={{ background: "#070b12", fontFamily: "'Plus Jakarta Sans',system-ui,sans-serif" }}>
+    <div className="min-h-[100dvh] flex flex-col md:flex-row" style={{ background: "#070b12", fontFamily: "'Plus Jakarta Sans',system-ui,sans-serif" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&display=swap');
         * { box-sizing: border-box; }
@@ -311,7 +324,7 @@ export default function Dashboard() {
         copiedUrl={copiedUrl}
       />
 
-      <main className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden custom-scrollbar bg-[#080a10]">
+      <main className="flex-1 flex flex-col min-w-0 h-[100dvh] overflow-hidden custom-scrollbar bg-[#080a10]">
         
         {/* ALERT BANNER GLOBAL */}
         {globalAlert && (
@@ -322,7 +335,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-6 pb-24 md:pb-6 relative" style={{ background: "radial-gradient(ellipse at 50% -20%, rgba(99,102,241,0.05), transparent 60%)" }}>
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-6 pb-[calc(env(safe-area-inset-bottom)+6rem)] md:pb-6 relative" style={{ background: "radial-gradient(ellipse at 50% -20%, rgba(99,102,241,0.05), transparent 60%)" }}>
           
           <div className="max-w-[1400px] mx-auto h-full flex flex-col">
             {/* ── HOME (Overview) ── */}
@@ -382,6 +395,65 @@ export default function Dashboard() {
                     </div>
                   </div>
                 </div>
+
+                {/* ── CHARTS (ANALYTICS) ── */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
+                  {/* Bar Chart */}
+                  <div className="rounded-2xl p-6 relative overflow-hidden" style={{ background: "linear-gradient(135deg,#131929,#111825)", border: "1px solid rgba(255,255,255,0.05)" }}>
+                    <h3 className="text-white font-bold mb-4 flex items-center gap-2"><Ico n="bar-chart-2" s={16} c="text-indigo-400"/> Actividad (Últimos 7 días)</h3>
+                    <div className="h-64">
+                      {(() => {
+                        const last7Days = Array.from({length: 7}, (_, i) => {
+                          const d = new Date(); d.setDate(d.getDate() - (6 - i));
+                          return { name: d.toLocaleDateString('es-AR', {weekday: 'short'}), dateStr: d.toDateString(), turnos: 0 };
+                        });
+                        appointments.forEach(a => {
+                          const aDate = new Date(a.date).toDateString();
+                          const day = last7Days.find(d => d.dateStr === aDate);
+                          if (day) day.turnos++;
+                        });
+                        return (
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={last7Days} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                              <XAxis dataKey="name" stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} />
+                              <YAxis stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} />
+                              <Tooltip cursor={{fill: 'rgba(255,255,255,0.05)'}} contentStyle={{background: '#1e293b', border: 'none', borderRadius: '8px', color: '#fff'}} />
+                              <Bar dataKey="turnos" fill="#6366f1" radius={[4,4,0,0]} />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        );
+                      })()}
+                    </div>
+                  </div>
+
+                  {/* Pie Chart */}
+                  <div className="rounded-2xl p-6 relative overflow-hidden" style={{ background: "linear-gradient(135deg,#131929,#111825)", border: "1px solid rgba(255,255,255,0.05)" }}>
+                    <h3 className="text-white font-bold mb-4 flex items-center gap-2"><Ico n="pie-chart" s={16} c="text-purple-400"/> Servicios Populares</h3>
+                    <div className="h-64">
+                      {(() => {
+                        const servicesMap: any = {};
+                        appointments.forEach(a => {
+                          const s = a.serviceName || "Otros";
+                          servicesMap[s] = (servicesMap[s] || 0) + 1;
+                        });
+                        const data = Object.keys(servicesMap).map(k => ({ name: k, value: servicesMap[k] })).sort((a,b) => b.value - a.value).slice(0, 5);
+                        const COLORS = ['#6366f1', '#a855f7', '#ec4899', '#f43f5e', '#f59e0b'];
+                        if (data.length === 0) return <div className="h-full flex items-center justify-center text-slate-500 text-sm">Sin datos aún</div>;
+                        return (
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <Pie data={data} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value" stroke="none">
+                                {data.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
+                              </Pie>
+                              <Tooltip contentStyle={{background: '#1e293b', border: 'none', borderRadius: '8px', color: '#fff'}} itemStyle={{color: '#fff'}} />
+                            </PieChart>
+                          </ResponsiveContainer>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                </div>
+
               </div>
             )}
 
@@ -584,6 +656,116 @@ export default function Dashboard() {
         </div>
       )}
 
+      {/* ── ONBOARDING MODAL ── */}
+      {showOnboarding && (
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-[#070b12]/95 backdrop-blur-xl p-4">
+          <div className="bg-[#111825] w-full max-w-xl rounded-3xl border border-indigo-500/20 shadow-2xl p-8 relative overflow-hidden animate-slideUp">
+            {/* Decors */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
+            <div className="absolute bottom-0 left-0 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl -ml-20 -mb-20 pointer-events-none" />
+            
+            <div className="relative z-10">
+              <div className="flex justify-between items-center mb-8">
+                <div>
+                  <h2 className="text-2xl font-black text-white">Configuración Inicial</h2>
+                  <p className="text-indigo-300 text-sm mt-1">Paso {onboardingStep} de 2</p>
+                </div>
+                <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center">
+                  <Ico n={onboardingStep === 1 ? "image" : "check-circle"} s={24} c="text-indigo-400" />
+                </div>
+              </div>
+
+              {onboardingStep === 1 && (
+                <div className="space-y-6">
+                  <div className="text-center p-6 border border-white/10 rounded-2xl bg-white/5 border-dashed">
+                    <p className="text-sm font-bold text-white mb-4">Sube el logo de tu negocio</p>
+                    <div className="flex justify-center mb-4">
+                      {biz.logoUrl ? (
+                        <img src={biz.logoUrl} className="w-24 h-24 rounded-2xl object-cover shadow-lg" alt="logo" />
+                      ) : (
+                        <div className="w-24 h-24 rounded-2xl bg-white/10 flex items-center justify-center text-3xl font-black text-white shadow-lg">
+                          {biz.name.charAt(0)}
+                        </div>
+                      )}
+                    </div>
+                    <input ref={logoRef} type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      pushToast("Subiendo logo...", "info");
+                      try {
+                        const url = await uploadToImgBB(file);
+                        setBiz((prev: any) => prev ? { ...prev, logoUrl: url } : prev);
+                        pushToast("Logo subido con éxito", "success");
+                      } catch {
+                        pushToast("Error al subir", "error");
+                      }
+                    }} />
+                    <button onClick={() => logoRef.current?.click()} className="px-5 py-2.5 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-bold transition-colors">
+                      Elegir Imagen
+                    </button>
+                  </div>
+                  <button onClick={() => setOnboardingStep(2)} className="w-full py-3.5 rounded-xl bg-white text-black hover:bg-gray-100 font-bold transition-colors">
+                    Continuar
+                  </button>
+                </div>
+              )}
+
+              {onboardingStep === 2 && (
+                <div className="space-y-5">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Teléfono / WhatsApp</label>
+                    <input type="text" value={onboardingData.phone} onChange={e => setOnboardingData({...onboardingData, phone: e.target.value})} 
+                      className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white focus:border-indigo-500 focus:outline-none" placeholder="Ej: 1154321234" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">CBU (Opcional)</label>
+                      <input type="text" value={onboardingData.cbu} onChange={e => setOnboardingData({...onboardingData, cbu: e.target.value})} 
+                        className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white focus:border-indigo-500 focus:outline-none" placeholder="00000..." />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Alias (Opcional)</label>
+                      <input type="text" value={onboardingData.alias} onChange={e => setOnboardingData({...onboardingData, alias: e.target.value})} 
+                        className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white focus:border-indigo-500 focus:outline-none" placeholder="MI.ALIAS" />
+                    </div>
+                  </div>
+                  <div className="flex gap-3 pt-2">
+                    <button onClick={() => setOnboardingStep(1)} className="px-6 py-3.5 rounded-xl bg-white/5 hover:bg-white/10 text-white font-bold transition-colors">
+                      Atrás
+                    </button>
+                    <button onClick={async () => {
+                      setSaving(true);
+                      try {
+                        const paymentData = { cbu: onboardingData.cbu, alias: onboardingData.alias, titular: "" };
+                        await fetch(`/api/businesses/${biz.id}`, {
+                          method: "PUT",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ 
+                            ...biz, 
+                            phone: onboardingData.phone,
+                            paymentData,
+                            layoutConfig: { ...(biz.layoutConfig || {}), onboarded: true } 
+                          }),
+                        });
+                        setBiz((prev: any) => ({ ...prev, phone: onboardingData.phone, paymentData, layoutConfig: { ...prev.layoutConfig, onboarded: true } }));
+                        setShowOnboarding(false);
+                        pushToast("¡Configuración completada! 🎉", "success");
+                      } catch (e) {
+                        pushToast("Error guardando datos", "error");
+                      }
+                      setSaving(false);
+                    }} disabled={saving} className="flex-1 py-3.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 text-white font-bold transition-colors shadow-lg shadow-indigo-500/20">
+                      {saving ? "Finalizando..." : "Finalizar y Entrar"}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TOAST NOTIFICATIONS */}
       <ToastBar toast={toast} />
     </div>
   );

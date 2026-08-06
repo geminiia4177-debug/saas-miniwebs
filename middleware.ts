@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { getToken } from "next-auth/jwt";
 
-export function middleware(req: NextRequest) {
+export async function middleware(req: NextRequest) {
   const url = req.nextUrl;
   
   // Si la ruta ya empieza con /api, /_next, etc., la ignoramos
@@ -19,6 +20,13 @@ export function middleware(req: NextRequest) {
 
   // Si estamos en la página principal o panel admin de la plataforma
   if (isLocalBase || isProdBase || isVercelBase) {
+    // Si intenta acceder al dashboard, verificamos cambio de contraseña
+    if (url.pathname.startsWith("/dashboard") && url.pathname !== "/dashboard/force-password-change") {
+      const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+      if (token?.forcePasswordChange) {
+        return NextResponse.redirect(new URL("/dashboard/force-password-change", req.url));
+      }
+    }
     return NextResponse.next();
   }
 

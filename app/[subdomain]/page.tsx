@@ -16,15 +16,35 @@ export async function generateMetadata({ params }: { params: Promise<{ subdomain
 
   if (!biz) return {};
 
+  const defaultImage = "https://saas-miniwebs.com/default-logo.jpg";
+  const imageUrl = biz.logoUrl || defaultImage;
+  const domainUrl = biz.customDomain ? `https://${biz.customDomain}` : `https://${subdomain}.saas-miniwebs.com`;
+
   return {
-    title: biz.name,
-    description: biz.description || `Bienvenido a ${biz.name}`,
+    title: `${biz.name} | Reserva tu turno`,
+    description: biz.description || `Bienvenido a ${biz.name}. Reserva tu turno online de forma rápida y sencilla.`,
+    keywords: [biz.name, biz.type || "negocio", "turnos", "reservas", "online"],
+    robots: "index, follow",
     openGraph: {
-      title: biz.name,
-      description: biz.description || `Bienvenido a ${biz.name}`,
-      url: `https://${subdomain}.saas-miniwebs.com`,
+      title: `${biz.name} | Reserva tu turno`,
+      description: biz.description || `Reserva tu turno en ${biz.name} en pocos segundos.`,
+      url: domainUrl,
       siteName: biz.name,
-      images: biz.logoUrl ? [{ url: biz.logoUrl }] : [],
+      images: [
+        {
+          url: imageUrl,
+          width: 1200,
+          height: 630,
+          alt: `Logo de ${biz.name}`,
+        }
+      ],
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: biz.name,
+      description: biz.description || `Reserva online en ${biz.name}.`,
+      images: [imageUrl],
     },
   };
 }

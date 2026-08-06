@@ -80,6 +80,32 @@ export default function ManagementTabs({
     }
   };
 
+  // Delete Store State
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+
+  const handleDeleteStore = async () => {
+    if (deleteConfirmText !== "ELIMINAR") {
+      return showToast("Debes escribir ELIMINAR para confirmar", "error");
+    }
+    setDeleteLoading(true);
+    try {
+      const res = await fetch("/api/business/delete", { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Error al eliminar la tienda");
+      }
+      showToast("Tienda eliminada. Redirigiendo...", "success");
+      setTimeout(() => {
+        window.location.href = "/";
+      }, 2000);
+    } catch(e: any) {
+      showToast(e.message, "error");
+      setDeleteLoading(false);
+    }
+  };
+
   // Completar Modal State
   const [completingId, setCompletingId] = useState<string | null>(null);
   const [employees, setEmployees] = useState<any[]>([]);
@@ -616,6 +642,22 @@ export default function ManagementTabs({
               </button>
             </div>
 
+            {/* Zona de Peligro */}
+            <div className="rounded-2xl p-5" style={{ background: "linear-gradient(135deg,rgba(239,68,68,0.05),rgba(239,68,68,0.1))", border: "1px solid rgba(239,68,68,0.2)" }}>
+              <p className="text-[11px] font-bold text-red-400 uppercase tracking-widest mb-2 flex items-center gap-2">
+                <Ico n="alert-triangle" s={14}/> Zona de Peligro
+              </p>
+              <p className="text-xs text-red-400/80 mb-4">
+                Atención: Al eliminar tu tienda perderás todos los datos, turnos y configuraciones. Esta acción es irreversible y está alineada con las leyes de eliminación de datos.
+              </p>
+              <button 
+                onClick={() => setDeleteModalOpen(true)}
+                className="px-5 py-2.5 bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 rounded-xl text-sm font-bold transition-colors"
+              >
+                Eliminar mi tienda
+              </button>
+            </div>
+
             {/* Horarios de Atención */}
             <div className="rounded-2xl p-5" style={{ background: "linear-gradient(135deg,#131929,#111825)", border: "1px solid rgba(255,255,255,0.06)" }}>
               <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-4">Horarios de Atención</p>
@@ -756,6 +798,46 @@ export default function ManagementTabs({
           </div>
         </div>
       )}
-    </>
+
+      {/* MODAL ELIMINAR TIENDA */}
+      {deleteModalOpen && (
+        <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center p-4">
+          <div className="bg-[#131929] w-full max-w-md rounded-2xl border border-red-500/30 shadow-2xl p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold text-red-400 flex items-center gap-2">
+                <Ico n="alert-triangle" s={20} /> Eliminar Tienda
+              </h3>
+              <button onClick={() => setDeleteModalOpen(false)} className="text-slate-400 hover:text-white transition-colors">
+                <Ico n="x" s={20} />
+              </button>
+            </div>
+            <p className="text-sm text-slate-300 mb-4">
+              Esta acción es <strong className="text-red-400">irreversible</strong>. Todos tus turnos, empleados, ventas y configuraciones serán eliminados de forma permanente.
+            </p>
+            <p className="text-xs text-slate-400 mb-2">Para confirmar, escribe <strong>ELIMINAR</strong> a continuación:</p>
+            <input 
+              type="text" 
+              value={deleteConfirmText} 
+              onChange={e => setDeleteConfirmText(e.target.value)} 
+              className="w-full px-3 py-2 bg-black/30 border border-red-500/30 text-white rounded-xl focus:border-red-500 focus:outline-none text-sm mb-4" 
+              placeholder="ELIMINAR" 
+            />
+            <div className="flex gap-3">
+              <button onClick={() => setDeleteModalOpen(false)} className="flex-1 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-white text-sm font-bold transition-colors">
+                Cancelar
+              </button>
+              <button 
+                onClick={handleDeleteStore} 
+                disabled={deleteLoading || deleteConfirmText !== "ELIMINAR"} 
+                className="flex-1 py-3 rounded-xl bg-red-500/80 hover:bg-red-500 text-white text-sm font-bold transition-colors disabled:opacity-50"
+              >
+                {deleteLoading ? "Eliminando..." : "Sí, eliminar tienda"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+    </div>
   );
 }
