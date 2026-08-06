@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
+import { prisma } from "@/lib/db";
 
 export async function POST(req: Request) {
   try {
@@ -56,18 +57,17 @@ Eres amable, claro y resolutivo.
       
       console.log("🚨 TRANSFERENCIA A ASESOR HUMANO SOLICITADA:", { businessId, businessName });
       
-      // Integración CallMeBot
-      const adminPhone = process.env.SAAS_ADMIN_PHONE;
-      const adminApiKey = process.env.SAAS_ADMIN_APIKEY;
+      // Guardar en la base de datos para que aparezca en el Panel de Administrador
+      const historyText = conversation.map((m: any) => `${m.isUser ? 'Usuario' : 'IA'}: ${m.text}`).join('\n');
       
-      if (adminPhone && adminApiKey) {
-        const text = encodeURIComponent(`Soporte de ${businessName} requiere asistencia. Último mensaje: ${conversation[conversation.length - 1].text}`);
-        fetch(`https://api.callmebot.com/whatsapp.php?phone=${adminPhone}&text=${text}&apikey=${adminApiKey}`)
-          .then(res => console.log("Notificación enviada a WhatsApp:", res.status))
-          .catch(err => console.error("Error enviando WhatsApp:", err));
-      } else {
-        console.warn("Faltan variables de entorno SAAS_ADMIN_PHONE y SAAS_ADMIN_APIKEY para notificar por WhatsApp.");
-      }
+      await prisma.message.create({
+        data: {
+          businessId,
+          content: `[TRANSFERIDO DESDE IA]\n\nHistorial:\n${historyText}`,
+          senderType: "USER",
+          isRead: false
+        }
+      });
     }
 
     return NextResponse.json({ success: true, message: responseText, transferred });
