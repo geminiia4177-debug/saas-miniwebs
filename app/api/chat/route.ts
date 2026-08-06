@@ -2,13 +2,14 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+
 
 export async function POST(req: Request) {
   try {
     if (!process.env.GEMINI_API_KEY) {
       return NextResponse.json({ error: "API Key no configurada." }, { status: 500 });
     }
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
     const body = await req.json();
     const { businessId, messages } = body;

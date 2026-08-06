@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+
 
 export async function POST(req: Request) {
   try {
@@ -14,8 +14,9 @@ export async function POST(req: Request) {
     }
 
     if (!process.env.GEMINI_API_KEY) {
-      return NextResponse.json({ error: "Falta configurar GEMINI_API_KEY en el servidor." }, { status: 500 });
+      return NextResponse.json({ error: "GEMINI_API_KEY no está configurada." }, { status: 500 });
     }
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
     const body = await req.json();
     const { businessId, campaignType, context, clientName } = body;
