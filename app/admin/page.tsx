@@ -556,6 +556,17 @@ function AdminWhatsApp() {
       
       {!statusData && <p style={{ color: "var(--t2)" }}>Consultando estado...</p>}
 
+      {statusData?.status === 'NOT_INITIALIZED' && (
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+          <div style={{ color: "var(--yellow)", fontSize: "40px", marginBottom: "16px" }}>⚠</div>
+          <p style={{ color: "var(--red)", fontWeight: "bold", fontSize: "16px", marginBottom: "8px" }}>WhatsApp no está inicializado</p>
+          <p style={{ color: "var(--t2)", fontSize: "14px", maxWidth: "400px" }}>
+            El bot de WhatsApp (Baileys) requiere ejecutarse en un entorno Node.js persistente (VPS, Servidor Dedicado, etc.). 
+            Si estás alojando esta aplicación en Vercel, las funciones "Serverless" no soportan procesos en segundo plano ni conexiones WebSocket constantes, por lo que el bot no funcionará.
+          </p>
+        </div>
+      )}
+
       {statusData?.status === 'STARTING' && (
         <p style={{ color: "var(--accent)", animation: "pulse 2s infinite" }}>Iniciando cliente de WhatsApp...</p>
       )}
