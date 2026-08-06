@@ -27,12 +27,15 @@ export async function POST(req: Request) {
     }
 
     // 2. Prepare Context (System Prompt)
-    const sections = (biz.layoutConfig as any)?.sections || [];
+    const layoutConfig = (biz.layoutConfig as any) || {};
+    const sections = layoutConfig.sections || [];
     const servicesSection = sections.find((s: any) => s.type === "services");
     const aboutSection = sections.find((s: any) => s.type === "about");
     const scheduleSection = sections.find((s: any) => s.type === "schedule");
 
-    const chatbotName = (biz.layoutConfig as any)?.chatbotName || "Asistente Virtual";
+    const chatbotName = layoutConfig.chatbotName || "Asistente Virtual";
+    const address = (biz as any).address || layoutConfig.address || "No especificada";
+    const phone = biz.phone || layoutConfig.whatsapp || "No especificado";
 
     let contextData = `
 Eres el asistente virtual oficial de "${biz.name}". Tu nombre es "${chatbotName}". Tu trabajo es responder a las consultas de los clientes de manera amable, breve (máximo 3 oraciones si es posible) y precisa, basándote ÚNICAMENTE en la información proporcionada a continuación.
@@ -42,20 +45,65 @@ Si no sabes la respuesta o te preguntan algo fuera de este contexto, diles amabl
 - **Nombre:** ${biz.name}
 - **Tipo de Negocio:** ${biz.type}
 - **Descripción General:** ${biz.description || "No especificada"}
-- **Teléfono/WhatsApp de contacto:** ${biz.phone || "No especificado"}
+- **Dirección / Ubicación:** ${address}
+- **Teléfono/WhatsApp de contacto:** ${phone}
 `;
 
-    if (servicesSection && servicesSection.items) {
-      contextData += `\n### SERVICIOS OFRECIDOS:\n`;
+    // ── SERVICIOS / PRODUCTOS ──
+    let hasServices = false;
+    contextData += `\n### SERVICIOS Y PRODUCTOS DISPONIBLES:\n`;
+    
+    if (servicesSection && servicesSection.items?.length > 0) {
+      hasServices = true;
       servicesSection.items.forEach((item: any) => {
         contextData += `- ${item.title || item.name}: ${item.price ? '$' + item.price : 'Consultar precio'}. ${item.desc || ""}\n`;
       });
     }
-
-    if (scheduleSection) {
-      contextData += `\n### HORARIOS:\n${scheduleSection.content || "Ver en la sección de reservas"}\n`;
+    const allServices = [
+      ...(layoutConfig.barberiaServices || []),
+      ...(layoutConfig.barberiaProducts || []),
+      ...(layoutConfig.canchaTarifas || []),
+      ...(layoutConfig.clinicaServices || []),
+      ...(layoutConfig.tallerServices || [])
+    ];
+    if (allServices.length > 0) {
+      hasServices = true;
+      allServices.filter((s: any) => s.active !== false).forEach((s: any) => {
+        contextData += `- ${s.name}: $${s.price}. ${s.duration ? 'Duración: ' + s.duration + ' min.' : ''} ${s.description || s.desc || ""}\n`;
+      });
     }
+    if (layoutConfig.menuCategorias?.length > 0) {
+      hasServices = true;
+      layoutConfig.menuCategorias.forEach((cat: any) => {
+        contextData += `\n**Categoría: ${cat.nombre}**\n`;
+        cat.products?.forEach((p: any) => {
+          if (p.disponible !== false) {
+            contextData += `- ${p.nombre}: $${p.precio}. ${p.descripcion || ""}\n`;
+          }
+        });
+      });
+    }
+    if (!hasServices) contextData += `(No hay servicios configurados todavía)\n`;
 
+    // ── HORARIOS ──
+    contextData += `\n### HORARIOS:\n`;
+    let hasHours = false;
+    if (layoutConfig.hours) {
+      hasHours = true;
+      Object.entries(layoutConfig.hours).forEach(([day, data]: [string, any]) => {
+        if (data.open) {
+          contextData += `- ${day.charAt(0).toUpperCase() + day.slice(1)}: ${data.from} a ${data.to}\n`;
+        } else {
+          contextData += `- ${day.charAt(0).toUpperCase() + day.slice(1)}: Cerrado\n`;
+        }
+      });
+    } else if (scheduleSection) {
+      hasHours = true;
+      contextData += `${scheduleSection.content || "Ver en la sección de reservas"}\n`;
+    }
+    if (!hasHours) contextData += `(Solicitar disponibilidad por WhatsApp)\n`;
+
+    // ── ACERCA DE ──
     if (aboutSection) {
       contextData += `\n### ACERCA DE NOSOTROS:\n${aboutSection.content || ""}\n`;
     }
