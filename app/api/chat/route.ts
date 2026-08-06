@@ -125,7 +125,7 @@ Ejemplo de respuesta con comando:
 
     // 7. Generate AI response
     const aiResponse = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
+      model: "gemini-3.5-flash-lite",
       contents: fullPrompt,
     });
 
