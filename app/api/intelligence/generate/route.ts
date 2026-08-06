@@ -2,9 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
-
+import { GoogleGenAI } from "@google/genai";
 
 export async function POST(req: Request) {
   try {
@@ -16,7 +14,7 @@ export async function POST(req: Request) {
     if (!process.env.GEMINI_API_KEY) {
       return NextResponse.json({ error: "GEMINI_API_KEY no está configurada." }, { status: 500 });
     }
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
     const body = await req.json();
     const { businessId, campaignType, context, clientName } = body;
@@ -40,8 +38,6 @@ export async function POST(req: Request) {
     }
 
     // Prepare prompt
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
     let prompt = `Actúa como un experto en marketing para un negocio llamado "${business.name}" (Rubro: ${business.type}).
 Tu objetivo es escribir un mensaje persuasivo para enviar por WhatsApp a un cliente.
 El mensaje debe ser corto, amigable, usar lenguaje argentino/neutro, incluir algunos emojis relevantes y tener un llamado a la acción claro (ej: reservar un turno).
@@ -62,9 +58,12 @@ Escribe un mensaje agradeciéndole por su fidelidad y regalándole un upgrade en
       prompt += `Contexto: Escribe una promoción atractiva para que el cliente ${clientName || ""} reserve un turno esta semana.`;
     }
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
+    const response = await ai.models.generateContent({
+      model: "gemini-3.5-flash-lite",
+      contents: prompt,
+    });
+
+    const text = response.text || "No se pudo generar el mensaje.";
 
     return NextResponse.json({ message: text });
 

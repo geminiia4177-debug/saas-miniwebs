@@ -1,15 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
-
+import { GoogleGenAI } from "@google/genai";
 
 export async function POST(req: Request) {
   try {
     if (!process.env.GEMINI_API_KEY) {
       return NextResponse.json({ error: "API Key no configurada." }, { status: 500 });
     }
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
     const body = await req.json();
     const { businessId, messages } = body;
@@ -73,27 +71,32 @@ Si no sabes la respuesta o te preguntan algo fuera de este contexto, diles amabl
 - Responde siempre como parte del equipo de "${biz.name}".
 `;
 
-    // 3. Prepare Gemini Chat History
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash", systemInstruction: contextData });
-    
-    // Skip the first message (greeting) because Gemini chat history MUST start with a "user" role, not "model".
-    const formattedHistory = messages.slice(1, -1).map((msg: any) => ({
-      role: msg.role === "assistant" ? "model" : "user",
-      parts: [{ text: msg.content }],
-    }));
+    // 3. Build conversation for Gemini
+    const userMessages = messages.filter((m: any) => m.role === "user");
+    const lastUserMessage = userMessages[userMessages.length - 1]?.content || "";
 
-    const chat = model.startChat({
-      history: formattedHistory,
+    // Build a single prompt with context + conversation history
+    let fullPrompt = contextData + "\n\n### CONVERSACIÓN:\n";
+    for (const msg of messages) {
+      if (msg.role === "user") {
+        fullPrompt += `Cliente: ${msg.content}\n`;
+      } else if (msg.role === "assistant") {
+        fullPrompt += `Asistente: ${msg.content}\n`;
+      }
+    }
+    fullPrompt += "\nResponde como el Asistente Virtual:";
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3.5-flash-lite",
+      contents: fullPrompt,
     });
 
-    const lastMessage = messages[messages.length - 1].content;
-    const result = await chat.sendMessage(lastMessage);
-    const responseText = result.response.text();
+    const responseText = response.text || "Lo siento, no pude generar una respuesta.";
 
     return NextResponse.json({ message: responseText });
 
   } catch (error: any) {
     console.error("Error in Chat API:", error);
-    return NextResponse.json({ error: "Internal Server Error", details: error.message, stack: error.stack }, { status: 500 });
+    return NextResponse.json({ error: "Internal Server Error", details: error.message }, { status: 500 });
   }
 }
