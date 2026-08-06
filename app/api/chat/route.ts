@@ -79,19 +79,20 @@ FECHA HOY: ${todayStr} (${todayISO}). Usa el año correcto (${today.getFullYear(
 1. Ayudar a RESERVAR TURNOS directamente (no mandas a WhatsApp para reservar)
 2. Responder preguntas puntuales del negocio
 
-## FLUJO DE RESERVA (sigue el orden, UN paso a la vez):
-- Paso 1: Si el usuario quiere reservar → pregunta qué SERVICIO quiere
+## FLUJO DE RESERVA (sigue el orden estricto, UN dato a la vez):
+- Paso 1: Pregunta qué SERVICIO quiere
 - Paso 2: Pregunta qué FECHA le queda mejor (NO muestres horarios todavía)
-- Paso 3: Cuando tenga fecha → usa CONSULTAR_TURNOS para mostrar los horarios libres de ESE día
-- Paso 4: El usuario elige hora → pide su NOMBRE
+- Paso 3: Cuando tenga fecha → usa CONSULTAR_TURNOS para mostrar los horarios disponibles
+- Paso 4: El usuario elige hora → pide su NOMBRE completo
 - Paso 5: Pide su TELÉFONO
-- Paso 6: Confirma datos en voz alta y ejecuta CREAR_TURNO
+- Paso 6: Con nombre y teléfono ya en mano, ejecuta CREAR_TURNO INMEDIATAMENTE. NO preguntes si confirman. El sistema lo confirma automáticamente.
 
-## REGLAS:
-- Si preguntan precios en general → pregunta de QUÉ servicio quieren el precio, no listes todo
-- Respuestas cortas: máximo 2-3 oraciones
+## REGLAS IMPORTANTES:
+- Si preguntan precios en general → pregunta de QUÉ servicio antes de listar
+- Respuestas cortas: máximo 2 oraciones antes del comando
+- Cuando ejecutas CREAR_TURNO, tu mensaje solo debe decir algo como "Perfecto, ya te agendo" — el sistema agrega la confirmación automáticamente
+- NO preguntes "\u00bfConfirmamos?" ni nada similar después de tener todos los datos
 - No inventes datos que no están en este documento
-- Para horarios disponibles SIEMPRE usa el comando CONSULTAR_TURNOS, no los inventas
 
 ## DATOS DEL NEGOCIO:
 - Nombre: ${biz.name}
@@ -147,10 +148,13 @@ Ejemplo correcto:
           const [, date, ...serviceNameParts] = parts;
           const serviceName = serviceNameParts.join(":");
           const slots = await fetchSlots(businessId, date, serviceName);
+          // Clean the AI text (remove trailing questions since we append our own)
+          responseText = responseText.replace(/(\?[^?]*)$/, "").trim();
           if (slots.length > 0) {
-            responseText += `\n\n🗓️ Horarios disponibles para **${date}**:\n${slots.map(s => `• ${s}`).join("\n")}\n\n¿Cuál te queda mejor?`;
+            const formatted = slots.map(s => `• ${s}`).join("  ");
+            responseText += `\n\n🗓️ *Horarios disponibles:*\n${formatted}\n\n¿Cuál te queda bien?`;
           } else {
-            responseText += `\n\n😕 No hay turnos disponibles para ese día. ¿Quieres intentar otro día?`;
+            responseText += `\n\n😕 No hay horarios disponibles ese día. ¿Probamos otro día?`;
           }
         }
 
