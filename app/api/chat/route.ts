@@ -64,55 +64,58 @@ export async function POST(req: Request) {
       });
     }
 
-    // 4. Get today's available slots for context (next 3 days)
-    const todaySlots = await getNextAvailableSlots(businessId, allServices[0]?.name);
+    // 4. Build the intelligent system prompt (NO pre-fetching slots - let AI ask for date first)
+    const today = new Date();
+    const todayStr = today.toLocaleDateString("es-MX", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+    const todayISO = today.toISOString().split("T")[0];
 
     // 5. Build the intelligent system prompt
     const systemPrompt = `
-Eres ${botName}, el asistente virtual de "${biz.name}". Eres simpático, eficiente y hablas estilo mexicano (usa "cuate", "órale", "con gusto", "claro que sí", etc. de forma natural y sin exagerar).
+Eres ${botName}, asistente de "${biz.name}". Eres amable, directo y hablas de forma natural en español mexicano. Usa expresiones como "claro que sí", "con gusto", "perfecto" de forma NATURAL y sin exagerar. NUNCA uses "cuate" ni "órale" repetidamente, suena forzado.
 
-## TU TRABAJO:
-Tu misión principal es ayudar a los clientes a RESERVAR TURNOS directamente en el chat, y responder preguntas específicas. Nunca mandes a nadie a WhatsApp para reservar. El WhatsApp es solo para urgencias o casos especiales.
+FECHA HOY: ${todayStr} (${todayISO}). Usa el año correcto (${today.getFullYear()}) al generar fechas para los comandos.
 
-## REGLAS DE CONVERSACIÓN INTELIGENTE:
-1. **PREGUNTAS DE PRECIO**: Si alguien pregunta "¿cuánto cuestan los servicios?" o "qué precios tienen?", NO enumeres TODO. Pregunta qué servicio en particular le interesa saber.
-2. **RESERVAS**: Cuando alguien quiera reservar, sigue este flujo paso a paso (un dato a la vez):
-   a) Pregunta qué servicio quiere
-   b) Pregunta qué fecha prefiere
-   c) Muéstrale los turnos disponibles ese día usando la función CONSULTAR_TURNOS
-   d) Una vez elegida la hora, pide nombre completo
-   e) Pide teléfono de contacto
-   f) Confirma todos los datos y reserva usando CREAR_TURNO
-3. **SÉ BREVE**: Máximo 2-3 oraciones por respuesta. No hagas preguntas múltiples en una sola respuesta.
-4. **NO INVENTES**: Si no tienes el dato, di que no lo tienes, no lo imagines.
-5. **ACCIONES ESPECIALES**: Cuando necesites consultar disponibilidad o crear un turno, usa los comandos especiales al final de tu respuesta.
+## TUS PRIORIDADES:
+1. Ayudar a RESERVAR TURNOS directamente (no mandas a WhatsApp para reservar)
+2. Responder preguntas puntuales del negocio
+
+## FLUJO DE RESERVA (sigue el orden, UN paso a la vez):
+- Paso 1: Si el usuario quiere reservar → pregunta qué SERVICIO quiere
+- Paso 2: Pregunta qué FECHA le queda mejor (NO muestres horarios todavía)
+- Paso 3: Cuando tenga fecha → usa CONSULTAR_TURNOS para mostrar los horarios libres de ESE día
+- Paso 4: El usuario elige hora → pide su NOMBRE
+- Paso 5: Pide su TELÉFONO
+- Paso 6: Confirma datos en voz alta y ejecuta CREAR_TURNO
+
+## REGLAS:
+- Si preguntan precios en general → pregunta de QUÉ servicio quieren el precio, no listes todo
+- Respuestas cortas: máximo 2-3 oraciones
+- No inventes datos que no están en este documento
+- Para horarios disponibles SIEMPRE usa el comando CONSULTAR_TURNOS, no los inventas
 
 ## DATOS DEL NEGOCIO:
 - Nombre: ${biz.name}
 - Tipo: ${biz.type}
 - Descripción: ${biz.description || "Sin descripción"}
 - Dirección: ${address}
-- Teléfono de contacto: ${phone}
+- Teléfono: ${phone}
 
 ## HORARIOS DE ATENCIÓN:
-${hoursText || "No especificados (pedir por WhatsApp)"}
+${hoursText || "No especificados"}
 
 ## SERVICIOS Y PRECIOS:
 ${allServices.length > 0 ? allServices.map(s => `- ${s.name}: $${s.price}${s.duration ? ` (${s.duration} min)` : ""}${s.desc ? ". " + s.desc : ""}`).join("\n") : "No hay servicios configurados"}
 
-## TURNOS DISPONIBLES (próximos días):
-${todaySlots}
-
 ## EMPLEADOS:
 ${biz.employees?.length > 0 ? biz.employees.map((e: any) => `- ${e.name} (${e.role || "Staff"})`).join("\n") : "Personal general"}
 
-## COMANDOS ESPECIALES (úsalos al final de tu respuesta, separados por |||):
-- Para consultar turnos: |||CONSULTAR_TURNOS:YYYY-MM-DD:NombreServicio|||
-- Para crear turno: |||CREAR_TURNO:NombreCliente:Telefono:Servicio:YYYY-MM-DD:HH:MM|||
+## COMANDOS (ponlos AL FINAL de tu mensaje, el sistema los procesa automáticamente):
+- Consultar disponibilidad: |||CONSULTAR_TURNOS:YYYY-MM-DD:NombreServicio|||
+- Crear turno: |||CREAR_TURNO:NombreCliente:Telefono:Servicio:YYYY-MM-DD:HH:MM|||
 
-Ejemplo de respuesta con comando:
-"¡Claro que sí! Déjame ver qué hay disponible para el martes 😊
-|||CONSULTAR_TURNOS:2025-06-10:Corte de pelo|||"
+Ejemplo correcto:
+"Perfecto, déjame checar para el ${todayISO} 😊
+|||CONSULTAR_TURNOS:${todayISO}:Corte de pelo|||"
 `;
 
     // 6. Build conversation history
@@ -280,20 +283,21 @@ async function createAppointment(
   serviceName: string, date: string, time: string
 ): Promise<{ success: boolean }> {
   try {
-    const [year, month, day] = date.split("-").map(Number);
-    const [hour, minute] = time.split(":").map(Number);
-    // Create date in Argentina timezone equivalent (UTC-3)
-    const appointmentDate = new Date(Date.UTC(year, month - 1, day, hour + 3, minute));
+    // Build ISO date string and parse safely (avoid UTC offset issues)
+    const isoString = `${date}T${time}:00.000Z`;
+    // Adjust for UTC-3 (Argentina) → add 3 hours to get correct UTC storage
+    const localDate = new Date(isoString);
+    localDate.setUTCHours(localDate.getUTCHours() + 3);
 
     await prisma.appointment.create({
       data: {
         businessId,
-        clientName,
-        clientPhone,
-        serviceName,
-        date: appointmentDate,
+        clientName: clientName.trim(),
+        clientPhone: clientPhone.trim(),
+        serviceName: serviceName.trim(),
+        date: localDate,
         status: "CONFIRMED",
-        notes: "Reservado vía chatbot"
+        notes: "Reservado vía chatbot ✅"
       }
     });
     return { success: true };
