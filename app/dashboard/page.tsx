@@ -715,7 +715,7 @@ export default function Dashboard() {
                   <div>
                     <label className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Teléfono / WhatsApp</label>
                     <input type="text" value={onboardingData.phone} onChange={e => setOnboardingData({...onboardingData, phone: e.target.value})} 
-                      className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white focus:border-indigo-500 focus:outline-none" placeholder="Ej: 1154321234" />
+                      className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white focus:border-indigo-500 focus:outline-none" placeholder="Ej: 5512345678" />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>

@@ -530,6 +530,57 @@ function NewClientDrawer({ onClose, onSave }: any) {
   );
 }
 
+// ── ADMIN WHATSAPP ──────────────────────────────────────────────────────────────
+function AdminWhatsApp() {
+  const [statusData, setStatusData] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchStatus = async () => {
+      try {
+        const res = await fetch('/api/whatsapp/status');
+        const data = await res.json();
+        setStatusData(data);
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    fetchStatus();
+    const interval = setInterval(fetchStatus, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div style={{ padding: "40px 20px", background: "var(--s1)", borderRadius: "var(--r)", border: "1px solid var(--b0)", textAlign: "center" }}>
+      <h2 style={{ fontSize: "20px", fontWeight: 800, marginBottom: "20px" }}>Estado de WhatsApp Web (Baileys)</h2>
+      
+      {!statusData && <p style={{ color: "var(--t2)" }}>Consultando estado...</p>}
+
+      {statusData?.status === 'STARTING' && (
+        <p style={{ color: "var(--accent)", animation: "pulse 2s infinite" }}>Iniciando cliente de WhatsApp...</p>
+      )}
+
+      {statusData?.status === 'QR_READY' && statusData?.qrCode && (
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+          <p style={{ color: "var(--yellow)", marginBottom: "16px", fontWeight: 500 }}>Escanea este código QR con tu celular en Dispositivos Vinculados</p>
+          <img src={statusData.qrCode} alt="WhatsApp QR Code" style={{ width: "260px", height: "260px", border: "4px solid white", borderRadius: "12px", background: "white" }} />
+        </div>
+      )}
+
+      {statusData?.status === 'AUTHENTICATED' && (
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", color: "var(--green)" }}>
+          <div style={{ fontSize: "48px", marginBottom: "16px" }}>✓</div>
+          <p style={{ fontWeight: "bold", fontSize: "18px" }}>¡WhatsApp Conectado y Listo para enviar mensajes!</p>
+        </div>
+      )}
+
+      {statusData?.status === 'ERROR' && (
+        <p style={{ color: "var(--red)", fontWeight: 500 }}>Error al conectar con WhatsApp. Revisa la terminal del servidor Node.</p>
+      )}
+    </div>
+  );
+}
+
 // ── MAIN APP ──────────────────────────────────────────────────────────────────
 export default function AdminCRM() {
   const [negocios, setNegocios] = useState<any[]>([]);
@@ -725,6 +776,7 @@ export default function AdminCRM() {
             <button onClick={() => setAdminTab("crm")} style={{ padding: "12px 16px", background: "none", border: "none", borderBottom: adminTab === "crm" ? "2px solid var(--accent)" : "2px solid transparent", color: adminTab === "crm" ? "var(--t0)" : "var(--t2)", cursor: "pointer", fontWeight: 600 }}>CRM y Clientes</button>
             <button onClick={() => setAdminTab("support")} style={{ padding: "12px 16px", background: "none", border: "none", borderBottom: adminTab === "support" ? "2px solid var(--accent)" : "2px solid transparent", color: adminTab === "support" ? "var(--t0)" : "var(--t2)", cursor: "pointer", fontWeight: 600 }}>Mensajes y Soporte</button>
             <button onClick={() => setAdminTab("alerts")} style={{ padding: "12px 16px", background: "none", border: "none", borderBottom: adminTab === "alerts" ? "2px solid var(--accent)" : "2px solid transparent", color: adminTab === "alerts" ? "var(--t0)" : "var(--t2)", cursor: "pointer", fontWeight: 600 }}>Alertas Globales</button>
+            <button onClick={() => setAdminTab("whatsapp")} style={{ padding: "12px 16px", background: "none", border: "none", borderBottom: adminTab === "whatsapp" ? "2px solid var(--green)" : "2px solid transparent", color: adminTab === "whatsapp" ? "var(--green)" : "var(--t2)", cursor: "pointer", fontWeight: 600 }}>WhatsApp Bot</button>
           </div>
 
           {adminTab === "crm" && (
@@ -855,6 +907,7 @@ export default function AdminCRM() {
 
           {adminTab === "support" && <AdminSupport showToast={pushToast} />}
           {adminTab === "alerts" && <AdminAlerts showToast={pushToast} />}
+          {adminTab === "whatsapp" && <AdminWhatsApp />}
 
         </div>
       </div>

@@ -519,7 +519,7 @@ export default function BookingForm({ businessId, primaryColor, secondaryColor, 
                 autoComplete="tel"
                 value={form.phone}
                 onChange={handlePhoneChange}
-                placeholder="+54 9 11 1234-5678" 
+                placeholder="+52 55 1234 5678" 
                 className={inputClass} 
               />
             </div>
