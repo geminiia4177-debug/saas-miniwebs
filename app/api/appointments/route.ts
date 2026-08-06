@@ -87,13 +87,9 @@ export async function POST(req: Request) {
         // Limpiar el teléfono
         let cleanPhone = data.clientPhone.replace(/\D/g, '');
         
-        // Magia para teléfonos (Argentina / México)
+        // Formato para teléfonos de México
         if (cleanPhone.length === 10) {
-          cleanPhone = `549${cleanPhone}`; // Asumimos Argentina por defecto
-        } else if (cleanPhone.startsWith('54') && !cleanPhone.startsWith('549') && cleanPhone.length === 12) {
-          cleanPhone = cleanPhone.replace(/^54/, '549'); // Argentina
-        } else if (cleanPhone.startsWith('52') && cleanPhone.length === 12) {
-          // México
+          cleanPhone = `52${cleanPhone}`; // Asumimos México por defecto
         }
         
         const jid = `${cleanPhone}@s.whatsapp.net`;

@@ -112,12 +112,10 @@ app.prepare().then(() => {
             for (const appt of upcomingAppointments) {
               if (!appt.clientPhone) continue;
 
-              // Limpieza y formato de Argentina
+              // Limpieza y formato de México
               let cleanPhone = appt.clientPhone.replace(/\D/g, '');
               if (cleanPhone.length === 10) {
-                cleanPhone = `549${cleanPhone}`;
-              } else if (cleanPhone.startsWith('54') && !cleanPhone.startsWith('549') && cleanPhone.length === 12) {
-                cleanPhone = cleanPhone.replace(/^54/, '549');
+                cleanPhone = `52${cleanPhone}`;
               }
               const jid = `${cleanPhone}@s.whatsapp.net`;
               
