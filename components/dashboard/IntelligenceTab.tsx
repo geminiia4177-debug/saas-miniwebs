@@ -67,7 +67,12 @@ export default function IntelligenceTab({ businessId, bizName }: { businessId: s
     );
   }
 
-  if (!data) return <div className="p-8 text-white">Error cargando inteligencia.</div>;
+  if (!data || data.error) {
+    return <div className="p-8 text-white">Error cargando inteligencia: {data?.error || "Error desconocido"}</div>;
+  }
+
+  const inactive = Array.isArray(data.inactiveClients) ? data.inactiveClients : [];
+  const vip = Array.isArray(data.vipClients) ? data.vipClients : [];
 
   return (
     <div className="p-8 animate-fadeIn">
@@ -89,7 +94,7 @@ export default function IntelligenceTab({ businessId, bizName }: { businessId: s
             <h3 className="text-sm font-bold text-slate-400">Clientes en Riesgo</h3>
             <AlertTriangle className="w-5 h-5 text-amber-500" />
           </div>
-          <p className="text-3xl font-black text-white">{data.inactiveClients?.length || 0}</p>
+          <p className="text-3xl font-black text-white">{inactive.length}</p>
           <p className="text-xs text-slate-500 mt-1">Hace más de 45 días que no vienen</p>
         </div>
 
@@ -100,7 +105,7 @@ export default function IntelligenceTab({ businessId, bizName }: { businessId: s
             <h3 className="text-sm font-bold text-slate-400">Clientes VIP</h3>
             <TrendingUp className="w-5 h-5 text-emerald-400" />
           </div>
-          <p className="text-3xl font-black text-white">{data.vipClients?.length || 0}</p>
+          <p className="text-3xl font-black text-white">{vip.length}</p>
           <p className="text-xs text-slate-500 mt-1">Con 3 o más visitas completadas</p>
         </div>
 
@@ -123,11 +128,11 @@ export default function IntelligenceTab({ businessId, bizName }: { businessId: s
           <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
             <AlertTriangle className="w-5 h-5 text-amber-500" /> Recuperar Clientes
           </h2>
-          {data.inactiveClients?.length === 0 ? (
+          {inactive.length === 0 ? (
             <p className="text-sm text-slate-500 text-center py-8">No hay clientes inactivos por el momento.</p>
           ) : (
             <div className="space-y-4">
-              {data.inactiveClients?.slice(0, 5).map((client: any, i: number) => (
+              {inactive.slice(0, 5).map((client: any, i: number) => (
                 <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-white/10 transition-colors">
                   <div>
                     <p className="font-bold text-white text-sm">{client.name}</p>
@@ -160,11 +165,11 @@ export default function IntelligenceTab({ businessId, bizName }: { businessId: s
           <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
             <TrendingUp className="w-5 h-5 text-emerald-400" /> Fidelizar VIPs
           </h2>
-          {data.vipClients?.length === 0 ? (
+          {vip.length === 0 ? (
             <p className="text-sm text-slate-500 text-center py-8">No hay suficientes datos para determinar VIPs.</p>
           ) : (
             <div className="space-y-4">
-              {data.vipClients?.slice(0, 5).map((client: any, i: number) => (
+              {vip.slice(0, 5).map((client: any, i: number) => (
                 <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-white/10 transition-colors">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center font-black text-emerald-400 text-xs">
