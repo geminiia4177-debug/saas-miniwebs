@@ -9,7 +9,6 @@ import EditorTab from "@/components/dashboard/EditorTab";
 import ManagementTabs from "@/components/dashboard/ManagementTabs";
 import CrmTab from "@/components/dashboard/CrmTab";
 import OrdersTablesTab from "@/components/dashboard/OrdersTablesTab"; // force IDE refresh
-import SupportTab from "@/components/dashboard/SupportTab";
 import BiolinksTab from "@/components/dashboard/BiolinksTab";
 import IntelligenceTab from "@/components/dashboard/IntelligenceTab";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
