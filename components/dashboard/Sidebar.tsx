@@ -75,7 +75,6 @@ export default function Sidebar({
         )}
         <NavItem icon="list" label="CRM y Finanzas" tab="crm" active={tab} setActive={setTab} collapsed={sidebarCollapsed} />
         <NavItem icon="settings" label="Configuración" tab="config" active={tab} setActive={setTab} collapsed={sidebarCollapsed} />
-        <NavItem icon="message" label="Soporte" tab="support" active={tab} setActive={setTab} badge={unreadSupport} collapsed={sidebarCollapsed} />
       </nav>
 
       <div className="px-3 py-2">

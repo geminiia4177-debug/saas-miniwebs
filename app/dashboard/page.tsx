@@ -75,32 +75,63 @@ export default function Dashboard() {
 
   // ── SOPORTE CHAT STATE ──
   const [supportOpen, setSupportOpen] = useState(false);
-  const [supportMsgs, setSupportMsgs] = useState<{text: string; isUser: boolean}[]>([
-    { text: "¡Hola! ¿En qué podemos ayudarte?", isUser: false }
-  ]);
+  const [supportMsgs, setSupportMsgs] = useState<any[]>([]);
   const [supportInput, setSupportInput] = useState("");
   const [supportLoading, setSupportLoading] = useState(false);
+  const supportScrollRef = React.useRef<HTMLDivElement>(null);
+
+  // Fetch support messages
+  const fetchSupportMsgs = async () => {
+    if (!biz) return;
+    try {
+      const res = await fetch(`/api/messages`);
+      const data = await res.json();
+      if (res.ok) setSupportMsgs(data);
+    } catch (e) {}
+  };
+
+  useEffect(() => {
+    if (supportOpen) {
+      fetchSupportMsgs();
+      // Mark as read when opening widget
+      fetch("/api/messages/read", { method: "POST", body: JSON.stringify({ businessId: biz?.id }) });
+    }
+  }, [supportOpen, biz]);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (supportOpen) {
+      interval = setInterval(fetchSupportMsgs, 5000);
+    }
+    return () => clearInterval(interval);
+  }, [supportOpen, biz]);
+
+  useEffect(() => {
+    if (supportScrollRef.current) {
+      supportScrollRef.current.scrollTop = supportScrollRef.current.scrollHeight;
+    }
+  }, [supportMsgs, supportOpen]);
 
   const handleSendSupport = async () => {
-    if (!supportInput.trim() || supportLoading) return;
-    const msg = supportInput.trim();
-    const newMsgs = [...supportMsgs, { text: msg, isUser: true }];
-    setSupportMsgs(newMsgs);
+    if (!supportInput.trim() || supportLoading || !biz) return;
+    const msgText = supportInput.trim();
+    // Optimistic UI update
+    const tempMsg = { id: "temp", content: msgText, senderType: "USER", createdAt: new Date() };
+    setSupportMsgs(prev => [...prev, tempMsg]);
     setSupportInput("");
     setSupportLoading(true);
 
     try {
-      const res = await fetch("/api/support", {
+      const res = await fetch("/api/messages", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ businessId: biz?.id, businessName: biz?.name, messages: newMsgs })
+        body: JSON.stringify({ businessId: biz.id, content: msgText })
       });
-      const data = await res.json();
-      if (data.message) {
-        setSupportMsgs(prev => [...prev, { text: data.message, isUser: false }]);
+      if (res.ok) {
+        await fetchSupportMsgs();
       }
     } catch {
-      setSupportMsgs(prev => [...prev, { text: "Error de conexión con el soporte.", isUser: false }]);
+      setSupportMsgs(prev => [...prev, { id: "err", content: "Error de conexión.", senderType: "AI", createdAt: new Date() }]);
     }
     setSupportLoading(false);
   };
@@ -336,7 +367,6 @@ export default function Dashboard() {
               <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-widest px-3 py-2 mt-3">Gestión</p>
               <NavItem icon="calendar" label="Turnos" tab="appointments" active={tab} setActive={(t) => { setTab(t); setMobileMenuOpen(false); }} badge={pending.length} />
               <NavItem icon="settings" label="Configuración" tab="config" active={tab} setActive={(t) => { setTab(t); setMobileMenuOpen(false); }} />
-              <NavItem icon="message-circle" label="Soporte" tab="support" active={tab} setActive={(t) => { setTab(t); setMobileMenuOpen(false); }} badge={unreadSupport} />
             </nav>
             <div className="p-3 border-t" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
               <button onClick={() => signOut({ callbackUrl: "/login" })}
@@ -534,10 +564,6 @@ export default function Dashboard() {
               <OrdersTablesTab biz={biz} showToast={pushToast} />
             )}
 
-            {tab === "support" && (
-              <SupportTab bizId={biz.id} showToast={pushToast} />
-            )}
-
             {tab === "intelligence" && (
               <IntelligenceTab businessId={biz.id} bizName={biz.name} />
             )}
@@ -557,10 +583,13 @@ export default function Dashboard() {
                 <Ico n="x" s={16} />
               </button>
             </div>
-            <div className="flex-1 p-4 overflow-y-auto flex flex-col gap-3 custom-scrollbar bg-[#050810]">
+            <div className="flex-1 p-4 overflow-y-auto flex flex-col gap-3 custom-scrollbar bg-[#050810]" ref={supportScrollRef}>
+              {supportMsgs.length === 0 && !supportLoading && (
+                <div className="text-center text-slate-400 text-sm mt-4">¡Hola! ¿En qué podemos ayudarte?</div>
+              )}
               {supportMsgs.map((m, i) => (
-                <div key={i} className={`max-w-[85%] p-3 rounded-xl text-sm ${m.isUser ? "bg-indigo-500/20 text-indigo-100 self-end rounded-br-sm border border-indigo-500/30" : "bg-white/5 text-slate-300 self-start rounded-bl-sm border border-white/10 whitespace-pre-line"}`}>
-                  {m.text}
+                <div key={m.id || i} className={`max-w-[85%] p-3 rounded-xl text-sm ${m.senderType === "USER" ? "bg-indigo-500/20 text-indigo-100 self-end rounded-br-sm border border-indigo-500/30" : "bg-white/5 text-slate-300 self-start rounded-bl-sm border border-white/10 whitespace-pre-line"}`}>
+                  {m.content}
                 </div>
               ))}
               {supportLoading && (
@@ -593,10 +622,15 @@ export default function Dashboard() {
           </div>
         )}
         <button 
-          onClick={() => setSupportOpen(!supportOpen)}
-          className={`w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-transform hover:scale-110 ${supportOpen ? "bg-white/10" : "bg-indigo-500"}`}
+          onClick={() => {
+            setSupportOpen(!supportOpen);
+          }}
+          className={`w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-transform hover:scale-110 relative ${supportOpen ? "bg-white/10" : "bg-indigo-500"}`}
         >
           <Ico n={supportOpen ? "x" : "message-circle"} s={24} c="text-white" />
+          {!supportOpen && unreadSupport > 0 && (
+            <span className="absolute top-0 right-0 w-4 h-4 bg-red-500 border-2 border-[#080a10] rounded-full"></span>
+          )}
         </button>
       </div>
 
