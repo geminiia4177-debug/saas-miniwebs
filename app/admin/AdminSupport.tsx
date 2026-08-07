@@ -36,6 +36,11 @@ export default function AdminSupport({ showToast }: { showToast: (msg: string, t
     } catch (e) {}
   };
 
+  const unreadPerBiz = businesses.reduce((acc, b) => {
+    acc[b.id] = messages.filter(m => m.businessId === b.id && !m.isRead && m.senderType === "USER").length;
+    return acc;
+  }, {} as Record<string, number>);
+
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [messages, selectedBiz]);
@@ -74,6 +79,26 @@ export default function AdminSupport({ showToast }: { showToast: (msg: string, t
     }
   };
 
+  const handleEndConsultation = async () => {
+    if (!selectedBiz) return;
+    setLoading(true);
+    try {
+      const res = await fetch("/api/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ businessId: selectedBiz, content: "[CONSULTA_FINALIZADA]" })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error("Error al finalizar consulta");
+      setMessages([...messages, data]);
+      showToast("Consulta finalizada. La IA volverá a contestar.", "ok");
+    } catch (e: any) {
+      showToast(e.message, "warn");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const currentMsgs = messages.filter(m => m.businessId === selectedBiz);
 
   return (
@@ -88,10 +113,17 @@ export default function AdminSupport({ showToast }: { showToast: (msg: string, t
             <div 
               key={b.id} 
               onClick={() => setSelectedBiz(b.id)}
-              style={{ padding: "16px", cursor: "pointer", borderBottom: "1px solid var(--border)", background: selectedBiz === b.id ? "rgba(255,255,255,0.05)" : "transparent" }}
+              style={{ padding: "16px", cursor: "pointer", borderBottom: "1px solid var(--border)", background: selectedBiz === b.id ? "rgba(255,255,255,0.05)" : "transparent", display: "flex", justifyContent: "space-between", alignItems: "center" }}
             >
-              <div style={{ fontWeight: "bold" }}>{b.name}</div>
-              <div style={{ fontSize: "11px", color: "var(--t2)" }}>/{b.subdomain}</div>
+              <div>
+                <div style={{ fontWeight: "bold" }}>{b.name}</div>
+                <div style={{ fontSize: "11px", color: "var(--t2)" }}>/{b.subdomain}</div>
+              </div>
+              {unreadPerBiz[b.id] > 0 && (
+                <div style={{ background: "var(--red)", color: "white", fontSize: "12px", padding: "2px 8px", borderRadius: "12px", fontWeight: "bold" }}>
+                  {unreadPerBiz[b.id]}
+                </div>
+              )}
             </div>
           ))
         )}
@@ -101,8 +133,38 @@ export default function AdminSupport({ showToast }: { showToast: (msg: string, t
       <div style={{ flex: 1, display: "flex", flexDirection: "column", background: "var(--bg)", border: "1px solid var(--border)", borderRadius: "16px" }}>
         {selectedBiz ? (
           <>
+            <div style={{ padding: "16px", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ fontWeight: "bold" }}>Chat con {businesses.find(b => b.id === selectedBiz)?.name}</div>
+              <button 
+                onClick={handleEndConsultation}
+                disabled={loading}
+                className={styles['btn-cancel']}
+                style={{ fontSize: "12px", padding: "6px 12px", color: "var(--red)", borderColor: "var(--red)" }}
+                title="Cierra este chat y permite que la IA vuelva a responder a este cliente"
+              >
+                Finalizar Consulta (Reset IA)
+              </button>
+            </div>
             <div style={{ flex: 1, overflowY: "auto", padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }} ref={scrollRef}>
               {currentMsgs.map(msg => {
+                if (msg.content === "[CONSULTA_FINALIZADA]") {
+                  return (
+                    <div key={msg.id} style={{ display: "flex", justifyContent: "center" }}>
+                      <div style={{ background: "rgba(255,255,255,0.05)", padding: "4px 16px", borderRadius: "20px", fontSize: "11px", color: "var(--t2)" }}>
+                        Consulta Finalizada. La IA está de nuevo a cargo.
+                      </div>
+                    </div>
+                  );
+                }
+                if (msg.content.startsWith("[TRANSFERIDO DESDE IA]")) {
+                  return (
+                    <div key={msg.id} style={{ display: "flex", justifyContent: "center" }}>
+                      <div style={{ background: "rgba(108,142,255,0.1)", padding: "4px 16px", borderRadius: "20px", fontSize: "11px", color: "var(--accent)" }}>
+                        Transferido a Asesor
+                      </div>
+                    </div>
+                  );
+                }
                 const isAdmin = msg.senderType === "ADMIN";
                 return (
                   <div key={msg.id} style={{ display: "flex", justifyContent: isAdmin ? "flex-end" : "flex-start" }}>

@@ -586,11 +586,27 @@ export default function Dashboard() {
               {supportMsgs.length === 0 && !supportLoading && (
                 <div className="text-center text-slate-400 text-sm mt-4">¡Hola! ¿En qué podemos ayudarte?</div>
               )}
-              {supportMsgs.map((m, i) => (
-                <div key={m.id || i} className={`max-w-[85%] p-3 rounded-xl text-sm ${m.senderType === "USER" ? "bg-indigo-500/20 text-indigo-100 self-end rounded-br-sm border border-indigo-500/30" : "bg-white/5 text-slate-300 self-start rounded-bl-sm border border-white/10 whitespace-pre-line"}`}>
-                  {m.content}
-                </div>
-              ))}
+              {supportMsgs.map((m, i) => {
+                if (m.content === "[CONSULTA_FINALIZADA]") {
+                  return (
+                    <div key={m.id || i} className="text-center text-xs text-slate-500 my-2 px-4 py-1 bg-white/5 rounded-full self-center border border-white/5">
+                      Chat finalizado. Escribe para iniciar una nueva consulta.
+                    </div>
+                  );
+                }
+                if (m.content.startsWith("[TRANSFERIDO DESDE IA]")) {
+                  return (
+                    <div key={m.id || i} className="text-center text-xs text-indigo-400 my-2 px-4 py-1 bg-indigo-500/10 rounded-full self-center border border-indigo-500/20">
+                      Un asesor humano se ha unido al chat.
+                    </div>
+                  );
+                }
+                return (
+                  <div key={m.id || i} className={`max-w-[85%] p-3 rounded-xl text-sm ${m.senderType === "USER" ? "bg-indigo-500/20 text-indigo-100 self-end rounded-br-sm border border-indigo-500/30" : "bg-white/5 text-slate-300 self-start rounded-bl-sm border border-white/10 whitespace-pre-line"}`}>
+                    {m.content}
+                  </div>
+                );
+              })}
               {supportLoading && (
                 <div className="max-w-[85%] p-3 rounded-xl text-sm bg-white/5 text-slate-400 self-start rounded-bl-sm border border-white/10 flex items-center gap-2">
                   <div className="w-4 h-4 border-2 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin"></div>

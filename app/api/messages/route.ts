@@ -73,7 +73,18 @@ export async function POST(req: Request) {
       });
 
       // Check if conversation was transferred to human recently
-      const hasHumanIntervention = recentMsgs.some(m => m.senderType === "ADMIN" || m.content.includes("[TRANSFERIDO DESDE IA]"));
+      const latestIntervention = recentMsgs.find(m => 
+        m.senderType === "ADMIN" || 
+        m.content.includes("[TRANSFERIDO DESDE IA]") || 
+        m.content.includes("[CONSULTA_FINALIZADA]")
+      );
+
+      let hasHumanIntervention = false;
+      if (latestIntervention) {
+        if (!latestIntervention.content.includes("[CONSULTA_FINALIZADA]")) {
+          hasHumanIntervention = true;
+        }
+      }
 
       if (!hasHumanIntervention) {
         if (!process.env.GEMINI_API_KEY) {
