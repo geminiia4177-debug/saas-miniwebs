@@ -14,6 +14,13 @@ export default function SupportTab({ bizId, showToast }: { bizId: string, showTo
         const res = await fetch(`/api/messages?businessId=${bizId}`);
         const data = await res.json();
         if(res.ok) setMessages(data);
+        
+        // Mark as read
+        await fetch("/api/messages/read", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ businessId: bizId })
+        });
       } catch(e) {}
     };
     fetchMsgs();

@@ -609,6 +609,7 @@ export default function AdminCRM() {
   const [viewMode, setViewMode]   = useState("grid");
   const [confirmDel, setConfirmDel] = useState<any>(null);
   const [confirmBlock, setConfirmBlock] = useState<any>(null);
+  const [unreadSupport, setUnreadSupport] = useState(0);
   const { toasts, push: pushToast } = useToasts();
   const searchInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -636,6 +637,19 @@ export default function AdminCRM() {
   useEffect(() => {
     setPage(0);
   }, [filter]);
+
+  // Fetch Unread
+  useEffect(() => {
+    const fetchUnread = () => {
+      fetch("/api/messages/unread")
+        .then(r => r.json())
+        .then(d => { if (d.count !== undefined) setUnreadSupport(d.count); })
+        .catch(e => {});
+    };
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 10000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Fetch API
   useEffect(() => {
@@ -785,7 +799,10 @@ export default function AdminCRM() {
 
           <div style={{ display: "flex", gap: "16px", marginBottom: "24px", borderBottom: "1px solid var(--border)" }}>
             <button onClick={() => setAdminTab("crm")} style={{ padding: "12px 16px", background: "none", border: "none", borderBottom: adminTab === "crm" ? "2px solid var(--accent)" : "2px solid transparent", color: adminTab === "crm" ? "var(--t0)" : "var(--t2)", cursor: "pointer", fontWeight: 600 }}>CRM y Clientes</button>
-            <button onClick={() => setAdminTab("support")} style={{ padding: "12px 16px", background: "none", border: "none", borderBottom: adminTab === "support" ? "2px solid var(--accent)" : "2px solid transparent", color: adminTab === "support" ? "var(--t0)" : "var(--t2)", cursor: "pointer", fontWeight: 600 }}>Mensajes y Soporte</button>
+            <button onClick={() => setAdminTab("support")} style={{ padding: "12px 16px", background: "none", border: "none", borderBottom: adminTab === "support" ? "2px solid var(--accent)" : "2px solid transparent", color: adminTab === "support" ? "var(--t0)" : "var(--t2)", cursor: "pointer", fontWeight: 600, display: "flex", gap: "8px", alignItems: "center" }}>
+              Mensajes y Soporte
+              {unreadSupport > 0 && <span style={{ background: "var(--red)", color: "white", padding: "2px 6px", borderRadius: "12px", fontSize: "10px" }}>{unreadSupport}</span>}
+            </button>
             <button onClick={() => setAdminTab("alerts")} style={{ padding: "12px 16px", background: "none", border: "none", borderBottom: adminTab === "alerts" ? "2px solid var(--accent)" : "2px solid transparent", color: adminTab === "alerts" ? "var(--t0)" : "var(--t2)", cursor: "pointer", fontWeight: 600 }}>Alertas Globales</button>
             <button onClick={() => setAdminTab("whatsapp")} style={{ padding: "12px 16px", background: "none", border: "none", borderBottom: adminTab === "whatsapp" ? "2px solid var(--green)" : "2px solid transparent", color: adminTab === "whatsapp" ? "var(--green)" : "var(--t2)", cursor: "pointer", fontWeight: 600 }}>WhatsApp Bot</button>
           </div>

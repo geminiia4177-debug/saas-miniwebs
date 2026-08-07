@@ -71,6 +71,7 @@ export default function Dashboard() {
   const [globalAlert, setGlobalAlert] = useState<any>(null);
   const [uploadQueue, setUploadQueue] = useState<{ file: File; progress: number; status: "pending" | "uploading" | "done" | "error"; url?: string }[]>([]);
   const [copiedUrl, setCopiedUrl] = useState(false);
+  const [unreadSupport, setUnreadSupport] = useState(0);
 
   // ── SOPORTE CHAT STATE ──
   const [supportOpen, setSupportOpen] = useState(false);
@@ -128,6 +129,15 @@ export default function Dashboard() {
         if(d && d.length > 0) setGlobalAlert(d[0]);
       })
       .catch(e => console.error("Error fetching alerts", e));
+
+    const fetchUnread = () => {
+      fetch("/api/messages/unread")
+        .then(r => r.json())
+        .then(d => { if (d.count !== undefined) setUnreadSupport(d.count); })
+        .catch(e => {});
+    };
+    fetchUnread();
+    const unreadInterval = setInterval(fetchUnread, 10000);
 
     fetch("/api/my-business", { cache: "no-store" })
       .then(r => r.json())
@@ -320,13 +330,13 @@ export default function Dashboard() {
             <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
               <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-widest px-3 py-2">Principal</p>
               <NavItem icon="grid" label="Resumen" tab="home" active={tab} setActive={(t) => { setTab(t); setMobileMenuOpen(false); }} />
-              <NavItem icon="cpu" label="Asesor Inteligente" tab="intelligence" active={tab} setActive={(t) => { setTab(t); setMobileMenuOpen(false); }} />
+              <NavItem icon="bot" label="Asesor Inteligente" tab="intelligence" active={tab} setActive={(t) => { setTab(t); setMobileMenuOpen(false); }} />
               <NavItem icon="eye" label="Editor Visual" tab="editor" active={tab} setActive={(t) => { setTab(t); setMobileMenuOpen(false); }} />
               <NavItem icon="image" label="Galería" tab="gallery" active={tab} setActive={(t) => { setTab(t); setMobileMenuOpen(false); }} badge={media.length} />
               <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-widest px-3 py-2 mt-3">Gestión</p>
               <NavItem icon="calendar" label="Turnos" tab="appointments" active={tab} setActive={(t) => { setTab(t); setMobileMenuOpen(false); }} badge={pending.length} />
               <NavItem icon="settings" label="Configuración" tab="config" active={tab} setActive={(t) => { setTab(t); setMobileMenuOpen(false); }} />
-              <NavItem icon="message-circle" label="Soporte" tab="support" active={tab} setActive={(t) => { setTab(t); setMobileMenuOpen(false); }} />
+              <NavItem icon="message-circle" label="Soporte" tab="support" active={tab} setActive={(t) => { setTab(t); setMobileMenuOpen(false); }} badge={unreadSupport} />
             </nav>
             <div className="p-3 border-t" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
               <button onClick={() => signOut({ callbackUrl: "/login" })}
@@ -349,6 +359,7 @@ export default function Dashboard() {
         pendingLength={pending.length}
         copyUrl={copyUrl}
         copiedUrl={copiedUrl}
+        unreadSupport={unreadSupport}
       />
 
       <main className="flex-1 flex flex-col min-w-0 h-[100dvh] overflow-hidden custom-scrollbar bg-[#080a10]">

@@ -40,6 +40,20 @@ export default function AdminSupport({ showToast }: { showToast: (msg: string, t
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [messages, selectedBiz]);
 
+  useEffect(() => {
+    if (!selectedBiz) return;
+    const markRead = async () => {
+      try {
+        await fetch("/api/messages/read", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ businessId: selectedBiz })
+        });
+      } catch (e) {}
+    };
+    markRead();
+  }, [selectedBiz, messages]);
+
   const handleSend = async () => {
     if (!content.trim() || !selectedBiz) return;
     setLoading(true);

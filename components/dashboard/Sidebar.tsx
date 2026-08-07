@@ -33,7 +33,8 @@ export default function Sidebar({
   mediaLength,
   pendingLength,
   copyUrl,
-  copiedUrl
+  copiedUrl,
+  unreadSupport
 }: any) {
   return (
     <aside className={`hidden md:flex flex-shrink-0 flex-col transition-all duration-300 ${sidebarCollapsed ? "w-20" : "w-60"}`} style={{ background: "linear-gradient(180deg,#0b1020 0%,#090e1c 100%)", borderRight: "1px solid rgba(255,255,255,0.05)", zIndex: 40 }}>
@@ -61,7 +62,7 @@ export default function Sidebar({
       <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto custom-scrollbar">
         {!sidebarCollapsed && <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-widest px-3 py-2">Principal</p>}
         <NavItem icon="grid" label="Resumen" tab="home" active={tab} setActive={setTab} collapsed={sidebarCollapsed} />
-        <NavItem icon="cpu" label="Asesor Inteligente" tab="intelligence" active={tab} setActive={setTab} collapsed={sidebarCollapsed} />
+        <NavItem icon="bot" label="Asesor Inteligente" tab="intelligence" active={tab} setActive={setTab} collapsed={sidebarCollapsed} />
         <NavItem icon="eye" label="Editor Visual" tab="editor" active={tab} setActive={setTab} collapsed={sidebarCollapsed} />
         <NavItem icon="link" label="BioLinks (Linktree)" tab="biolinks" active={tab} setActive={setTab} collapsed={sidebarCollapsed} />
         <NavItem icon="image" label="Galería de Fotos" tab="gallery" active={tab} setActive={setTab} badge={mediaLength} collapsed={sidebarCollapsed} />
@@ -74,7 +75,7 @@ export default function Sidebar({
         )}
         <NavItem icon="list" label="CRM y Finanzas" tab="crm" active={tab} setActive={setTab} collapsed={sidebarCollapsed} />
         <NavItem icon="settings" label="Configuración" tab="config" active={tab} setActive={setTab} collapsed={sidebarCollapsed} />
-        <NavItem icon="message" label="Soporte" tab="support" active={tab} setActive={setTab} collapsed={sidebarCollapsed} />
+        <NavItem icon="message" label="Soporte" tab="support" active={tab} setActive={setTab} badge={unreadSupport} collapsed={sidebarCollapsed} />
       </nav>
 
       <div className="px-3 py-2">
