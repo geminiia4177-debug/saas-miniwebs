@@ -13,7 +13,7 @@ export async function GET(req: Request) {
       const biz = await prisma.business.findMany({ where: { userId: session.user.id }, select: { id: true } });
       const bizIds = biz.map((b: { id: string }) => b.id);
       count = await prisma.message.count({
-        where: { businessId: { in: bizIds }, senderType: 'ADMIN', isRead: false }
+        where: { businessId: { in: bizIds }, senderType: { in: ['ADMIN', 'AI'] }, isRead: false }
       });
     } else {
       count = await prisma.message.count({

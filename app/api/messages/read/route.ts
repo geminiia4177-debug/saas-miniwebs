@@ -14,9 +14,9 @@ export async function POST(req: Request) {
       const biz = await prisma.business.findMany({ where: { userId: session.user.id }, select: { id: true } });
       const bizIds = biz.map((b: { id: string }) => b.id);
       
-      // Mark ADMIN messages as read for this user's businesses
+      // Mark ADMIN and AI messages as read for this user's businesses
       await prisma.message.updateMany({
-        where: { businessId: { in: bizIds }, senderType: 'ADMIN', isRead: false },
+        where: { businessId: { in: bizIds }, senderType: { in: ['ADMIN', 'AI'] }, isRead: false },
         data: { isRead: true }
       });
     } else {
