@@ -86,7 +86,7 @@ export default function Dashboard() {
       const res = await fetch(`/api/messages`);
       const data = await res.json();
       if (res.ok) setSupportMsgs(data);
-    } catch (e) {}
+    } catch (e) { }
   };
 
   useEffect(() => {
@@ -137,7 +137,7 @@ export default function Dashboard() {
 
   // ── PAGOS MODAL STATE ──
   const [payModalOpen, setPayModalOpen] = useState(false);
-  const [payStatus, setPayStatus] = useState<"idle"|"sending"|"sent">("idle");
+  const [payStatus, setPayStatus] = useState<"idle" | "sending" | "sent">("idle");
 
   // ── ONBOARDING STATE ──
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -156,7 +156,7 @@ export default function Dashboard() {
     fetch("/api/alerts")
       .then(r => r.json())
       .then(d => {
-        if(d && d.length > 0) setGlobalAlert(d[0]);
+        if (d && d.length > 0) setGlobalAlert(d[0]);
       })
       .catch(e => console.error("Error fetching alerts", e));
 
@@ -164,7 +164,7 @@ export default function Dashboard() {
       fetch("/api/messages/unread")
         .then(r => r.json())
         .then(d => { if (d.count !== undefined) setUnreadSupport(d.count); })
-        .catch(e => {});
+        .catch(e => { });
     };
     fetchUnread();
     const unreadInterval = setInterval(fetchUnread, 10000);
@@ -200,7 +200,7 @@ export default function Dashboard() {
             setSections(merged);
           }
           if (d.business.layoutConfig?.media) setMedia(d.business.layoutConfig.media);
-          
+
           // Check Onboarding
           if (d.business && !d.business.layoutConfig?.onboarded) {
             setShowOnboarding(true);
@@ -221,7 +221,7 @@ export default function Dashboard() {
   // ── CARGAR TURNOS ──
   useEffect(() => {
     if (!biz?.id) return;
-    
+
     if (tab === "appointments" || appointments.length === 0) {
       fetch(`/api/appointments?businessId=${biz.id}`)
         .then(res => {
@@ -308,7 +308,7 @@ export default function Dashboard() {
     <div className="min-h-[100dvh] flex items-center justify-center bg-[#070b12]">
       <div className="text-center p-8 border border-white/10 rounded-2xl bg-white/5">
         <h2 className="text-xl text-white font-bold mb-2">Acceso Restringido 🛑</h2>
-        <p className="text-slate-400 text-sm">Tu cuenta no tiene un negocio asignado.<br/>Contactá a la administración para obtener tu acceso.</p>
+        <p className="text-slate-400 text-sm">Tu cuenta no tiene un negocio asignado.<br />Contactá a la administración para obtener tu acceso.</p>
       </div>
     </div>
   );
@@ -316,7 +316,7 @@ export default function Dashboard() {
   const pending = appointments.filter(a => a.status === "PENDING");
 
   return (
-    <div className="min-h-[100dvh] flex flex-col md:flex-row" style={{ background: "#070b12", fontFamily: "'Plus Jakarta Sans',system-ui,sans-serif" }}>
+    <div className="min-h-[100dvh] flex flex-col md:flex-row" style={{ background: "#070b12", fontFamily: "'Plus Jakarta Sans',system-ui,sans-serif", "--primary-color": biz?.primaryColor || "#6366f1", "--secondary-color": biz?.secondaryColor || "#a855f7" } as React.CSSProperties}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&display=swap');
         * { box-sizing: border-box; }
@@ -378,7 +378,7 @@ export default function Dashboard() {
       )}
 
       {/* ── SIDEBAR (Desktop only) ── */}
-      <Sidebar 
+      <Sidebar
         biz={biz}
         tab={tab}
         setTab={setTab}
@@ -392,7 +392,7 @@ export default function Dashboard() {
       />
 
       <main className="flex-1 flex flex-col min-w-0 h-[100dvh] overflow-hidden custom-scrollbar bg-[#080a10]">
-        
+
         {/* ALERT BANNER GLOBAL */}
         {globalAlert && (
           <div className={`px-4 py-2 flex items-center justify-center gap-2 text-sm font-semibold z-50 ${globalAlert.type === "warning" ? "bg-red-500/20 text-red-200 border-b border-red-500/30" : globalAlert.type === "success" ? "bg-emerald-500/20 text-emerald-200 border-b border-emerald-500/30" : "bg-indigo-500/20 text-indigo-200 border-b border-indigo-500/30"}`}>
@@ -403,7 +403,7 @@ export default function Dashboard() {
         )}
 
         <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-6 pb-[calc(env(safe-area-inset-bottom)+6rem)] md:pb-6 relative" style={{ background: "radial-gradient(ellipse at 50% -20%, rgba(99,102,241,0.05), transparent 60%)" }}>
-          
+
           <div className="max-w-[1400px] mx-auto h-full flex flex-col">
             {/* ── HOME (Overview) ── */}
             {tab === "home" && (
@@ -449,30 +449,75 @@ export default function Dashboard() {
                     </button>
                   </div>
 
-                  <div className="rounded-2xl p-6 relative overflow-hidden group" style={{ background: "linear-gradient(135deg,#4338ca,#6366f1)", border: "1px solid rgba(255,255,255,0.1)" }}>
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -mr-10 -mt-10 group-hover:bg-white/20 transition-colors"></div>
-                    <div className="relative z-10 flex flex-col h-full justify-between">
-                      <div>
-                        <h3 className="text-white font-bold text-lg mb-1">¡Completá tu perfil!</h3>
-                        <p className="text-sm text-indigo-100 mb-4 leading-relaxed">Personalizá los colores, agregá tus servicios y subí algunas fotos para empezar a recibir reservas.</p>
+                  {(() => {
+                    const checklist = [
+                      { id: "logo", label: "Subir un logo", done: !!biz.logoUrl, tab: "config" },
+                      { id: "services", label: "Agregar servicios", done: sections.find((s: any) => s.id === "services")?.config?.items?.length > 0, tab: "editor" },
+                      { id: "gallery", label: "Subir fotos", done: media.length > 0, tab: "gallery" },
+                      { id: "contact", label: "Añadir WhatsApp", done: !!biz.whatsapp, tab: "config" }
+                    ];
+                    const completed = checklist.filter(c => c.done).length;
+                    const progress = (completed / checklist.length) * 100;
+                    
+                    if (completed === checklist.length) {
+                      return (
+                        <div className="rounded-2xl p-6 relative overflow-hidden group flex flex-col justify-between" style={{ background: `linear-gradient(135deg, var(--secondary-color), var(--primary-color))`, border: "1px solid rgba(255,255,255,0.1)" }}>
+                          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -mr-10 -mt-10 group-hover:bg-white/20 transition-colors"></div>
+                          <div className="relative z-10 flex flex-col h-full justify-between">
+                            <div>
+                              <div className="flex items-center gap-2 mb-2">
+                                <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center"><Ico n="check" s={16} c="text-white" /></div>
+                                <h3 className="text-white font-bold text-lg">¡Perfil completado!</h3>
+                              </div>
+                              <p className="text-sm text-white/80 mb-4 leading-relaxed">Tu negocio está listo para recibir reservas. Compartí el enlace para atraer más clientes.</p>
+                            </div>
+                            <button onClick={copyUrl} className="self-start flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-white/20 text-white hover:bg-white/30 transition-colors shadow-lg">
+                              <Ico n="share-2" s={14} /> Compartir Enlace
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div className="rounded-2xl p-6 relative overflow-hidden flex flex-col" style={{ background: "linear-gradient(135deg,#131929,#111825)", border: "1px solid rgba(255,255,255,0.05)" }}>
+                        <div className="flex justify-between items-end mb-4">
+                          <div>
+                            <h3 className="text-white font-bold mb-1">Primeros pasos</h3>
+                            <p className="text-xs text-slate-400">Completá tu perfil para arrancar</p>
+                          </div>
+                          <div className="text-xs font-bold" style={{ color: "var(--primary-color)" }}>{completed}/{checklist.length}</div>
+                        </div>
+                        
+                        <div className="w-full h-1.5 bg-white/5 rounded-full mb-5 overflow-hidden">
+                          <div className="h-full rounded-full transition-all duration-500" style={{ width: `${progress}%`, backgroundColor: "var(--primary-color)" }}></div>
+                        </div>
+                        
+                        <div className="flex flex-col gap-2.5 flex-1 justify-center">
+                          {checklist.map(item => (
+                            <div key={item.id} onClick={() => !item.done && setTab(item.tab)} className={`flex items-center gap-3 ${item.done ? "opacity-50 cursor-default" : "cursor-pointer hover:bg-white/5"} p-2 -mx-2 rounded-lg transition-colors`}>
+                              <div className={`w-5 h-5 rounded-full flex items-center justify-center border transition-colors ${item.done ? "bg-emerald-500/20 border-emerald-500/50 text-emerald-400" : "bg-white/5 border-white/10 text-transparent"}`}>
+                                <Ico n="check" s={12} c={item.done ? "text-emerald-400" : "text-transparent"} />
+                              </div>
+                              <span className={`text-sm font-medium ${item.done ? "text-slate-400 line-through" : "text-slate-300"}`}>{item.label}</span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                      <button onClick={() => setTab("editor")} className="self-start flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-white text-indigo-600 hover:bg-indigo-50 transition-colors shadow-lg shadow-black/10">
-                        <Ico n="edit" s={14} /> Ir al Editor Visual
-                      </button>
-                    </div>
-                  </div>
+                    );
+                  })()}
                 </div>
 
                 {/* ── CHARTS (ANALYTICS) ── */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
                   {/* Bar Chart */}
                   <div className="rounded-2xl p-6 relative overflow-hidden" style={{ background: "linear-gradient(135deg,#131929,#111825)", border: "1px solid rgba(255,255,255,0.05)" }}>
-                    <h3 className="text-white font-bold mb-4 flex items-center gap-2"><Ico n="bar-chart-2" s={16} c="text-indigo-400"/> Actividad (Últimos 7 días)</h3>
+                    <h3 className="text-white font-bold mb-4 flex items-center gap-2"><Ico n="bar-chart-2" s={16} c="text-indigo-400" /> Actividad (Últimos 7 días)</h3>
                     <div className="h-64">
                       {(() => {
-                        const last7Days = Array.from({length: 7}, (_, i) => {
+                        const last7Days = Array.from({ length: 7 }, (_, i) => {
                           const d = new Date(); d.setDate(d.getDate() - (6 - i));
-                          return { name: d.toLocaleDateString('es-AR', {weekday: 'short'}), dateStr: d.toDateString(), turnos: 0 };
+                          return { name: d.toLocaleDateString('es-AR', { weekday: 'short' }), dateStr: d.toDateString(), turnos: 0 };
                         });
                         appointments.forEach(a => {
                           const aDate = new Date(a.date).toDateString();
@@ -484,8 +529,8 @@ export default function Dashboard() {
                             <BarChart data={last7Days} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                               <XAxis dataKey="name" stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} />
                               <YAxis stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} />
-                              <Tooltip cursor={{fill: 'rgba(255,255,255,0.05)'}} contentStyle={{background: '#1e293b', border: 'none', borderRadius: '8px', color: '#fff'}} />
-                              <Bar dataKey="turnos" fill="#6366f1" radius={[4,4,0,0]} />
+                              <Tooltip cursor={{ fill: 'rgba(255,255,255,0.05)' }} contentStyle={{ background: '#1e293b', border: 'none', borderRadius: '8px', color: '#fff' }} />
+                              <Bar dataKey="turnos" fill="var(--primary-color)" radius={[4, 4, 0, 0]} />
                             </BarChart>
                           </ResponsiveContainer>
                         );
@@ -495,7 +540,7 @@ export default function Dashboard() {
 
                   {/* Pie Chart */}
                   <div className="rounded-2xl p-6 relative overflow-hidden" style={{ background: "linear-gradient(135deg,#131929,#111825)", border: "1px solid rgba(255,255,255,0.05)" }}>
-                    <h3 className="text-white font-bold mb-4 flex items-center gap-2"><Ico n="pie-chart" s={16} c="text-purple-400"/> Servicios Populares</h3>
+                    <h3 className="text-white font-bold mb-4 flex items-center gap-2"><Ico n="pie-chart" s={16} c="text-purple-400" /> Servicios Populares</h3>
                     <div className="h-64">
                       {(() => {
                         const servicesMap: any = {};
@@ -503,8 +548,8 @@ export default function Dashboard() {
                           const s = a.serviceName || "Otros";
                           servicesMap[s] = (servicesMap[s] || 0) + 1;
                         });
-                        const data = Object.keys(servicesMap).map(k => ({ name: k, value: servicesMap[k] })).sort((a,b) => b.value - a.value).slice(0, 5);
-                        const COLORS = ['#6366f1', '#a855f7', '#ec4899', '#f43f5e', '#f59e0b'];
+                        const data = Object.keys(servicesMap).map(k => ({ name: k, value: servicesMap[k] })).sort((a, b) => b.value - a.value).slice(0, 5);
+                        const COLORS = ['var(--primary-color)', 'var(--secondary-color)', '#ec4899', '#f43f5e', '#f59e0b'];
                         if (data.length === 0) return <div className="h-full flex items-center justify-center text-slate-500 text-sm">Sin datos aún</div>;
                         return (
                           <ResponsiveContainer width="100%" height="100%">
@@ -512,7 +557,7 @@ export default function Dashboard() {
                               <Pie data={data} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value" stroke="none">
                                 {data.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
                               </Pie>
-                              <Tooltip contentStyle={{background: '#1e293b', border: 'none', borderRadius: '8px', color: '#fff'}} itemStyle={{color: '#fff'}} />
+                              <Tooltip contentStyle={{ background: '#1e293b', border: 'none', borderRadius: '8px', color: '#fff' }} itemStyle={{ color: '#fff' }} />
                             </PieChart>
                           </ResponsiveContainer>
                         );
@@ -526,32 +571,32 @@ export default function Dashboard() {
 
             {/* ── EDITOR ── */}
             {tab === "editor" && (
-              <EditorTab 
-                biz={biz} setBiz={setBiz} sections={sections} setSections={setSections} 
-                media={media} setMedia={setMedia} saveAll={saveAll} saving={saving} 
-                showToast={pushToast} setTab={setTab} 
+              <EditorTab
+                biz={biz} setBiz={setBiz} sections={sections} setSections={setSections}
+                media={media} setMedia={setMedia} saveAll={saveAll} saving={saving}
+                showToast={pushToast} setTab={setTab}
               />
             )}
 
             {/* ── BIOLINKS EDITOR ── */}
             {tab === "biolinks" && (
-              <BiolinksTab 
-                biz={biz} setBiz={setBiz} saveAll={saveAll} saving={saving} 
+              <BiolinksTab
+                biz={biz} setBiz={setBiz} saveAll={saveAll} saving={saving}
                 showToast={pushToast} copyUrl={() => {
                   navigator.clipboard.writeText(biz.customDomain ? `https://${biz.customDomain}/links` : `https://${biz.subdomain}.saas-miniwebs.vercel.app/links`);
                   setCopiedUrl(true);
                   setTimeout(() => setCopiedUrl(false), 2000);
                   pushToast("URL /links copiada al portapapeles", "success");
-                }} copiedUrl={copiedUrl} 
+                }} copiedUrl={copiedUrl}
               />
             )}
 
             {/* ── TABS HIJOS IMPORTADOS ── */}
             {(tab === "appointments" || tab === "gallery" || tab === "config") && (
-              <ManagementTabs 
-                tab={tab} biz={biz} setBiz={setBiz} media={media} setMedia={setMedia} 
-                appointments={appointments} setAppointments={setAppointments} saveAll={saveAll} saving={saving} 
-                showToast={pushToast} uploadQueue={uploadQueue} uploadFiles={uploadFiles} 
+              <ManagementTabs
+                tab={tab} biz={biz} setBiz={setBiz} media={media} setMedia={setMedia}
+                appointments={appointments} setAppointments={setAppointments} saveAll={saveAll} saving={saving}
+                showToast={pushToast} uploadQueue={uploadQueue} uploadFiles={uploadFiles}
               />
             )}
 
@@ -586,27 +631,11 @@ export default function Dashboard() {
               {supportMsgs.length === 0 && !supportLoading && (
                 <div className="text-center text-slate-400 text-sm mt-4">¡Hola! ¿En qué podemos ayudarte?</div>
               )}
-              {supportMsgs.map((m, i) => {
-                if (m.content === "[CONSULTA_FINALIZADA]") {
-                  return (
-                    <div key={m.id || i} className="text-center text-xs text-slate-500 my-2 px-4 py-1 bg-white/5 rounded-full self-center border border-white/5">
-                      Chat finalizado. Escribe para iniciar una nueva consulta.
-                    </div>
-                  );
-                }
-                if (m.content.startsWith("[TRANSFERIDO DESDE IA]")) {
-                  return (
-                    <div key={m.id || i} className="text-center text-xs text-indigo-400 my-2 px-4 py-1 bg-indigo-500/10 rounded-full self-center border border-indigo-500/20">
-                      Un asesor humano se ha unido al chat.
-                    </div>
-                  );
-                }
-                return (
-                  <div key={m.id || i} className={`max-w-[85%] p-3 rounded-xl text-sm ${m.senderType === "USER" ? "bg-indigo-500/20 text-indigo-100 self-end rounded-br-sm border border-indigo-500/30" : "bg-white/5 text-slate-300 self-start rounded-bl-sm border border-white/10 whitespace-pre-line"}`}>
-                    {m.content}
-                  </div>
-                );
-              })}
+              {supportMsgs.map((m, i) => (
+                <div key={m.id || i} className={`max-w-[85%] p-3 rounded-xl text-sm ${m.senderType === "USER" ? "bg-indigo-500/20 text-indigo-100 self-end rounded-br-sm border border-indigo-500/30" : "bg-white/5 text-slate-300 self-start rounded-bl-sm border border-white/10 whitespace-pre-line"}`}>
+                  {m.content}
+                </div>
+              ))}
               {supportLoading && (
                 <div className="max-w-[85%] p-3 rounded-xl text-sm bg-white/5 text-slate-400 self-start rounded-bl-sm border border-white/10 flex items-center gap-2">
                   <div className="w-4 h-4 border-2 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin"></div>
@@ -615,8 +644,8 @@ export default function Dashboard() {
               )}
             </div>
             <div className="p-3 bg-[#131929] border-t border-white/5 flex gap-2">
-              <input 
-                type="text" 
+              <input
+                type="text"
                 value={supportInput}
                 onChange={e => setSupportInput(e.target.value)}
                 onKeyDown={e => {
@@ -626,21 +655,23 @@ export default function Dashboard() {
                 placeholder="Escribe tu consulta..."
                 className="flex-1 bg-[#050810] text-sm text-white px-3 py-2 rounded-lg border border-white/10 focus:border-indigo-500 focus:outline-none disabled:opacity-50"
               />
-              <button 
+              <button
                 onClick={handleSendSupport}
                 disabled={supportLoading}
-                className="w-10 h-10 bg-indigo-500 rounded-lg flex items-center justify-center text-white hover:bg-indigo-400 transition-colors disabled:opacity-50"
+                className="w-10 h-10 rounded-lg flex items-center justify-center text-white transition-colors disabled:opacity-50"
+                style={{ backgroundColor: "var(--primary-color)" }}
               >
                 <Ico n="send" s={16} />
               </button>
             </div>
           </div>
         )}
-        <button 
+        <button
           onClick={() => {
             setSupportOpen(!supportOpen);
           }}
-          className={`w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-transform hover:scale-110 relative ${supportOpen ? "bg-white/10" : "bg-indigo-500"}`}
+          className={`w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-transform hover:scale-110 relative ${supportOpen ? "bg-white/10" : ""}`}
+          style={!supportOpen ? { backgroundColor: "var(--primary-color)" } : {}}
         >
           <Ico n={supportOpen ? "x" : "message-circle"} s={24} c="text-white" />
           {!supportOpen && unreadSupport > 0 && (
@@ -662,7 +693,7 @@ export default function Dashboard() {
                 <Ico n="x" s={16} />
               </button>
             </div>
-            
+
             <div className="p-6">
               <div className="bg-[#050810] border border-white/5 rounded-xl p-5 mb-6 text-center">
                 <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Datos de Transferencia</p>
@@ -719,11 +750,11 @@ export default function Dashboard() {
               )}
             </div>
             {payStatus === "sent" && (
-               <div className="p-4 border-t border-white/10 bg-[#0b1020]">
-                 <button onClick={() => { setPayModalOpen(false); setTimeout(() => setPayStatus("idle"), 300); }} className="w-full py-3 rounded-xl bg-white/5 hover:bg-white/10 text-white font-bold text-sm transition-colors">
-                   Cerrar ventana
-                 </button>
-               </div>
+              <div className="p-4 border-t border-white/10 bg-[#0b1020]">
+                <button onClick={() => { setPayModalOpen(false); setTimeout(() => setPayStatus("idle"), 300); }} className="w-full py-3 rounded-xl bg-white/5 hover:bg-white/10 text-white font-bold text-sm transition-colors">
+                  Cerrar ventana
+                </button>
+              </div>
             )}
           </div>
         </div>
@@ -736,7 +767,7 @@ export default function Dashboard() {
             {/* Decors */}
             <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
             <div className="absolute bottom-0 left-0 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl -ml-20 -mb-20 pointer-events-none" />
-            
+
             <div className="relative z-10">
               <div className="flex justify-between items-center mb-8">
                 <div>
@@ -773,7 +804,7 @@ export default function Dashboard() {
                         pushToast("Error al subir", "error");
                       }
                     }} />
-                    <button onClick={() => logoRef.current?.click()} className="px-5 py-2.5 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-bold transition-colors">
+                    <button onClick={() => logoRef.current?.click()} className="px-5 py-2.5 rounded-xl text-white text-sm font-bold transition-colors" style={{ backgroundColor: "var(--primary-color)" }}>
                       Elegir Imagen
                     </button>
                   </div>
@@ -787,18 +818,18 @@ export default function Dashboard() {
                 <div className="space-y-5">
                   <div>
                     <label className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Teléfono / WhatsApp</label>
-                    <input type="text" value={onboardingData.phone} onChange={e => setOnboardingData({...onboardingData, phone: e.target.value})} 
+                    <input type="text" value={onboardingData.phone} onChange={e => setOnboardingData({ ...onboardingData, phone: e.target.value })}
                       className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white focus:border-indigo-500 focus:outline-none" placeholder="Ej: 5512345678" />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">CBU (Opcional)</label>
-                      <input type="text" value={onboardingData.cbu} onChange={e => setOnboardingData({...onboardingData, cbu: e.target.value})} 
+                      <input type="text" value={onboardingData.cbu} onChange={e => setOnboardingData({ ...onboardingData, cbu: e.target.value })}
                         className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white focus:border-indigo-500 focus:outline-none" placeholder="00000..." />
                     </div>
                     <div>
                       <label className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Alias (Opcional)</label>
-                      <input type="text" value={onboardingData.alias} onChange={e => setOnboardingData({...onboardingData, alias: e.target.value})} 
+                      <input type="text" value={onboardingData.alias} onChange={e => setOnboardingData({ ...onboardingData, alias: e.target.value })}
                         className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white focus:border-indigo-500 focus:outline-none" placeholder="MI.ALIAS" />
                     </div>
                   </div>
@@ -813,11 +844,11 @@ export default function Dashboard() {
                         await fetch(`/api/businesses/${biz.id}`, {
                           method: "PUT",
                           headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ 
-                            ...biz, 
+                          body: JSON.stringify({
+                            ...biz,
                             phone: onboardingData.phone,
                             paymentData,
-                            layoutConfig: { ...(biz.layoutConfig || {}), onboarded: true } 
+                            layoutConfig: { ...(biz.layoutConfig || {}), onboarded: true }
                           }),
                         });
                         setBiz((prev: any) => ({ ...prev, phone: onboardingData.phone, paymentData, layoutConfig: { ...prev.layoutConfig, onboarded: true } }));
@@ -827,7 +858,7 @@ export default function Dashboard() {
                         pushToast("Error guardando datos", "error");
                       }
                       setSaving(false);
-                    }} disabled={saving} className="flex-1 py-3.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 text-white font-bold transition-colors shadow-lg shadow-indigo-500/20">
+                    }} disabled={saving} className="flex-1 py-3.5 rounded-xl text-white font-bold transition-colors shadow-lg" style={{ background: `linear-gradient(to right, var(--primary-color), var(--secondary-color))` }}>
                       {saving ? "Finalizando..." : "Finalizar y Entrar"}
                     </button>
                   </div>

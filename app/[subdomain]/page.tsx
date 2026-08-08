@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { Metadata } from "next";
+import { getTheme } from "@/lib/themes";
 import BookingForm from "./BookingForm";
 
 export async function generateMetadata({ params }: { params: Promise<{ subdomain: string }> }): Promise<Metadata> {
@@ -144,16 +145,34 @@ export default async function PublicLandingPage({ params }: { params: Promise<{ 
   };
 
   const TemplateComponent = renderTemplate();
+  const theme = getTheme(biz.type);
+
+  // Generamos el bloque de CSS dinámico para este negocio
+  const themeStyles = `
+    :root {
+      --biz-bg: ${theme.bg};
+      --biz-surface: ${theme.surface};
+      --biz-accent: ${biz.primaryColor || theme.accent};
+      --biz-text: ${theme.textPrimary};
+      --biz-text-sec: ${theme.textSecondary};
+      --biz-border: ${theme.border};
+    }
+    body {
+      background-color: var(--biz-bg);
+      color: var(--biz-text);
+    }
+  `;
 
   if (TemplateComponent) {
     return (
-      <>
+      <div className={`${theme.fontDisplay}`}>
+        <style dangerouslySetInnerHTML={{ __html: themeStyles }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
         {TemplateComponent}
         {biz.layoutConfig?.chatbotEnabled !== false && (
-          <ChatbotWidget businessId={biz.id} bizName={biz.name} primaryColor={biz.primaryColor || "#6366f1"} chatbotName={biz.layoutConfig?.chatbotName || "Asistente Virtual"} />
+          <ChatbotWidget businessId={biz.id} bizName={biz.name} primaryColor={biz.primaryColor || theme.accent} chatbotName={biz.layoutConfig?.chatbotName || "Asistente Virtual"} />
         )}
-      </>
+      </div>
     );
   }
 
@@ -166,11 +185,12 @@ export default async function PublicLandingPage({ params }: { params: Promise<{ 
   const media = layoutConfig.media || [];
   
   return (
-    <>
+    <div className={`${theme.fontDisplay}`}>
+      <style dangerouslySetInnerHTML={{ __html: themeStyles }} />
       <DefaultTemplate negocio={biz} media={media} sections={sections} />
       {layoutConfig.chatbotEnabled !== false && (
-        <ChatbotWidget businessId={biz.id} bizName={biz.name} primaryColor={biz.primaryColor || "#6366f1"} chatbotName={layoutConfig.chatbotName || "Asistente Virtual"} />
+        <ChatbotWidget businessId={biz.id} bizName={biz.name} primaryColor={biz.primaryColor || theme.accent} chatbotName={layoutConfig.chatbotName || "Asistente Virtual"} />
       )}
-    </>
+    </div>
   );
 }

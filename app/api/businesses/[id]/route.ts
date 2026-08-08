@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { businessUpdateSchema } from "@/lib/validations";
 
 // Función ninja para evitar que las fechas exploten
 const parseDate = (d: any) => {
@@ -38,11 +39,16 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     if (!existingBusiness) {
       return NextResponse.json({ error: "Negocio no encontrado" }, { status: 404 });
     }
-    const isAdmin = (session.user as any).role === 'ADMIN';
+    const isAdmin = session.user.role === 'ADMIN';
     if (existingBusiness.userId !== session.user.id && !isAdmin) {
       return NextResponse.json({ error: "Prohibido: No tienes permiso para editar este negocio" }, { status: 403 });
     }
-    const data = await req.json();
+    const rawData = await req.json();
+    const parseResult = businessUpdateSchema.safeParse(rawData);
+    if (!parseResult.success) {
+      return NextResponse.json({ error: "Datos inválidos", details: parseResult.error.format() }, { status: 400 });
+    }
+    const data = parseResult.data;
     
     // Limpiar el customDomain si lo envían
     const cleanCustomDomain = data.customDomain 
@@ -104,7 +110,7 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
     if (!existingBusiness) {
       return NextResponse.json({ error: "Negocio no encontrado" }, { status: 404 });
     }
-    const isAdmin = (session.user as any).role === 'ADMIN';
+    const isAdmin = session.user.role === 'ADMIN';
     if (existingBusiness.userId !== session.user.id && !isAdmin) {
       return NextResponse.json({ error: "Prohibido: No tienes permiso para borrar este negocio" }, { status: 403 });
     }

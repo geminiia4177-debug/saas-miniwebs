@@ -22,6 +22,35 @@ export async function POST(req: Request) {
     } else {
       // ADMIN
       if (businessId) {
+        // Check if we need to send a "Asesor conectado" message
+        const recent = await prisma.message.findMany({
+          where: { businessId },
+          orderBy: { createdAt: 'desc' },
+          take: 5
+        });
+        
+        let needsJoinMessage = false;
+        for (const msg of recent) {
+          if (msg.content === '[ASESOR_CONECTADO]' || msg.senderType === 'ADMIN') {
+             break; // Already joined or talked
+          }
+          if (msg.content.includes('[TRANSFERIDO DESDE IA]')) {
+             needsJoinMessage = true;
+             break;
+          }
+        }
+        
+        if (needsJoinMessage) {
+           await prisma.message.create({
+             data: {
+               businessId,
+               content: '[ASESOR_CONECTADO]',
+               senderType: 'ADMIN',
+               isRead: true
+             }
+           });
+        }
+
         // Mark USER messages as read for this business
         await prisma.message.updateMany({
           where: { businessId, senderType: 'USER', isRead: false },

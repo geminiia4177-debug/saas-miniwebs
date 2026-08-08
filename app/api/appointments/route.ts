@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db"; 
+import { prisma } from "@/lib/db";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
+import { appointmentSchema } from "@/lib/validations";
 
 export async function GET(req: Request) {
+  const session = await getServerSession(authOptions);
   const { searchParams } = new URL(req.url);
   const patente = searchParams.get("patente");
   const search = searchParams.get("search");
@@ -11,6 +15,56 @@ export async function GET(req: Request) {
 
   try {
     let whereClause: any = { businessId: businessId };
+    
+    // Si NO hay sesión de administrador o dueño, es una consulta pública (tracking)
+    let isOwnerOrAdmin = false;
+    
+    if (session) {
+      const userRole = session.user?.role;
+      const userId = session.user?.id;
+      
+      if (userRole === "ADMIN") {
+        isOwnerOrAdmin = true;
+      } else if (userId) {
+        const business = await prisma.business.findUnique({ where: { id: businessId } });
+        if (business && business.userId === userId) {
+          isOwnerOrAdmin = true;
+        }
+      }
+    }
+
+    if (!isOwnerOrAdmin) {
+      // Para búsquedas públicas es obligatorio enviar patente o término de búsqueda
+      if (!patente && !search) {
+        return NextResponse.json({ error: "No autorizado. Se requiere término de búsqueda." }, { status: 401 });
+      }
+
+      const q = patente || search;
+      whereClause = {
+        ...whereClause,
+        OR: [
+          { patente: { contains: q, mode: 'insensitive' } },
+          { notes: { contains: `PATENTE:${q}`, mode: 'insensitive' } }
+        ]
+      };
+
+      const turnosPublicos = await prisma.appointment.findMany({
+        where: whereClause,
+        orderBy: { date: 'asc' },
+        select: {
+          id: true,
+          date: true,
+          status: true,
+          serviceName: true,
+          notes: true,
+          patente: true,
+          businessId: true,
+        }
+      });
+      return NextResponse.json(turnosPublicos);
+    }
+
+    // Si es admin/dueño y envió búsqueda (para filtrar en el dashboard)
     if (patente || search) {
       const q = patente || search;
       whereClause = {
@@ -35,7 +89,13 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const data = await req.json();
+    const rawData = await req.json();
+    const parseResult = appointmentSchema.safeParse(rawData);
+    if (!parseResult.success) {
+      return NextResponse.json({ error: "Datos de turno inválidos", details: parseResult.error.format() }, { status: 400 });
+    }
+    const data = parseResult.data;
+
     if (data.paymentMethod === 'TRANSFER') {
       data.paymentReference = "TRX-" + Math.random().toString(36).substring(2, 6).toUpperCase();
     }

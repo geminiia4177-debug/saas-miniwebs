@@ -20,15 +20,15 @@ const RUBRO_META: Record<string, any> = {
 };
 
 const STATUS_META: Record<string, any> = {
-  ACTIVE:  { label: "Activo",     color: "#00e5a0", glow: "rgba(0,229,160,0.3)"  },
-  DEMO:    { label: "Demo",       color: "#f5a623", glow: "rgba(245,166,35,0.3)" },
-  BLOCKED: { label: "Bloqueado",  color: "#ff4d6d", glow: "rgba(255,77,109,0.3)" },
+  ACTIVE:  { label: "Activo",     color: "#4ADE9C", glow: "rgba(74,222,156,0.3)"  },
+  DEMO:    { label: "Demo",       color: "#E5A94D", glow: "rgba(229,169,77,0.3)" },
+  BLOCKED: { label: "Bloqueado",  color: "#EF6A80", glow: "rgba(239,106,128,0.3)" },
 };
 
 const PAY_STATUS_META: Record<string, any> = {
-  paid:    { label: "Al día",    color: "#00e5a0", bg: "rgba(0,229,160,0.1)"   },
-  pending: { label: "Pendiente", color: "#f5a623", bg: "rgba(245,166,35,0.1)"  },
-  overdue: { label: "Vencido",   color: "#ff4d6d", bg: "rgba(255,77,109,0.1)"  },
+  paid:    { label: "Al día",    color: "#4ADE9C", bg: "rgba(74,222,156,0.1)"   },
+  pending: { label: "Pendiente", color: "#E5A94D", bg: "rgba(229,169,77,0.1)"  },
+  overdue: { label: "Vencido",   color: "#EF6A80", bg: "rgba(239,106,128,0.1)"  },
 };
 
 // ── UTILITY ──────────────────────────────────────────────────────────────────

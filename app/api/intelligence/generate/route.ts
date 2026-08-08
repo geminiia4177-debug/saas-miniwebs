@@ -24,7 +24,7 @@ export async function POST(req: Request) {
     }
 
     // Verify ownership
-    const isAdmin = (session.user as any).role === "ADMIN";
+    const isAdmin = session.user.role === "ADMIN";
     const business = await prisma.business.findUnique({
       where: { id: businessId },
     });

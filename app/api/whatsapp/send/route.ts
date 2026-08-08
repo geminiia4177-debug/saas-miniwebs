@@ -1,6 +1,14 @@
 import { NextResponse } from 'next/server';
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
 
 export async function POST(request: Request) {
+  const session = await getServerSession(authOptions);
+  
+  if (!session) {
+    return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+  }
+
   const globalAny: any = global;
   
   if (globalAny.waStatus !== 'AUTHENTICATED' || !globalAny.waClient) {

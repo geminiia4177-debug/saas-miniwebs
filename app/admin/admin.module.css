@@ -16,9 +16,9 @@
   --t2:        #4a5568;
   --accent:    #6c8eff;
   --accent2:   #a78bfa;
-  --green:     #00e5a0;
-  --yellow:    #f5a623;
-  --red:       #ff4d6d;
+  --green:     #4ADE9C;
+  --yellow:    #E5A94D;
+  --red:       #EF6A80;
   --f:         'Outfit', sans-serif;
   --fm:        'IBM Plex Mono', monospace;
   --r:         14px;
@@ -26,20 +26,19 @@
   --shadow:    0 24px 60px rgba(0,0,0,0.6);
 }
 
-:global(html), :global(body), :global(#root) { height:100%; }
-
-:global(body) {
+.adminRoot {
   background: var(--bg);
   font-family: var(--f);
   color: var(--t0);
   -webkit-font-smoothing: antialiased;
-  overflow-x: hidden;
+  min-height: 100dvh;
+  position: relative;
 }
 
 /* Noise + grid ambient */
-:global(body::before) {
+.adminRoot::before {
   content:'';
-  position:fixed;inset:0;
+  position:absolute;inset:0;
   background-image:
     radial-gradient(ellipse 80% 40% at 20% -10%, rgba(108,142,255,0.06) 0%, transparent 60%),
     radial-gradient(ellipse 60% 40% at 80% 110%, rgba(167,139,250,0.05) 0%, transparent 60%),

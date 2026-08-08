@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import styles from "./admin.module.css";
+import { Ico } from "@/lib/constants";
 
 export default function AdminSupport({ showToast }: { showToast: (msg: string, type: "ok" | "warn") => void }) {
   const [messages, setMessages] = useState<any[]>([]);
@@ -156,11 +157,31 @@ export default function AdminSupport({ showToast }: { showToast: (msg: string, t
                     </div>
                   );
                 }
-                if (msg.content.startsWith("[TRANSFERIDO DESDE IA]")) {
+                if (msg.content === "[ASESOR_CONECTADO]") {
                   return (
                     <div key={msg.id} style={{ display: "flex", justifyContent: "center" }}>
-                      <div style={{ background: "rgba(108,142,255,0.1)", padding: "4px 16px", borderRadius: "20px", fontSize: "11px", color: "var(--accent)" }}>
-                        Transferido a Asesor
+                      <div style={{ background: "rgba(0,229,160,0.1)", padding: "4px 16px", borderRadius: "20px", fontSize: "11px", color: "var(--green)" }}>
+                        Te has unido al chat
+                      </div>
+                    </div>
+                  );
+                }
+                if (msg.content.startsWith("[TRANSFERIDO DESDE IA]")) {
+                  const actual = msg.content.replace("[TRANSFERIDO DESDE IA]", "").trim();
+                  return (
+                    <div key={msg.id} style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                      <div style={{ display: "flex", justifyContent: "flex-start" }}>
+                        <div style={{ maxWidth: "70%", padding: "12px 16px", borderRadius: "12px", background: "rgba(255,255,255,0.1)", color: "var(--t0)", borderBottomLeftRadius: 0 }}>
+                          <div style={{ whiteSpace: "pre-wrap", fontSize: "14px" }}>{actual}</div>
+                          <div style={{ fontSize: "10px", marginTop: "4px", opacity: 0.7, textAlign: "left" }}>
+                            {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </div>
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", justifyContent: "center" }}>
+                        <div style={{ background: "rgba(108,142,255,0.1)", padding: "4px 16px", borderRadius: "20px", fontSize: "11px", color: "var(--accent)" }}>
+                          Transferido a Asesor
+                        </div>
                       </div>
                     </div>
                   );
@@ -191,9 +212,14 @@ export default function AdminSupport({ showToast }: { showToast: (msg: string, t
                 onClick={handleSend}
                 disabled={loading || !content.trim()}
                 className={styles['btn-submit']}
-                style={{ padding: "0 24px" }}
+                style={{ padding: "0 20px", display: "flex", alignItems: "center", gap: "8px" }}
               >
-                {loading ? "..." : "Enviar"}
+                {loading ? "..." : (
+                  <>
+                    <span>Enviar</span>
+                    <Ico n="send" s={16} />
+                  </>
+                )}
               </button>
             </div>
           </>

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import bcrypt from "bcryptjs"; // <- IMPORTANTE: El cerrajero que encripta la clave
+import { businessSchema } from "@/lib/validations";
 
 // ── GET: OBTENER TODOS LOS NEGOCIOS (Para tu Panel Admin CRM) ──
 export async function GET(req: Request) {
@@ -113,10 +114,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
-    const data = await req.json();
+    const rawData = await req.json();
+    const parseResult = businessSchema.safeParse(rawData);
+    if (!parseResult.success) {
+      return NextResponse.json({ error: "Datos inválidos", details: parseResult.error.format() }, { status: 400 });
+    }
+    const data = parseResult.data;
+    
     const { name, subdomain, email, customDomain } = data;
-
-    // Exigimos que haya un email para poder crearle la cuenta al cliente
     if (!name || !subdomain || !email) {
       return NextResponse.json({ error: "Nombre, subdominio y email son obligatorios" }, { status: 400 });
     }

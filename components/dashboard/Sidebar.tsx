@@ -8,9 +8,9 @@ export const NavItem = React.memo(({ icon, label, tab, active, setActive, badge,
   <button onClick={() => setActive(tab)}
     title={collapsed ? label : undefined}
     className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all relative ${collapsed ? "justify-center" : ""}`}
-    style={active === tab ? { background: "rgba(99,102,241,0.15)", color: "#fff", border: "1px solid rgba(99,102,241,0.3)" } : { color: "#64748b", border: "1px solid transparent" }}
+    style={active === tab ? { background: "color-mix(in srgb, var(--primary-color) 15%, transparent)", color: "#fff", border: "1px solid color-mix(in srgb, var(--primary-color) 30%, transparent)" } : { color: "#64748b", border: "1px solid transparent" }}
   >
-    <span style={active === tab ? { color: "#818cf8" } : {}}><Ico n={icon} s={16} /></span>
+    <span style={active === tab ? { color: "var(--primary-color)" } : {}}><Ico n={icon} s={16} /></span>
     {!collapsed && <span className="flex-1 text-left">{label}</span>}
     {badge !== undefined && badge > 0 && !collapsed && (
       <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold" style={{ background: "rgba(239,68,68,0.2)", color: "#f87171" }}>{badge}</span>

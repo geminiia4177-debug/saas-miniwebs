@@ -32,13 +32,13 @@ export default function DefaultTemplate({ negocio, media, sections }: { negocio:
   const [preselectedService, setPreselectedService] = useState("");
 
   return (
-    <div style={{ fontFamily: currentFont, backgroundColor: "#fafafa", minHeight: "100vh" }} className="text-slate-800 scroll-smooth">
+    <div style={{ backgroundColor: "var(--biz-bg)", minHeight: "100vh" }} className="scroll-smooth">
       {/* ── BARRA DE NAVEGACIÓN SUPERIOR ── */}
       <nav 
         className={`px-6 py-4 fixed top-0 w-full z-50 transition-all duration-300 flex justify-between items-center ${
-          scrolled ? "backdrop-blur-md bg-white/80 shadow-sm border-b border-slate-100/50 text-slate-800" : "bg-transparent text-white"
+          scrolled ? "backdrop-blur-md shadow-sm border-b" : "bg-transparent text-white"
         }`}
-        style={!scrolled && !heroImage ? { backgroundColor: primary } : {}}
+        style={scrolled ? { backgroundColor: "var(--biz-surface)", borderColor: "var(--biz-border)", color: "var(--biz-text)" } : (!heroImage ? { backgroundColor: primary } : {})}
       >
         <div className="flex items-center gap-3">
           {negocio.logoUrl ? (
@@ -71,11 +71,9 @@ export default function DefaultTemplate({ negocio, media, sections }: { negocio:
             <div className={`w-6 h-0.5 transition-all ${scrolled ? "bg-slate-800" : "bg-white"} ${menuOpen ? "-rotate-45 -translate-y-2" : ""}`}></div>
           </div>
         </button>
-      </nav>
-
-      {/* Drawer Móvil */}
+        {/* Drawer Móvil */}
       {menuOpen && (
-        <div className="fixed inset-0 z-40 bg-white pt-24 px-6 flex flex-col gap-6 text-lg font-medium text-slate-800 md:hidden">
+        <div className="fixed inset-0 z-40 pt-24 px-6 flex flex-col gap-6 text-lg font-medium md:hidden" style={{ backgroundColor: "var(--biz-surface)", color: "var(--biz-text)" }}>
           <a href="#services" onClick={() => setMenuOpen(false)}>Servicios</a>
           <a href="#gallery" onClick={() => setMenuOpen(false)}>Galería</a>
           <a href="#contact" onClick={() => setMenuOpen(false)}>Contacto</a>
@@ -86,15 +84,16 @@ export default function DefaultTemplate({ negocio, media, sections }: { negocio:
       )}
 
       {/* Mobile Sticky CTA */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-sm border-t border-slate-100 flex gap-3 z-50 md:hidden shadow-[0_-4px_16px_rgba(0,0,0,0.05)]">
+      <div className="fixed bottom-0 left-0 right-0 p-4 backdrop-blur-sm border-t flex gap-3 z-50 md:hidden shadow-[0_-4px_16px_rgba(0,0,0,0.05)]" style={{ backgroundColor: "var(--biz-surface)", borderColor: "var(--biz-border)" }}>
         {negocio.whatsapp && (
-          <a href={`https://wa.me/${negocio.whatsapp.replace(/\D/g,'')}`} target="_blank" rel="noreferrer" className="flex items-center justify-center p-3 rounded-xl bg-green-500 text-white shrink-0">
+          <a href={`https://wa.me/${negocio.whatsapp.replace(/\\D/g,'')}`} target="_blank" rel="noreferrer" className="flex items-center justify-center p-3 rounded-xl bg-green-500 text-white shrink-0">
             <MessageCircle className="w-6 h-6" />
           </a>
         )}
         <a href="#booking" className="flex-1 flex items-center justify-center py-3 rounded-xl font-bold text-white text-sm uppercase tracking-wide shadow-colored" style={{ backgroundColor: primary }}>
           Reservar turno
         </a>
+      </div>>
       </div>
 
       {/* ── CONSTRUCTOR DINÁMICO DE SECCIONES ── */}
@@ -142,7 +141,7 @@ export default function DefaultTemplate({ negocio, media, sections }: { negocio:
           if (section.id === "gallery" && galleryImages.length > 0) return (
             <section key="gallery" id="gallery" className="px-6 py-24 max-w-7xl mx-auto">
               <div className="text-center mb-16">
-                <h2 className="text-4xl font-black text-slate-900 mb-4 tracking-tight">Nuestra Galería</h2>
+                <h2 className="text-4xl font-black mb-4 tracking-tight" style={{ color: "var(--biz-text)" }}>Nuestra Galería</h2>
                 <div className="w-24 h-1 mx-auto rounded-full" style={{ backgroundColor: primary }}></div>
               </div>
               <div className={section.config?.masonry ? "columns-2 md:columns-3 lg:columns-4 gap-4 space-y-4" : `grid gap-4 ${section.config?.columns === 2 ? "grid-cols-2" : section.config?.columns === 4 ? "grid-cols-2 md:grid-cols-4" : "grid-cols-2 md:grid-cols-3"}`}>
@@ -157,16 +156,16 @@ export default function DefaultTemplate({ negocio, media, sections }: { negocio:
           );
 
           if (section.id === "services" && section.config?.items?.length > 0) return (
-            <section key="services" id="services" className="px-6 py-24 bg-slate-50 relative">
+            <section key="services" id="services" className="px-6 py-24 relative" style={{ backgroundColor: "var(--biz-surface)" }}>
               <div className="max-w-7xl mx-auto relative z-10">
                 <div className="text-center mb-16">
-                  <h2 className="text-4xl font-black text-slate-900 mb-4 tracking-tight">Nuestros Servicios</h2>
+                  <h2 className="text-4xl font-black mb-4 tracking-tight" style={{ color: "var(--biz-text)" }}>Nuestros Servicios</h2>
                   <div className="w-24 h-1 mx-auto rounded-full" style={{ backgroundColor: primary }}></div>
                 </div>
                 
                 <div className={`grid gap-6 ${section.config.items.length === 2 ? 'grid-cols-1 md:grid-cols-2 max-w-4xl mx-auto' : section.config.items.length === 3 ? 'grid-cols-1 md:grid-cols-3' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4'}`}>
                   {section.config.items.map((item: any, i: number) => (
-                    <div key={i} className="group relative bg-white rounded-3xl p-8 text-center shadow-sm border border-slate-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-2 overflow-hidden flex flex-col">
+                    <div key={i} className="group relative rounded-3xl p-8 text-center shadow-sm border hover:shadow-xl transition-all duration-300 hover:-translate-y-2 overflow-hidden flex flex-col" style={{ backgroundColor: "var(--biz-bg)", borderColor: "var(--biz-border)" }}>
                       {item.featured && (
                         <div className='absolute top-0 inset-x-0 h-1.5' style={{ background: `linear-gradient(90deg, ${primary}, ${secondary})` }}></div>
                       )}
@@ -176,26 +175,26 @@ export default function DefaultTemplate({ negocio, media, sections }: { negocio:
                          </span>
                       )}
                       
-                      <div className={`text-4xl mb-6 mx-auto w-16 h-16 flex items-center justify-center rounded-2xl bg-slate-50 ${item.featured ? "mt-6" : ""}`}>
+                      <div className={`text-4xl mb-6 mx-auto w-16 h-16 flex items-center justify-center rounded-2xl ${item.featured ? "mt-6" : ""}`} style={{ backgroundColor: "var(--biz-surface)" }}>
                         {item.emoji || "✨"}
                       </div>
                       
-                      <h3 className="font-bold text-xl text-slate-900 mb-2">{item.name}</h3>
+                      <h3 className="font-bold text-xl mb-2" style={{ color: "var(--biz-text)" }}>{item.name}</h3>
                       
                       {item.description && (
-                        <p className='text-sm text-slate-500 max-h-0 md:max-h-0 overflow-hidden md:group-hover:max-h-32 transition-all duration-500 mb-0 md:group-hover:mb-4'>
+                        <p className='text-sm max-h-0 md:max-h-0 overflow-hidden md:group-hover:max-h-32 transition-all duration-500 mb-0 md:group-hover:mb-4' style={{ color: "var(--biz-text-sec)" }}>
                           {item.description}
                         </p>
                       )}
-                      <p className='text-sm text-slate-500 block md:hidden mb-4'>{item.description}</p>
+                      <p className='text-sm block md:hidden mb-4' style={{ color: "var(--biz-text-sec)" }}>{item.description}</p>
                       
-                      <div className="mt-auto pt-4 border-t border-slate-100/50">
+                      <div className="mt-auto pt-4 border-t" style={{ borderColor: "var(--biz-border)" }}>
                         <div className="flex justify-between items-center">
                           <div className="text-left">
                             <p className="text-2xl font-black mb-0.5" style={{ color: primary }}>
                               {!item.price || item.price == 0 ? 'Consultar' : new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(Number(item.price))}
                             </p>
-                            <p className="text-xs text-slate-400 font-medium tracking-widest uppercase">{item.duration} min</p>
+                            <p className="text-xs font-medium tracking-widest uppercase" style={{ color: "var(--biz-text-sec)" }}>{item.duration} min</p>
                           </div>
                           <button onClick={() => { setPreselectedService(item.name); document.getElementById('booking')?.scrollIntoView({behavior:'smooth'}); }} className="px-4 py-2 rounded-full text-white text-sm font-bold shadow-sm hover:scale-105 transition-transform" style={{ backgroundColor: primary }}>
                             Reservar
@@ -216,10 +215,10 @@ export default function DefaultTemplate({ negocio, media, sections }: { negocio:
             return (
               <section key="booking" id="booking" className="px-6 py-24 max-w-3xl mx-auto text-center">
                 <div className="mb-12">
-                  <h2 className="text-4xl font-black text-slate-900 mb-4 tracking-tight">{section.config?.title || "Reservá tu turno"}</h2>
-                  <p className="text-slate-500 text-lg">{section.config?.subtitle || "Completá tus datos y asegurá tu lugar en segundos."}</p>
+                  <h2 className="text-4xl font-black mb-4 tracking-tight" style={{ color: "var(--biz-text)" }}>{section.config?.title || "Reservá tu turno"}</h2>
+                  <p className="text-lg" style={{ color: "var(--biz-text-sec)" }}>{section.config?.subtitle || "Completá tus datos y asegurá tu lugar en segundos."}</p>
                 </div>
-                <div className="bg-white rounded-[2rem] shadow-xl border border-slate-100 p-2 sm:p-4">
+                <div className="rounded-[2rem] shadow-xl border p-2 sm:p-4" style={{ backgroundColor: "var(--biz-surface)", borderColor: "var(--biz-border)" }}>
                   <BookingForm 
                     businessId={negocio.id} 
                     primaryColor={primary} 

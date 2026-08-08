@@ -8,6 +8,45 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+// ─── ENUMS ───
+enum BusinessStatus {
+  TRIAL
+  DEMO
+  ACTIVE
+  BLOCKED
+}
+
+enum BusinessType {
+  barberia
+  estetica
+  gimnasio
+  lavadero
+  taller
+  clinica
+  cancha
+  menu
+  general
+}
+
+enum PaymentStatus {
+  pending
+  paid
+  overdue
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  LOCAL
+  TRANSFER
+}
+
 // ─── MODELOS DE AUTENTICACIÓN (NEXTAUTH) ───
 
 model Account {
@@ -52,6 +91,7 @@ model User {
   emailVerified DateTime?
   image         String?
   password      String?    // Para login manual
+  mustChangePassword Boolean @default(false)
   role          String     @default("USER")
   accounts      Account[]
   sessions      Session[]
@@ -68,13 +108,13 @@ model Business {
   email         String?
   phone         String?
   description   String?
-  type          String?   @default("barberia")
-  status        String?   @default("DEMO")
+  type          BusinessType?   @default(general)
+  status        BusinessStatus?   @default(DEMO)
   accentColor String? @default("#f59e0b")
   
   // Facturación
   paymentAmount Float?    @default(0)
-  paymentStatus String?   @default("pending")
+  paymentStatus PaymentStatus?   @default(pending)
   demoExpiresAt DateTime?
   nextPayment   DateTime?
 
@@ -100,6 +140,20 @@ model Business {
   tables        Table[]
   orders        Order[]
   messages      Message[]
+  whatsappConn  WhatsappConnection?
+}
+
+model WhatsappConnection {
+  id            String   @id @default(cuid())
+  businessId    String   @unique
+  provider      String   @default("CLOUD_API") // CLOUD_API, BAILEYS
+  phoneNumberId String?
+  accessToken   String?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  business      Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
 }
 
 // 🌟 NUEVA TABLA PARA LOS TURNOS 🌟
@@ -110,12 +164,12 @@ model Appointment {
   clientPhone String
   clientEmail String?
   date        DateTime
-  status      String   @default("PENDING") // PENDING, CONFIRMED, CANCELLED, COMPLETED
+  status      AppointmentStatus   @default(PENDING) // PENDING, CONFIRMED, CANCELLED, COMPLETED
   serviceName String?
   notes       String?
   patente     String?
   employeeId  String?
-  paymentMethod String? @default("LOCAL") // LOCAL, TRANSFER
+  paymentMethod PaymentMethod? @default(LOCAL) // LOCAL, TRANSFER
   paymentReference String? @unique
   whatsappSent Boolean @default(false)
   reminderSent Boolean @default(false)

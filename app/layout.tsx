@@ -1,6 +1,17 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
+import { Inter, Fraunces } from "next/font/google";
 import "./globals.css";
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-sans",
+});
+
+const fraunces = Fraunces({
+  subsets: ["latin"],
+  variable: "--font-display",
+});
 
 export const metadata: Metadata = {
   title: "SaaS MiniWebs — Crea tu página web con turnos",
@@ -36,7 +47,7 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
       </head>
       {/* El atributo suppressHydrationWarning evita que las extensiones del navegador rompan la pantalla */}
-      <body suppressHydrationWarning className="min-h-full flex flex-col antialiased">
+      <body suppressHydrationWarning className={`${inter.variable} ${fraunces.variable} font-sans min-h-full flex flex-col antialiased`}>
         {children}
         {/* Service Worker Registration */}
         <Script
