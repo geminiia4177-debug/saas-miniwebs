@@ -99,7 +99,7 @@ export async function POST(req: Request) {
     if (data.paymentMethod === 'TRANSFER') {
       data.paymentReference = "TRX-" + Math.random().toString(36).substring(2, 6).toUpperCase();
     }
-    const nuevoTurno = await prisma.appointment.create({ data });
+    const nuevoTurno = await prisma.appointment.create({ data: data as any });
 
     // CallMeBot Integration (Internal Notification)
     try {
