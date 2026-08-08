@@ -1,14 +1,20 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 export default function EditModeWrapper() {
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const parent = wrapperRef.current?.parentElement;
+      
+      // Si el clic no fue dentro del contenedor padre de este wrapper, ignorarlo
+      if (parent && !parent.contains(target)) return;
+
       e.preventDefault();
       e.stopPropagation();
-      
-      const target = e.target as HTMLElement;
       
       // Intentar encontrar la sección más cercana que tenga un ID conocido
       // Las plantillas suelen usar IDs como "servicios", "hero", "galeria", "contacto", etc.
@@ -43,7 +49,7 @@ export default function EditModeWrapper() {
   }, []);
 
   return (
-    <div className="fixed inset-0 z-[99999] pointer-events-none" style={{
+    <div ref={wrapperRef} className="fixed inset-0 z-[99999] pointer-events-none" style={{
       boxShadow: "inset 0 0 0 4px rgba(99,102,241,0.5)",
       transition: "all 0.3s ease"
     }}>
