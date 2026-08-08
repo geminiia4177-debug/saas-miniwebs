@@ -72,7 +72,7 @@ const ListTheme = dynamic(() => import("@/components/landings/themes/ListTheme")
 const ChatbotWidget = dynamic(() => import("@/components/landings/ChatbotWidget"));
 
 // Como es Next.js 15, los params son asíncronos
-export default async function PublicLandingPage({ params }: { params: Promise<{ subdomain: string }> }) {
+export default async function PublicLandingPage({ params, searchParams }: { params: Promise<{ subdomain: string }>, searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
   const { subdomain } = await params;
 
   // 1. Buscamos el negocio en la base de datos (por subdominio o por dominio personalizado)
