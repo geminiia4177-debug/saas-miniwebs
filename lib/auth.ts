@@ -36,11 +36,11 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Contraseña incorrecta");
         }
         
-        if (user.mustChangePassword) {
-          user.forcePasswordChange = true;
+        if ((user as any).mustChangePassword) {
+          (user as any).forcePasswordChange = true;
         }
 
-        return user;
+        return user as any;
       }
     })
   ],

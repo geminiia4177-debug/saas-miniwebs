@@ -71,7 +71,9 @@ export default function DefaultTemplate({ negocio, media, sections }: { negocio:
             <div className={`w-6 h-0.5 transition-all ${scrolled ? "bg-slate-800" : "bg-white"} ${menuOpen ? "-rotate-45 -translate-y-2" : ""}`}></div>
           </div>
         </button>
-        {/* Drawer Móvil */}
+      </nav>
+
+      {/* Drawer Móvil */}
       {menuOpen && (
         <div className="fixed inset-0 z-40 pt-24 px-6 flex flex-col gap-6 text-lg font-medium md:hidden" style={{ backgroundColor: "var(--biz-surface)", color: "var(--biz-text)" }}>
           <a href="#services" onClick={() => setMenuOpen(false)}>Servicios</a>
@@ -86,14 +88,13 @@ export default function DefaultTemplate({ negocio, media, sections }: { negocio:
       {/* Mobile Sticky CTA */}
       <div className="fixed bottom-0 left-0 right-0 p-4 backdrop-blur-sm border-t flex gap-3 z-50 md:hidden shadow-[0_-4px_16px_rgba(0,0,0,0.05)]" style={{ backgroundColor: "var(--biz-surface)", borderColor: "var(--biz-border)" }}>
         {negocio.whatsapp && (
-          <a href={`https://wa.me/${negocio.whatsapp.replace(/\\D/g,'')}`} target="_blank" rel="noreferrer" className="flex items-center justify-center p-3 rounded-xl bg-green-500 text-white shrink-0">
+          <a href={`https://wa.me/${negocio.whatsapp.replace(/\D/g,'')}`} target="_blank" rel="noreferrer" className="flex items-center justify-center p-3 rounded-xl bg-green-500 text-white shrink-0">
             <MessageCircle className="w-6 h-6" />
           </a>
         )}
         <a href="#booking" className="flex-1 flex items-center justify-center py-3 rounded-xl font-bold text-white text-sm uppercase tracking-wide shadow-colored" style={{ backgroundColor: primary }}>
           Reservar turno
         </a>
-      </div>>
       </div>
 
       {/* ── CONSTRUCTOR DINÁMICO DE SECCIONES ── */}
