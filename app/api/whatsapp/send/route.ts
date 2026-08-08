@@ -32,13 +32,16 @@ export async function POST(request: Request) {
       }
     }
 
-    // En Baileys, el sufijo para un chat individual es @s.whatsapp.net
-    const cleanPhone = phone.replace(/\D/g, '');
-    const jid = `${cleanPhone}@s.whatsapp.net`;
+    // En vez de enviar sincrónicamente, encolamos el mensaje
+    const queuedMessage = await prisma.whatsappMessageQueue.create({
+      data: {
+        businessId,
+        toPhone: phone,
+        message
+      }
+    });
 
-    const result = await globalAny.waClient.sendMessage(jid, { text: message });
-
-    return NextResponse.json({ success: true, result });
+    return NextResponse.json({ success: true, queuedMessageId: queuedMessage.id });
   } catch (error: any) {
     console.error('Error enviando mensaje por WhatsApp:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });

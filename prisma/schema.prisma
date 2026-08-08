@@ -141,11 +141,12 @@ model Business {
   orders        Order[]
   messages      Message[]
   whatsappConn  WhatsappConnection?
+  whatsappQueue WhatsappMessageQueue[]
 }
 
 model WhatsappConnection {
   id            String   @id @default(cuid())
-  businessId    String   @unique
+  businessId    String?  @unique
   provider      String   @default("CLOUD_API") // CLOUD_API, BAILEYS
   phoneNumberId String?
   accessToken   String?
@@ -153,7 +154,21 @@ model WhatsappConnection {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  business      Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  business      Business? @relation(fields: [businessId], references: [id], onDelete: Cascade)
+}
+
+model WhatsappMessageQueue {
+  id           String   @id @default(cuid())
+  businessId   String
+  toPhone      String
+  message      String   @db.Text
+  status       String   @default("PENDING") // PENDING, SENT, FAILED, PROCESSING
+  retries      Int      @default(0)
+  errorMessage String?  @db.Text
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  business     Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
 }
 
 // 🌟 NUEVA TABLA PARA LOS TURNOS 🌟
