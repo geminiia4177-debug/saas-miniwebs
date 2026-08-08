@@ -372,7 +372,7 @@ export default function CrmTab({ biz, setBiz, saveAll, showToast }: { biz: any; 
           {activeSubTab === "sales" && visibleSales.map((sale: Sale) => (
             <div key={sale.id} className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/10">
               <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${sale.type === "SERVICE" ? "bg-indigo-500/20 text-indigo-400" : "bg-emerald-500/20 text-emerald-400"}`}>
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center border shadow-sm ${sale.type === "SERVICE" ? "bg-indigo-500/10 text-indigo-400 border-indigo-500/20 shadow-indigo-500/10" : "bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-emerald-500/10"}`}>
                   <Ico n={sale.type === "SERVICE" ? "zap" : "list"} s={16} />
                 </div>
                 <div>

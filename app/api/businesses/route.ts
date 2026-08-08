@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import bcrypt from "bcryptjs"; // <- IMPORTANTE: El cerrajero que encripta la clave
 import { businessSchema } from "@/lib/validations";
+import { BUSINESS_THEMES } from "@/lib/themes";
 
 // ── GET: OBTENER TODOS LOS NEGOCIOS (Para tu Panel Admin CRM) ──
 export async function GET(req: Request) {
@@ -157,7 +158,10 @@ export async function POST(req: Request) {
       });
     }
 
-    // Diseño por defecto
+    // Diseño por defecto y Perfil Visual según Rubro
+    const typeKey = (data.type || "general") as keyof typeof BUSINESS_THEMES;
+    const themeProfile = BUSINESS_THEMES[typeKey] || BUSINESS_THEMES.general;
+
     const defaultLayoutConfig = {
       sections: [
         { id: "hero", label: "Hero / Portada", icon: "image", visible: true, config: { title: `Bienvenido a ${name}`, subtitle: "Tu negocio premium", ctaText: "Reservar Turno" } },
@@ -165,7 +169,8 @@ export async function POST(req: Request) {
         { id: "gallery", label: "Galería de Fotos", icon: "image", visible: true, config: { columns: 3 } },
         { id: "contact", label: "Contacto", icon: "link", visible: true, config: {} }
       ],
-      media: []
+      media: [],
+      themeVariant: "modern" // Usar la vista moderna por defecto
     };
 
     // Limpiar el customDomain si lo envían (quitar http, https, espacios)
@@ -182,13 +187,13 @@ export async function POST(req: Request) {
         email: email,
         phone: data.phone || null,
         description: data.description || null,
-        type: (data.type || "general") as any,
+        type: typeKey,
         status: (data.status || "TRIAL") as any,
         paymentAmount: Number(data.paymentAmount) || 0,
         paymentStatus: (data.paymentStatus || "pending") as any,
-        primaryColor: "#6366f1",
-        secondaryColor: "#a855f7",
-        fontFamily: "sans",
+        primaryColor: themeProfile.accent,
+        secondaryColor: themeProfile.bg,
+        fontFamily: themeProfile.fontDisplay.includes("sans") ? "sans" : "serif",
         layoutConfig: defaultLayoutConfig,
         userId: clientUser.id, // ¡Acá se unen el cliente y su negocio!
       },

@@ -94,12 +94,15 @@ export default async function PublicLandingPage({ params }: { params: Promise<{ 
     return notFound();
   }
 
+  const activeConfig = (rawBiz as any).publishedConfig || (rawBiz as any).layoutConfig || {};
+
   const biz = {
     ...(rawBiz as any),
-    instagram: (rawBiz as any).layoutConfig?.instagram || "",
-    facebook: (rawBiz as any).layoutConfig?.facebook || "",
-    whatsapp: (rawBiz as any).layoutConfig?.whatsapp || "",
-    tiktok: (rawBiz as any).layoutConfig?.tiktok || "",
+    layoutConfig: activeConfig,
+    instagram: activeConfig.instagram || "",
+    facebook: activeConfig.facebook || "",
+    whatsapp: activeConfig.whatsapp || "",
+    tiktok: activeConfig.tiktok || "",
   };
 
   // ─────────────────────────────────────────────────────────
@@ -163,6 +166,10 @@ export default async function PublicLandingPage({ params }: { params: Promise<{ 
     }
   `;
 
+  const sp = await searchParams;
+  const editMode = sp.preview === 'true';
+  const EditModeWrapper = editMode ? dynamic(() => import("@/components/landings/EditModeWrapper")) : null;
+
   if (TemplateComponent) {
     return (
       <div className={`${theme.fontDisplay}`}>
@@ -172,6 +179,7 @@ export default async function PublicLandingPage({ params }: { params: Promise<{ 
         {biz.layoutConfig?.chatbotEnabled !== false && (
           <ChatbotWidget businessId={biz.id} bizName={biz.name} primaryColor={biz.primaryColor || theme.accent} chatbotName={biz.layoutConfig?.chatbotName || "Asistente Virtual"} />
         )}
+        {EditModeWrapper && <EditModeWrapper />}
       </div>
     );
   }
@@ -191,6 +199,7 @@ export default async function PublicLandingPage({ params }: { params: Promise<{ 
       {layoutConfig.chatbotEnabled !== false && (
         <ChatbotWidget businessId={biz.id} bizName={biz.name} primaryColor={biz.primaryColor || theme.accent} chatbotName={layoutConfig.chatbotName || "Asistente Virtual"} />
       )}
+      {EditModeWrapper && <EditModeWrapper />}
     </div>
   );
 }

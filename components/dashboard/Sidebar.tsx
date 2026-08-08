@@ -62,19 +62,28 @@ export default function Sidebar({
       <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto custom-scrollbar">
         {!sidebarCollapsed && <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-widest px-3 py-2">Principal</p>}
         <NavItem icon="grid" label="Resumen" tab="home" active={tab} setActive={setTab} collapsed={sidebarCollapsed} />
-        <NavItem icon="bot" label="Asesor Inteligente" tab="intelligence" active={tab} setActive={setTab} collapsed={sidebarCollapsed} />
+
+        {!sidebarCollapsed && <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-widest px-3 py-2 mt-3">Crear y editar</p>}
+        {sidebarCollapsed && <div className="my-3 h-px bg-white/5" />}
         <NavItem icon="eye" label="Editor Visual" tab="editor" active={tab} setActive={setTab} collapsed={sidebarCollapsed} />
-        <NavItem icon="link" label="BioLinks (Linktree)" tab="biolinks" active={tab} setActive={setTab} collapsed={sidebarCollapsed} />
         <NavItem icon="image" label="Galería de Fotos" tab="gallery" active={tab} setActive={setTab} badge={mediaLength} collapsed={sidebarCollapsed} />
 
-        {!sidebarCollapsed && <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-widest px-3 py-2 mt-3">Gestión</p>}
+        {!sidebarCollapsed && <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-widest px-3 py-2 mt-3">Contenido</p>}
         {sidebarCollapsed && <div className="my-3 h-px bg-white/5" />}
         <NavItem icon="calendar" label="Turnos" tab="appointments" active={tab} setActive={setTab} badge={pendingLength} collapsed={sidebarCollapsed} />
         {(biz.type === "menu" || biz.type === "restaurante") && (
           <NavItem icon="box" label="Pedidos / Mesas" tab="orders" active={tab} setActive={setTab} collapsed={sidebarCollapsed} />
         )}
+
+        {!sidebarCollapsed && <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-widest px-3 py-2 mt-3">Herramientas</p>}
+        {sidebarCollapsed && <div className="my-3 h-px bg-white/5" />}
+        <NavItem icon="bot" label="Asesor Inteligente" tab="intelligence" active={tab} setActive={setTab} collapsed={sidebarCollapsed} />
+        <NavItem icon="link" label="BioLinks" tab="biolinks" active={tab} setActive={setTab} collapsed={sidebarCollapsed} />
         <NavItem icon="list" label="CRM y Finanzas" tab="crm" active={tab} setActive={setTab} collapsed={sidebarCollapsed} />
-        <NavItem icon="settings" label="Configuración" tab="config" active={tab} setActive={setTab} collapsed={sidebarCollapsed} />
+
+        {!sidebarCollapsed && <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-widest px-3 py-2 mt-3">Configuración</p>}
+        {sidebarCollapsed && <div className="my-3 h-px bg-white/5" />}
+        <NavItem icon="settings" label="Ajustes Generales" tab="config" active={tab} setActive={setTab} collapsed={sidebarCollapsed} />
       </nav>
 
       <div className="px-3 py-2">

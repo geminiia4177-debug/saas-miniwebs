@@ -2,7 +2,7 @@ import React, { useState, useRef } from "react";
 import { Ico } from "@/lib/constants";
 import { DropZone } from "./DropZone";
 import { uploadToImgBB } from "@/lib/utils/upload";
-import { GaleriaTab } from "./GaleriaTab";
+
 
 export function ConfiguradorAvanzado({
   biz, setBiz, media, setMedia, showToast, activeTab
@@ -408,10 +408,7 @@ export function ConfiguradorAvanzado({
           );
         })()}
 
-        {/* ── GALERÍA ── */}
-        {activeTab === "galeria" && (
-          <GaleriaTab media={media} setMedia={setMedia} showToast={showToast} />
-        )}
+
 
         {/* ── VIDEO ── */}
         {activeTab === "video" && (

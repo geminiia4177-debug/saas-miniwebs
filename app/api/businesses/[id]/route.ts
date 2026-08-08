@@ -85,6 +85,15 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
           whatsapp: data.whatsapp,
           tiktok: data.tiktok,
         },
+        ...(rawData.publish === true ? {
+          publishedConfig: {
+            ...(data.layoutConfig || {}),
+            instagram: data.instagram,
+            facebook: data.facebook,
+            whatsapp: data.whatsapp,
+            tiktok: data.tiktok,
+          }
+        } : {}),
         paymentData: data.paymentData,
       },
     });

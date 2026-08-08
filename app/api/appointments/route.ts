@@ -134,13 +134,12 @@ export async function POST(req: Request) {
       console.error("Error sending CallMeBot notification:", e);
     }
 
-    // 🔥 WHASTAPP AUTOMÁTICO PARA EL CLIENTE 🔥
-    const globalAny: any = global;
-    if (globalAny.waClient && globalAny.waStatus === 'AUTHENTICATED' && data.clientPhone) {
+    // 🔥 WHASTAPP ENCOLA DE MENSAJE 🔥
+    if (data.clientPhone) {
       try {
         const businessInfo = await prisma.business.findUnique({
           where: { id: data.businessId },
-          select: { name: true }
+          select: { name: true, layoutConfig: true }
         });
 
         // Limpiar el teléfono
@@ -152,14 +151,6 @@ export async function POST(req: Request) {
         }
         
         const jid = `${cleanPhone}@s.whatsapp.net`;
-        console.log(`> Intentando enviar WhatsApp al cliente: ${jid}`);
-        
-        // Verificar que el número exista en WhatsApp antes de enviar
-        const [result] = await globalAny.waClient.onWhatsApp(jid);
-        if (!result || !result.exists) {
-          console.log(`> El número ${jid} no está registrado en WhatsApp. Se omite envío.`);
-          return NextResponse.json(nuevoTurno, { status: 201 });
-        }
         
         // Formatear la fecha y hora
         const apptDate = new Date(nuevoTurno.date);
@@ -175,12 +166,7 @@ export async function POST(req: Request) {
           hour: '2-digit', minute: '2-digit'
         });
 
-        // Recuperar plantillas personalizadas (si existen en layoutConfig)
-        const businessLayout = await prisma.business.findUnique({
-          where: { id: data.businessId },
-          select: { layoutConfig: true }
-        });
-        const layoutConfig = businessLayout?.layoutConfig as any || {};
+        const layoutConfig = businessInfo?.layoutConfig as any || {};
         
         const templateConfirmed = layoutConfig.waTemplateConfirmed || `¡Hola! {{cliente}} tu turno en {{negocio}} quedó confirmado para {{fecha}} a las {{hora}} hs. ¡Te esperamos!`;
         const templateTransfer = layoutConfig.waTemplateTransfer || `¡Hola! {{cliente}} para confirmar tu turno, transfiere a {{datos_bancarios}} y pon el código {{referencia}} en el concepto.`;
@@ -197,16 +183,19 @@ export async function POST(req: Request) {
           .replace(/{{referencia}}/g, nuevoTurno.paymentReference || "")
           .replace(/{{datos_bancarios}}/g, layoutConfig.bankDetails || "nuestra cuenta bancaria");
 
-        await globalAny.waClient.sendMessage(result.jid, { text: mensajeCliente });
-        console.log(`> WhatsApp enviado correctamente a ${result.jid}`);
-        
-        // Marcar como enviado
-        await prisma.appointment.update({
-          where: { id: nuevoTurno.id },
-          data: { whatsappSent: true }
+        // Guardar en la cola en lugar de enviar directo
+        await prisma.whatsappMessageQueue.create({
+          data: {
+            businessId: data.businessId,
+            toPhone: jid,
+            message: mensajeCliente,
+            status: "PENDING"
+          }
         });
+        
+        console.log(`> Turno: Mensaje a ${jid} encolado exitosamente.`);
       } catch (waError) {
-        console.error("Error enviando confirmación por WhatsApp al cliente:", waError);
+        console.error("Error encolando confirmación por WhatsApp al cliente:", waError);
       }
     }
 

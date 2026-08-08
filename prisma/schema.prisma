@@ -125,6 +125,7 @@ model Business {
   secondaryColor String?   @default("#ffffff")
   fontFamily     String?   @default("sans")
   layoutConfig   Json?
+  publishedConfig Json?
   paymentData    Json?
 
   createdAt     DateTime  @default(now())

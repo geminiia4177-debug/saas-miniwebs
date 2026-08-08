@@ -13,6 +13,7 @@ import GeneralTemplate   from "@/components/landings/GeneralTemplate";
 import ModernTheme from "@/components/landings/themes/ModernTheme";
 import DarkEleganceTheme from "@/components/landings/themes/DarkEleganceTheme";
 import ListTheme from "@/components/landings/themes/ListTheme";
+import EditModeWrapper from "@/components/landings/EditModeWrapper";
 
 export const LandingPreview = ({
   biz, sections, media,
@@ -26,89 +27,27 @@ export const LandingPreview = ({
 
   const themeVariant = biz.layoutConfig?.themeVariant || "classic";
 
-  if (themeVariant === "modern") {
-    return (
-      <div className={containerClass} style={containerStyle}>
-        <ModernTheme negocio={biz as any} media={media} businessId={biz.id} sections={sections} />
-      </div>
-    );
-  }
-  if (themeVariant === "dark") {
-    return (
-      <div className={containerClass} style={containerStyle}>
-        <DarkEleganceTheme negocio={biz as any} media={media} businessId={biz.id} sections={sections} />
-      </div>
-    );
-  }
-  if (themeVariant === "list") {
-    return (
-      <div className={containerClass} style={containerStyle}>
-        <ListTheme negocio={biz as any} media={media} businessId={biz.id} sections={sections} />
-      </div>
-    );
-  }
+  const renderContent = () => {
+    if (themeVariant === "modern") return <ModernTheme negocio={biz as any} media={media} businessId={biz.id} sections={sections} />;
+    if (themeVariant === "dark") return <DarkEleganceTheme negocio={biz as any} media={media} businessId={biz.id} sections={sections} />;
+    if (themeVariant === "list") return <ListTheme negocio={biz as any} media={media} businessId={biz.id} sections={sections} />;
 
-  if (biz.type === "barberia") {
-    return (
-      <div className={containerClass} style={containerStyle}>
-        <BarberiaTemplate negocio={biz as any} media={media} businessId={biz.id} sections={sections} />
-      </div>
-    );
-  }
-  if (biz.type === "taller") {
-    return (
-      <div className={containerClass} style={containerStyle}>
-        <TallerTemplate negocio={biz as any} media={media} businessId={biz.id} sections={sections} />
-      </div>
-    );
-  }
-  if (biz.type === "lavadero") {
-    return (
-      <div className={containerClass} style={containerStyle}>
-        <LavaderoTemplate negocio={biz as any} media={media} businessId={biz.id} sections={sections} />
-      </div>
-    );
-  }
-  if (biz.type === "cancha") {
-    return (
-      <div className={containerClass} style={containerStyle}>
-        <CanchaTemplate negocio={biz as any} />
-      </div>
-    );
-  }
-  if (biz.type === "menu" || biz.type === "restaurante") {
-    return (
-      <div className={containerClass} style={containerStyle}>
-        <MenuTemplate negocio={biz as any} />
-      </div>
-    );
-  }
-  if (biz.type === "estetica") {
-    return (
-      <div className={containerClass} style={containerStyle}>
-        <EsteticaTemplate negocio={biz as any} />
-      </div>
-    );
-  }
-  if (biz.type === "clinica") {
-    return (
-      <div className={containerClass} style={containerStyle}>
-        <ClinicaTemplate negocio={biz as any} />
-      </div>
-    );
-  }
-  if (biz.type === "gimnasio") {
-    return (
-      <div className={containerClass} style={containerStyle}>
-        <GimnasioTemplate negocio={biz as any} />
-      </div>
-    );
-  }
+    if (biz.type === "barberia") return <BarberiaTemplate negocio={biz as any} media={media} businessId={biz.id} sections={sections} />;
+    if (biz.type === "taller") return <TallerTemplate negocio={biz as any} media={media} businessId={biz.id} sections={sections} />;
+    if (biz.type === "lavadero") return <LavaderoTemplate negocio={biz as any} media={media} businessId={biz.id} sections={sections} />;
+    if (biz.type === "cancha") return <CanchaTemplate negocio={biz as any} />;
+    if (biz.type === "menu" || biz.type === "restaurante") return <MenuTemplate negocio={biz as any} />;
+    if (biz.type === "estetica") return <EsteticaTemplate negocio={biz as any} />;
+    if (biz.type === "clinica") return <ClinicaTemplate negocio={biz as any} />;
+    if (biz.type === "gimnasio") return <GimnasioTemplate negocio={biz as any} />;
+    
+    return <GeneralTemplate negocio={biz as any} media={media} businessId={biz.id} sections={sections} />;
+  };
 
-  // Fallback a GeneralTemplate si no coincide ninguno
   return (
     <div className={containerClass} style={containerStyle}>
-      <GeneralTemplate negocio={biz as any} media={media} businessId={biz.id} sections={sections} />
+      {renderContent()}
+      <EditModeWrapper />
     </div>
   );
 };

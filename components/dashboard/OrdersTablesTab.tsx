@@ -181,16 +181,16 @@ export default function OrdersTablesTab({ biz, showToast }: { biz: any; showToas
               <div key={order.id} className="p-5 rounded-2xl bg-[#131929] border border-white/5 flex flex-col md:flex-row justify-between gap-4">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-3">
-                    <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${
-                      order.type === "DELIVERY" ? "bg-orange-500/20 text-orange-400" :
-                      order.type === "MESA" ? "bg-blue-500/20 text-blue-400" : "bg-purple-500/20 text-purple-400"
+                    <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-widest border ${
+                      order.type === "DELIVERY" ? "bg-orange-500/10 text-orange-400 border-orange-500/20 shadow-[0_0_10px_rgba(249,115,22,0.1)]" :
+                      order.type === "MESA" ? "bg-blue-500/10 text-blue-400 border-blue-500/20 shadow-[0_0_10px_rgba(59,130,246,0.1)]" : "bg-purple-500/10 text-purple-400 border-purple-500/20 shadow-[0_0_10px_rgba(168,85,247,0.1)]"
                     }`}>
                       {order.type === "DELIVERY" ? "🛵 Envío" : order.type === "MESA" ? `🍽️ Mesa ${order.table?.number || "?"}` : "🛍️ Retiro"}
                     </span>
-                    <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${
-                      order.status === "PENDING" ? "bg-yellow-500/20 text-yellow-400" :
-                      order.status === "CONFIRMED" ? "bg-indigo-500/20 text-indigo-400" :
-                      order.status === "COMPLETED" ? "bg-emerald-500/20 text-emerald-400" : "bg-red-500/20 text-red-400"
+                    <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-widest border ${
+                      order.status === "PENDING" ? "bg-yellow-500/10 text-yellow-500 border-yellow-500/20 shadow-[0_0_10px_rgba(234,179,8,0.1)]" :
+                      order.status === "CONFIRMED" ? "bg-indigo-500/10 text-indigo-400 border-indigo-500/20 shadow-[0_0_10px_rgba(99,102,241,0.1)]" :
+                      order.status === "COMPLETED" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.1)]" : "bg-red-500/10 text-red-400 border-red-500/20 shadow-[0_0_10px_rgba(239,68,68,0.1)]"
                     }`}>
                       {order.status === "PENDING" ? "Pendiente" : order.status === "CONFIRMED" ? "Preparando" : order.status === "COMPLETED" ? "Listo/Entregado" : "Cancelado"}
                     </span>

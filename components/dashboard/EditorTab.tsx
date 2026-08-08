@@ -9,7 +9,7 @@ import { ConfiguradorAvanzado } from "./editor/ConfiguradorAvanzado";
 import { LandingPreview } from "./editor/LandingPreview";
 import ConfiguradorTaller from "@/components/dashboard/cartuchos/ConfiguradorTaller";
 import ConfiguradorMenu   from "@/components/dashboard/cartuchos/ConfiguradorMenu";
-import { GaleriaTab } from "./editor/GaleriaTab";
+
 import { useBusinessEditor } from "./editor/useBusinessEditor";
 import { HexColorPicker } from "react-colorful";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
@@ -94,6 +94,47 @@ export default function EditorTab({
     return () => clearTimeout(timer);
   }, [biz, sections]);
 
+  // Escuchar clics desde el iframe (Click-to-Edit)
+  useEffect(() => {
+    const handleMessage = (e: MessageEvent) => {
+      if (e.data && e.data.type === 'EDIT_SECTION') {
+        const { section } = e.data;
+        
+        // 1. Si estamos usando el constructor visual (Default Template)
+        if (biz.type === 'general' || biz.type === 'personalizado' || !biz.type || biz.layoutConfig?.themeVariant === 'modern' || biz.layoutConfig?.themeVariant === 'dark' || biz.layoutConfig?.themeVariant === 'list') {
+          const sec = sections?.find((s: any) => s.id === section);
+          if (sec) {
+            setMainTab("generalConfig"); // Asumiendo que el constructor está aquí, o "diseno"
+            openSectionEditor(sec);
+            showToast(`Editando: ${sec.label || section}`);
+            return;
+          }
+        }
+        
+        // 2. Si es una plantilla premium
+        if (section === 'hero' || section === 'header') {
+          setMainTab('diseno');
+        } else if (section === 'services') {
+          if (biz.type === 'barberia' || biz.type === 'estetica' || biz.type === 'gimnasio') setMainTab('servicios');
+          else if (biz.type === 'cancha') setMainTab('canchas');
+          else if (biz.type === 'clinica') setMainTab('especialidades');
+          else if (biz.type === 'taller') setMainTab('tallerServices');
+          else if (biz.type === 'lavadero') setMainTab('vehiculos');
+          else if (biz.type === 'menu' || biz.type === 'restaurante') setMainTab('menuCategorias');
+        } else if (section === 'gallery' || section === 'video') {
+          setMainTab('video'); // o galeria si existiera
+        } else if (section === 'contact') {
+          setMainTab('generalConfig');
+        }
+        
+        showToast("Modo edición activo");
+      }
+    };
+    
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [biz, sections]);
+
   const undo = () => {
     if (historyIndex > 0) {
       setIsUndoing(true);
@@ -176,7 +217,6 @@ export default function EditorTab({
       { id: "diseno", label: "Diseño", icon: "palette" }
     ];
     const end = [
-      { id: "galeria", label: "Galería", icon: "image" },
       { id: "video", label: "Video", icon: "video" },
     ];
     const genericEnd = [...end, { id: "generalConfig", label: "Config.", icon: "settings" }];
@@ -329,49 +369,42 @@ export default function EditorTab({
               </div>
 
               <div className="px-3 pt-2 pb-2 border-t border-white/5 mt-2">
-                <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-2">Tamaños de Texto</p>
-                <div className="space-y-3">
-                  <div>
-                    <div className="flex justify-between mb-1 text-[10px] text-slate-400">
-                      <span>Título Principal</span>
-                      <span>{biz.layoutConfig?.fontSizeHero || 100}%</span>
-                    </div>
-                    <input type="range" min="50" max="150" value={biz.layoutConfig?.fontSizeHero || 100}
-                      onChange={e => setBiz((prev: any) => prev ? { ...prev, layoutConfig: { ...prev.layoutConfig, fontSizeHero: Number(e.target.value) } } : prev)}
-                      className="w-full accent-indigo-500" />
-                  </div>
-                  <div>
-                    <div className="flex justify-between mb-1 text-[10px] text-slate-400">
-                      <span>Títulos de Sección</span>
-                      <span>{biz.layoutConfig?.fontSizeTitles || 100}%</span>
-                    </div>
-                    <input type="range" min="50" max="150" value={biz.layoutConfig?.fontSizeTitles || 100}
-                      onChange={e => setBiz((prev: any) => prev ? { ...prev, layoutConfig: { ...prev.layoutConfig, fontSizeTitles: Number(e.target.value) } } : prev)}
-                      className="w-full accent-indigo-500" />
-                  </div>
-                  <div>
-                    <div className="flex justify-between mb-1 text-[10px] text-slate-400">
-                      <span>Textos Generales</span>
-                      <span>{biz.layoutConfig?.fontSizeBody || 100}%</span>
-                    </div>
-                    <input type="range" min="50" max="150" value={biz.layoutConfig?.fontSizeBody || 100}
-                      onChange={e => setBiz((prev: any) => prev ? { ...prev, layoutConfig: { ...prev.layoutConfig, fontSizeBody: Number(e.target.value) } } : prev)}
-                      className="w-full accent-indigo-500" />
-                  </div>
+                <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-2">Tamaño Base del Texto</p>
+                <div className="flex bg-white/5 rounded-lg p-1">
+                  {[
+                    { label: "Pequeño", val: 85 },
+                    { label: "Normal", val: 100 },
+                    { label: "Grande", val: 115 }
+                  ].map(preset => (
+                    <button
+                      key={preset.label}
+                      onClick={() => setBiz((prev: any) => prev ? { ...prev, layoutConfig: { ...prev.layoutConfig, fontSizeHero: preset.val, fontSizeTitles: preset.val, fontSizeBody: preset.val } } : prev)}
+                      className="flex-1 py-1.5 text-[10px] font-bold rounded-md transition-all"
+                      style={(biz.layoutConfig?.fontSizeBody || 100) === preset.val ? { background: "rgba(99,102,241,0.25)", color: "#a5b4fc" } : { color: "#64748b" }}
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
                 </div>
               </div>
 
               <div className="px-3 pt-2 pb-2 border-t border-white/5 mt-2">
                 <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-2">Sombreado de Portada</p>
-                <div>
-                  <div className="flex justify-between mb-1 text-[10px] text-slate-400">
-                    <span>Transparente</span>
-                    <span>{biz.layoutConfig?.bannerOpacity !== undefined ? biz.layoutConfig.bannerOpacity : 80}%</span>
-                    <span>Oscuro</span>
-                  </div>
-                  <input type="range" min="0" max="100" value={biz.layoutConfig?.bannerOpacity !== undefined ? biz.layoutConfig.bannerOpacity : 80}
-                    onChange={e => setBiz((prev: any) => prev ? { ...prev, layoutConfig: { ...prev.layoutConfig, bannerOpacity: Number(e.target.value) } } : prev)}
-                    className="w-full accent-indigo-500" />
+                <div className="flex bg-white/5 rounded-lg p-1">
+                  {[
+                    { label: "Claro", val: 40 },
+                    { label: "Medio", val: 70 },
+                    { label: "Oscuro", val: 95 }
+                  ].map(preset => (
+                    <button
+                      key={preset.label}
+                      onClick={() => setBiz((prev: any) => prev ? { ...prev, layoutConfig: { ...prev.layoutConfig, bannerOpacity: preset.val } } : prev)}
+                      className="flex-1 py-1.5 text-[10px] font-bold rounded-md transition-all"
+                      style={(biz.layoutConfig?.bannerOpacity ?? 70) === preset.val ? { background: "rgba(99,102,241,0.25)", color: "#a5b4fc" } : { color: "#64748b" }}
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
                 </div>
               </div>
 
