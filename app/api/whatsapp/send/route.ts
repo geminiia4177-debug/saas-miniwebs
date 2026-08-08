@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/db";
 
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
@@ -16,10 +17,19 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { phone, message } = await request.json();
+    const { phone, message, businessId } = await request.json();
     
-    if (!phone || !message) {
-      return NextResponse.json({ error: 'Faltan parámetros: phone o message.' }, { status: 400 });
+    if (!phone || !message || !businessId) {
+      return NextResponse.json({ error: 'Faltan parámetros: phone, message o businessId.' }, { status: 400 });
+    }
+
+    if (session.user?.role !== 'ADMIN') {
+      const business = await prisma.business.findUnique({
+        where: { id: businessId }
+      });
+      if (!business || business.userId !== session.user?.id) {
+        return NextResponse.json({ error: 'No autorizado para enviar mensajes en nombre de este negocio.' }, { status: 403 });
+      }
     }
 
     // En Baileys, el sufijo para un chat individual es @s.whatsapp.net

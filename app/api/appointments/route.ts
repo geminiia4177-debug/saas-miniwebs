@@ -56,7 +56,6 @@ export async function GET(req: Request) {
           date: true,
           status: true,
           serviceName: true,
-          notes: true,
           patente: true,
           businessId: true,
         }

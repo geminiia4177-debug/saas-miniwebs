@@ -151,7 +151,8 @@ export async function POST(req: Request) {
         data: {
           email: email,
           name: name,
-          password: hashedPassword, 
+          password: hashedPassword,
+          mustChangePassword: true,
         }
       });
     }

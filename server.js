@@ -89,13 +89,13 @@ app.prepare().then(() => {
       console.log('> Initializing WhatsApp Client (Baileys)...');
       connectToWhatsApp();
 
-      // 🕒 TAREA PROGRAMADA: RECORDATORIOS DE 3 HORAS 🕒
+      // 🕒 TAREA PROGRAMADA: RECORDATORIOS (24 HORAS ANTES) 🕒
       cron.schedule('* * * * *', async () => {
         if (global.waClient && global.waStatus === 'AUTHENTICATED') {
-          // Buscamos turnos que estén a exactamente entre 3 horas y 3 horas con 1 minuto de distancia
+          // Buscamos turnos que estén a exactamente entre 24 horas y 24 horas con 1 minuto de distancia
           const now = new Date();
-          const targetStart = new Date(now.getTime() + 3 * 60 * 60 * 1000);
-          const targetEnd = new Date(now.getTime() + (3 * 60 + 1) * 60 * 1000);
+          const targetStart = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+          const targetEnd = new Date(now.getTime() + (24 * 60 + 1) * 60 * 1000);
 
           try {
             const upcomingAppointments = await prisma.appointment.findMany({
@@ -127,7 +127,7 @@ app.prepare().then(() => {
               }
               
               const hora = new Date(appt.date).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
-              const msg = `🔔 *Recordatorio*\n¡Hola ${appt.clientName}! Te recordamos que tu turno en ${appt.business?.name || "el local"} es en aproximadamente 3 horas, a las ${hora} hs. ¡Te esperamos!`;
+              const msg = `🔔 *Recordatorio*\n¡Hola ${appt.clientName}! Te recordamos que tu turno en ${appt.business?.name || "el local"} es mañana a las ${hora} hs. ¡Te esperamos!`;
 
               await global.waClient.sendMessage(result.jid, { text: msg });
               
