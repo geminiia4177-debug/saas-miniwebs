@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { requireBusinessOwner } from "@/lib/auth-helpers";
 
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
@@ -49,6 +50,10 @@ export async function POST(req: Request) {
     if (!businessId || !content) {
       return NextResponse.json({ error: "Missing fields" }, { status: 400 });
     }
+    
+    // SEC-P0-002 Fix: Validate ownership before creating message
+    const { error: authError } = await requireBusinessOwner(businessId);
+    if (authError) return authError;
 
     const senderType = session.user.role === "ADMIN" ? "ADMIN" : "USER";
 

@@ -13,23 +13,60 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing fields" }, { status: 400 });
     }
 
-    // SEC-023 Fix: Validate negative totals and item consistency
-    if (typeof total !== 'number' || total < 0 || !Array.isArray(items)) {
-      return NextResponse.json({ error: "Datos de carrito inválidos" }, { status: 400 });
+    // SEC-P0-001 Fix: Calculate order price server-side
+    const business = await prisma.business.findUnique({
+      where: { id: businessId },
+      select: { layoutConfig: true, status: true }
+    });
+    if (!business) return NextResponse.json({ error: "Negocio no encontrado" }, { status: 404 });
+    if (business.status === "BLOCKED") return NextResponse.json({ error: "Negocio bloqueado" }, { status: 403 });
+
+    const layoutConfig: any = business.layoutConfig || {};
+    const validProducts = new Map<string, { nombre: string, precio: number }>();
+    
+    if (Array.isArray(layoutConfig.menuCategorias)) {
+      layoutConfig.menuCategorias.forEach((cat: any) => {
+        if (Array.isArray(cat.products)) {
+          cat.products.forEach((p: any) => {
+            if (p.id) validProducts.set(String(p.id), { nombre: p.nombre || p.name || "Producto", precio: Number(p.precio || p.price || 0) });
+          });
+        }
+      });
+    }
+    
+    if (Array.isArray(layoutConfig.menuPromos)) {
+      layoutConfig.menuPromos.forEach((p: any) => {
+        if (p.id) validProducts.set(String(p.id), { nombre: p.name || "Promo", precio: Number(p.price || 0) });
+      });
     }
 
     let calculatedTotal = 0;
+    const finalItems = [];
+
     for (const item of items) {
-      const price = parseFloat(item.price) || 0;
-      const quantity = parseInt(item.quantity) || 0;
-      if (price < 0 || quantity <= 0) {
-        return NextResponse.json({ error: "Precios o cantidades inválidas" }, { status: 400 });
+      const quantity = parseInt(item.quantity || item.qty) || 0;
+      if (quantity <= 0) {
+        return NextResponse.json({ error: "Cantidades inválidas" }, { status: 400 });
       }
-      calculatedTotal += price * quantity;
+
+      const validProduct = validProducts.get(String(item.id));
+      if (!validProduct) {
+        return NextResponse.json({ error: `Producto no encontrado o no disponible: ${item.nombre || item.id}` }, { status: 400 });
+      }
+
+      calculatedTotal += validProduct.precio * quantity;
+      
+      finalItems.push({
+        id: item.id,
+        nombre: validProduct.nombre, // Force server name
+        qty: quantity,
+        precio: validProduct.precio // Force server price
+      });
     }
 
+    // Still compare to detect if client was desynced
     if (Math.abs(calculatedTotal - total) > 0.01) {
-      return NextResponse.json({ error: "El total del carrito ha sido manipulado o es inconsistente" }, { status: 400 });
+      return NextResponse.json({ error: "El precio de algunos productos ha cambiado. Refresca la página e intenta nuevamente." }, { status: 400 });
     }
 
     // Determine Table ID if mesaNum was passed
@@ -54,7 +91,7 @@ export async function POST(req: Request) {
         tableId: actualTableId,
         type,
         status: "PENDING",
-        items,
+        items: finalItems,
         total,
         address,
         customerName,

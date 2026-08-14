@@ -28,14 +28,26 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     const isOwnerOrAdmin = session?.user && (session.user.role === 'ADMIN' || session.user.id === (await prisma.business.findUnique({where:{id},select:{userId:true}}))?.userId);
 
     if (!isOwnerOrAdmin && business.layoutConfig) {
-      // Strip private config
-      const layout: any = typeof business.layoutConfig === 'object' && business.layoutConfig !== null 
-        ? { ...business.layoutConfig as any } 
+      // SEC-P0-005 Fix: Refactor to whitelist pattern for public layout config
+      const originalConfig = typeof business.layoutConfig === 'object' && business.layoutConfig !== null 
+        ? business.layoutConfig as any 
         : {};
-      delete layout.callMeBotApiKey;
-      delete layout.bankDetails;
-      delete layout.privateConfig;
-      business.layoutConfig = layout;
+        
+      business.layoutConfig = {
+        hours: originalConfig.hours,
+        menuCategorias: originalConfig.menuCategorias,
+        menuPromos: originalConfig.menuPromos,
+        barberiaServices: originalConfig.barberiaServices,
+        clinicaServices: originalConfig.clinicaServices,
+        instagram: originalConfig.instagram,
+        facebook: originalConfig.facebook,
+        whatsapp: originalConfig.whatsapp,
+        tiktok: originalConfig.tiktok,
+        modosDisponibles: originalConfig.modosDisponibles,
+        deliveryRadio: originalConfig.deliveryRadio,
+        reservaMesaActiva: originalConfig.reservaMesaActiva,
+        bannerOpacity: originalConfig.bannerOpacity,
+      };
     }
 
     return NextResponse.json(business);
@@ -132,6 +144,11 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
 
     // Esperamos el ID antes de borrar
     const { id } = await params;
+
+    // SEC-P0-003 Fix: Prevent accidental deletion by normal users
+    if (session.user.role !== "ADMIN") {
+      return NextResponse.json({ error: "Para eliminar tu negocio definitivamente, por favor contacta a soporte." }, { status: 403 });
+    }
 
     // VERIFICACIÓN DE PROPIEDAD (IDOR FIX)
     const { error: authError } = await requireBusinessOwner(id);

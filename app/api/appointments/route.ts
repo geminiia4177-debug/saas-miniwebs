@@ -90,6 +90,38 @@ export async function POST(req: Request) {
     // SEC-011 Fix: Ignore client status and force PENDING
     data.status = "PENDING";
 
+    // SEC-P0-007 Fix: Check business status before allowing booking
+    const business = await prisma.business.findUnique({
+      where: { id: data.businessId },
+      select: { status: true, layoutConfig: true, callMeBotApiKey: true, name: true, bankDetails: true }
+    });
+    
+    if (!business) return NextResponse.json({ error: "Negocio no encontrado" }, { status: 404 });
+    if (business.status === "BLOCKED") return NextResponse.json({ error: "Este negocio no admite nuevas reservas." }, { status: 403 });
+
+    // SEC-P0-008 Fix: Validate service name against configured services
+    if (data.serviceName) {
+      const layoutConfig = (business.layoutConfig as any) || {};
+      const allServices = [
+        ...(layoutConfig.barberiaServices || []),
+        ...(layoutConfig.clinicaServices || [])
+      ];
+      if (layoutConfig.menuCategorias) {
+        layoutConfig.menuCategorias.forEach((cat: any) => {
+          if (cat.products) allServices.push(...cat.products);
+        });
+      }
+      
+      // Only strictly validate if the business has structured services defined
+      if (allServices.length > 0) {
+        const found = allServices.find(s => (s.nombre || s.name || s.title) === data.serviceName);
+        if (!found && !data.serviceName.includes("Mesa")) {
+          // Permitting 'Mesa' for restaurant bookings since they might not be in menuCategorias
+          return NextResponse.json({ error: "Servicio no válido" }, { status: 400 });
+        }
+      }
+    }
+
     // Validate employeeId if present
     if (data.employeeId) {
       const emp = await prisma.employee.findUnique({ where: { id: data.employeeId } });
@@ -98,31 +130,39 @@ export async function POST(req: Request) {
       }
     }
 
-    // SEC-012 Fix: Check overlap right before creation to mitigate race conditions
-    const existingSlot = await prisma.appointment.findFirst({
-      where: {
-        businessId: data.businessId,
-        date: data.date,
-        status: { in: ['PENDING', 'CONFIRMED'] },
-        ...(data.employeeId ? { employeeId: data.employeeId } : {})
+    // SEC-P0-006 Fix: Wrap slot availability check and create in $transaction
+    let nuevoTurno;
+    try {
+      nuevoTurno = await prisma.$transaction(async (tx) => {
+        const existingSlot = await tx.appointment.findFirst({
+          where: {
+            businessId: data.businessId,
+            date: data.date,
+            status: { in: ['PENDING', 'CONFIRMED'] },
+            ...(data.employeeId ? { employeeId: data.employeeId } : {})
+          }
+        });
+
+        if (existingSlot) {
+          throw new Error("SLOT_TAKEN");
+        }
+
+        // SEC-037 Fix: Secure paymentReference generation
+        if (data.paymentMethod === 'TRANSFER') {
+          data.paymentReference = "TRX-" + crypto.randomUUID().substring(0, 8).toUpperCase();
+        }
+        
+        return await tx.appointment.create({ data: data as any });
+      });
+    } catch (e: any) {
+      if (e.message === "SLOT_TAKEN") {
+        return NextResponse.json({ error: "El horario seleccionado acaba de ser reservado." }, { status: 409 });
       }
-    });
-
-    if (existingSlot) {
-      return NextResponse.json({ error: "El horario seleccionado acaba de ser reservado." }, { status: 409 });
+      throw e;
     }
-
-    // SEC-037 Fix: Secure paymentReference generation
-    if (data.paymentMethod === 'TRANSFER') {
-      data.paymentReference = "TRX-" + crypto.randomUUID().substring(0, 8).toUpperCase();
-    }
-    const nuevoTurno = await prisma.appointment.create({ data: data as any });
 
     // CallMeBot Integration (Internal Notification)
     try {
-      const business = await prisma.business.findUnique({
-        where: { id: data.businessId }
-      });
       if (business?.layoutConfig) {
         const layoutConfig = business.layoutConfig as any;
         const phone = layoutConfig.callMeBotPhone;
