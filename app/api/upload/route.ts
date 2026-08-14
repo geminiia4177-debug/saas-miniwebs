@@ -26,13 +26,20 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
-    if (businessId && session.user.role !== "ADMIN") {
-      const business = await prisma.business.findFirst({
-        where: { id: businessId, userId: session.user.id }
-      });
-      if (!business) {
-        return NextResponse.json({ error: "No autorizado para subir archivos a este negocio" }, { status: 403 });
-      }
+    if (!businessId) {
+      return NextResponse.json({ error: "businessId es obligatorio" }, { status: 400 });
+    }
+
+    const business = await prisma.business.findUnique({
+      where: { id: businessId }
+    });
+
+    if (!business) {
+      return NextResponse.json({ error: "Negocio no encontrado" }, { status: 404 });
+    }
+
+    if (session.user.role !== "ADMIN" && business.userId !== session.user.id) {
+      return NextResponse.json({ error: "No autorizado para subir archivos a este negocio" }, { status: 403 });
     }
 
     if (file.size > MAX_SIZE) {

@@ -103,7 +103,7 @@ export async function GET(req: Request) {
       chartData: Object.entries(monthCounts).map(([month, count]) => ({ month, count }))
     };
 
-    const safeBusinesses = businesses.map(toSafeBusinessDTO);
+    const safeBusinesses = businesses.map(b => toSafeBusinessDTO(b, false));
     return NextResponse.json({ data: safeBusinesses, total, stats });
   } catch (error) {
     console.error("Error obteniendo negocios:", error);

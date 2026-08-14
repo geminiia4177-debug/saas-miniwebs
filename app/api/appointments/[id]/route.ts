@@ -56,7 +56,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
           }),
           prisma.appointment.update({
             where: { id },
-            data: { status },
+            data: { 
+              status,
+              ...( (status === "CANCELLED" || status === "COMPLETED") ? { concurrencyToken: null } : {} )
+            },
             include: { business: true }
           })
         ]);
@@ -68,7 +71,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     } else {
       const updatedAppointment = await prisma.appointment.update({
         where: { id },
-        data: { status },
+        data: { 
+          status,
+          ...( (status === "CANCELLED" || status === "COMPLETED") ? { concurrencyToken: null } : {} )
+        },
         include: { business: true }
       });
       return NextResponse.json(updatedAppointment);

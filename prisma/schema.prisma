@@ -214,6 +214,7 @@ model Appointment {
   reminderSent Boolean @default(false)
   cancelledAt  DateTime?
   cancelReason String?
+  concurrencyToken String? @unique
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -236,6 +237,7 @@ model Sale {
   employeeId  String?
   appointmentId String? @unique
   date        DateTime @default(now())
+  deletedAt   DateTime?
 
   business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
   employee    Employee? @relation(fields: [employeeId], references: [id], onDelete: SetNull)
@@ -261,6 +263,7 @@ model Employee {
   imageUrl    String?
   bio         String?
   isPublic    Boolean  @default(true)
+  deletedAt   DateTime?
 
   business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
   sales       Sale[]
@@ -275,6 +278,7 @@ model Supplier {
   name        String
   phone       String?
   products    String?
+  deletedAt   DateTime?
 
   business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
 }

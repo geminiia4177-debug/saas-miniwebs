@@ -30,13 +30,33 @@ export const ownerBusinessUpdateSchema = z.object({
   fontFamily: z.string().optional(),
   logoUrl: z.string().optional().nullable(),
   bannerUrl: z.string().optional().nullable(),
-  // SEC-P1-001 Fix: Use record for layoutConfig to avoid arbitrary deep prototype pollution
-  layoutConfig: z.record(z.string(), z.unknown()).optional(),
+  // SEC-P1-001 Fix: Use structured schema for layoutConfig
+  layoutConfig: z.object({
+    sections: z.array(z.object({
+      id: z.string(),
+      label: z.string().optional(),
+      icon: z.string().optional(),
+      visible: z.boolean().optional(),
+      config: z.record(z.string(), z.unknown()).optional()
+    })).optional(),
+    themeVariant: z.string().optional(),
+    instagram: z.string().optional().nullable(),
+    facebook: z.string().optional().nullable(),
+    whatsapp: z.string().optional().nullable(),
+    tiktok: z.string().optional().nullable(),
+    callMeBotPhone: z.string().optional().nullable(),
+    waTemplateConfirmed: z.string().optional().nullable(),
+    waTemplateTransfer: z.string().optional().nullable(),
+    bannerOpacity: z.number().optional(),
+    reservaMesaActiva: z.boolean().optional()
+  }).catchall(z.unknown()).optional(),
   customDomain: z.string().optional().nullable(),
   instagram: z.string().optional().nullable(),
   facebook: z.string().optional().nullable(),
   whatsapp: z.string().optional().nullable(),
   tiktok: z.string().optional().nullable(),
+  callMeBotApiKey: z.string().optional().nullable(),
+  bankDetails: z.string().optional().nullable(),
 });
 
 export const adminBusinessUpdateSchema = ownerBusinessUpdateSchema.extend({

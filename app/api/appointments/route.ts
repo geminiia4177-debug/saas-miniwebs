@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { publicAppointmentCreateSchema } from "@/lib/validations";
+import { decryptSecret } from "@/lib/encryption";
 import crypto from "crypto";
 
 export async function GET(req: Request) {
@@ -51,7 +52,6 @@ export async function GET(req: Request) {
           date: true,
           status: true,
           serviceName: true,
-          businessId: true,
         }
       });
       return NextResponse.json(turnosPublicos);
@@ -142,31 +142,21 @@ export async function POST(req: Request) {
     }
 
     // SEC-P0-006 Fix: Wrap slot availability check and create in $transaction
+    // SEC-P0-011 Fix: Enforce unique constraint in DB using concurrencyToken
+    if (data.paymentMethod === 'TRANSFER') {
+      data.paymentReference = "TRX-" + crypto.randomUUID().substring(0, 8).toUpperCase();
+    }
+    
+    // Generamos el token único para la base de datos (businessId + fecha + employeeId)
+    // Esto asegura que Prisma rechace inserciones concurrentes en el mismo slot si ambas usan este token
+    const employeeStr = data.employeeId || 'NO_EMP';
+    data.concurrencyToken = `${data.businessId}_${data.date.getTime()}_${employeeStr}`;
+
     let nuevoTurno;
     try {
-      nuevoTurno = await prisma.$transaction(async (tx) => {
-        const existingSlot = await tx.appointment.findFirst({
-          where: {
-            businessId: data.businessId,
-            date: data.date,
-            status: { in: ['PENDING', 'CONFIRMED'] },
-            ...(data.employeeId ? { employeeId: data.employeeId } : {})
-          }
-        });
-
-        if (existingSlot) {
-          throw new Error("SLOT_TAKEN");
-        }
-
-        // SEC-037 Fix: Secure paymentReference generation
-        if (data.paymentMethod === 'TRANSFER') {
-          data.paymentReference = "TRX-" + crypto.randomUUID().substring(0, 8).toUpperCase();
-        }
-        
-        return await tx.appointment.create({ data: data as any });
-      });
+      nuevoTurno = await prisma.appointment.create({ data: data as any });
     } catch (e: any) {
-      if (e.message === "SLOT_TAKEN") {
+      if (e.code === 'P2002' && e.meta?.target?.includes('concurrencyToken')) {
         return NextResponse.json({ error: "El horario seleccionado acaba de ser reservado." }, { status: 409 });
       }
       throw e;
@@ -177,8 +167,8 @@ export async function POST(req: Request) {
       if (business?.layoutConfig) {
         const layoutConfig = business.layoutConfig as any;
         const phone = layoutConfig.callMeBotPhone;
-        // Obtenemos apiKey desde el campo directo en Business
-        const apiKey = business.callMeBotApiKey;
+        // SEC-P0-002 Fix: Obtenemos apiKey cifrada y la desciframos en memoria
+        const apiKey = decryptSecret(business.callMeBotApiKey);
 
         if (phone && apiKey) {
           const date = new Date(nuevoTurno.date).toLocaleString('es-MX', {
@@ -190,18 +180,27 @@ export async function POST(req: Request) {
           const encodedMessage = encodeURIComponent(message);
           const callMeBotUrl = `https://api.callmebot.com/whatsapp.php?phone=${cleanPhone}&text=${encodedMessage}&apikey=${apiKey}`;
           
-          // Await to ensure Next.js doesn't kill the request handler before the fetch completes
-          const botRes = await fetch(callMeBotUrl);
-          const botText = await botRes.text();
-          if (!botRes.ok) {
-            console.error("CallMeBot error response:", botText);
-          } else {
-            console.log("CallMeBot success:", botText);
+          // SEC-022 Fix: Add timeout to avoid blocking the response
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 2000);
+          
+          try {
+            const botRes = await fetch(callMeBotUrl, { signal: controller.signal });
+            const botText = await botRes.text();
+            if (!botRes.ok) {
+              console.error("CallMeBot error response (masked)");
+            } else {
+              console.log("CallMeBot success");
+            }
+          } catch (fetchErr) {
+            console.error("CallMeBot request timed out or failed (async)");
+          } finally {
+            clearTimeout(timeoutId);
           }
         }
       }
     } catch (e) {
-      console.error("Error sending CallMeBot notification:", e);
+      console.error("Error sending CallMeBot notification");
     }
 
     // 🔥 WHASTAPP ENCOLA DE MENSAJE 🔥
@@ -243,6 +242,9 @@ export async function POST(req: Request) {
         
         const templateToUse = nuevoTurno.paymentMethod === 'TRANSFER' ? templateTransfer : templateConfirmed;
 
+        // SEC-P0-002 Fix: Decrypt bank details for WhatsApp message
+        const bankDetails = decryptSecret(businessInfo?.bankDetails) || (businessInfo?.layoutConfig as any)?.bankDetails || "nuestra cuenta bancaria";
+
         // Reemplazar variables
         let mensajeCliente = templateToUse
           .replace(/{{cliente}}/g, nuevoTurno.clientName)
@@ -251,7 +253,7 @@ export async function POST(req: Request) {
           .replace(/{{hora}}/g, hora)
           .replace(/{{servicio}}/g, nuevoTurno.serviceName || "servicio")
           .replace(/{{referencia}}/g, nuevoTurno.paymentReference || "")
-          .replace(/{{datos_bancarios}}/g, businessInfo?.bankDetails || "nuestra cuenta bancaria");
+          .replace(/{{datos_bancarios}}/g, bankDetails);
 
         // Guardar en la cola en lugar de enviar directo
         await prisma.whatsappMessageQueue.create({

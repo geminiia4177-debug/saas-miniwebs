@@ -30,18 +30,13 @@ export async function GET(request: Request) {
 
   try {
     if (type === "clients") {
-      const clients = await (prisma as any).cRMClient.findMany({
-        where: { businessId: businessId },
-        orderBy: { lastContactAt: "desc" },
-        take: limit,
-        skip: offset,
-      });
-      return NextResponse.json(clients);
+      // TODO: Implement clients table in schema
+      return NextResponse.json([]);
     }
 
     if (type === "sales") {
-      const sales = await (prisma as any).sale.findMany({
-        where: { businessId },
+      const sales = await prisma.sale.findMany({
+        where: { businessId, deletedAt: null },
         orderBy: { date: 'desc' },
         take: limit,
         skip: offset,
@@ -50,15 +45,15 @@ export async function GET(request: Request) {
     }
     
     if (type === "employees") {
-      const employees = await (prisma as any).employee.findMany({
-        where: { businessId }
+      const employees = await prisma.employee.findMany({
+        where: { businessId, deletedAt: null }
       });
       return NextResponse.json(employees);
     }
     
     if (type === "suppliers") {
-      const suppliers = await (prisma as any).supplier.findMany({
-        where: { businessId }
+      const suppliers = await prisma.supplier.findMany({
+        where: { businessId, deletedAt: null }
       });
       return NextResponse.json(suppliers);
     }

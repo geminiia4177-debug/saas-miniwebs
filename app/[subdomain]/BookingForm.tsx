@@ -82,8 +82,8 @@ export default function BookingForm({ businessId, primaryColor, secondaryColor, 
       fetch(`/api/businesses/${businessId}`)
         .then(res => res.json())
         .then(data => {
-          if (data?.layoutConfig?.bankDetails) {
-            setBankDetails(data.layoutConfig.bankDetails);
+          if (data?.hasBankDetails || data?.layoutConfig?.bankDetails) {
+            setBankDetails(data.hasBankDetails ? 'enabled' : data.layoutConfig.bankDetails);
           }
         })
         .catch(() => {});

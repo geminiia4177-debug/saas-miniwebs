@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { toSafeBusinessDTO } from "@/lib/dtos";
 import { ownerBusinessUpdateSchema, adminBusinessUpdateSchema } from "@/lib/validations";
 import { requireBusinessOwner } from "@/lib/auth-helpers";
+import { encryptSecret } from "@/lib/encryption";
 
 // Función ninja para evitar que las fechas exploten
 const parseDate = (d: any) => {
@@ -51,7 +52,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       };
     }
 
-    return NextResponse.json(toSafeBusinessDTO(business));
+    return NextResponse.json(toSafeBusinessDTO(business, isOwnerOrAdmin));
   } catch (error) {
     return NextResponse.json({ error: "Error al obtener" }, { status: 500 });
   }
@@ -135,10 +136,12 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
           }
         } : {}),
         paymentData: data.paymentData,
+        ...(data.callMeBotApiKey !== undefined ? { callMeBotApiKey: encryptSecret(data.callMeBotApiKey) } : {}),
+        ...(data.bankDetails !== undefined ? { bankDetails: encryptSecret(data.bankDetails) } : {}),
       },
     });
 
-    return NextResponse.json(toSafeBusinessDTO(updatedBusiness));
+    return NextResponse.json(toSafeBusinessDTO(updatedBusiness, isAdmin || (session.user.id === existingBusiness.userId)));
   } catch (error) {
     console.error("Error editando:", error);
     return NextResponse.json({ error: "Error al actualizar" }, { status: 500 });

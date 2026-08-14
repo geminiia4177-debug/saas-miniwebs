@@ -40,11 +40,11 @@ export async function DELETE(
     if (authError) return authError;
 
     if (type === "sales") {
-      await (prisma as any).sale.delete({ where: { id } });
+      await (prisma as any).sale.update({ where: { id }, data: { deletedAt: new Date() } });
     } else if (type === "employees") {
-      await (prisma as any).employee.delete({ where: { id } });
+      await (prisma as any).employee.update({ where: { id }, data: { deletedAt: new Date() } });
     } else if (type === "suppliers") {
-      await (prisma as any).supplier.delete({ where: { id } });
+      await (prisma as any).supplier.update({ where: { id }, data: { deletedAt: new Date() } });
     }
     return NextResponse.json({ success: true });
   } catch (error) {
