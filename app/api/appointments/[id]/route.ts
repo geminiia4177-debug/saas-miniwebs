@@ -33,9 +33,13 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       try {
         const business = await prisma.business.findUnique({ where: { id: existingAppointment.businessId } });
         const layoutConfig = business?.layoutConfig as any;
-        const servicios = layoutConfig?.servicios || [];
-        const servicio = servicios.find((s: any) => s.name === existingAppointment.serviceName);
-        const amount = servicio ? parseFloat(servicio.price) : 0;
+        const allServices = [
+          ...(layoutConfig?.barberiaServices || []),
+          ...(layoutConfig?.clinicaServices || []),
+          ...(layoutConfig?.sections?.find((s: any) => s.type === "services")?.items || [])
+        ];
+        const servicio = allServices.find((s: any) => (s.name || s.title) === existingAppointment.serviceName);
+        const amount = servicio ? parseFloat(servicio.price || servicio.precio || 0) : 0;
 
         const [, updatedAppointment] = await prisma.$transaction([
           prisma.sale.upsert({

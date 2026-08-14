@@ -35,13 +35,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Faltan parámetros" }, { status: 400 });
     }
 
-    // SEC-010 Fix: Rate Limiting
+    // SEC-P1-013 Fix: Rate Limiting per IP
     const ip = req.headers.get("x-forwarded-for") || "unknown_ip";
     if (!checkRateLimit(ip, businessId)) {
       return NextResponse.json({ error: "Demasiadas solicitudes. Intenta en un minuto." }, { status: 429 });
     }
 
-    // SEC-010 Fix: Limit messages length to prevent context abuse
+    // SEC-P1-014 Fix: Limit messages length and history to prevent context budget abuse
     let chatMessages = messages;
     if (chatMessages.length > 15) {
       chatMessages = chatMessages.slice(-15);

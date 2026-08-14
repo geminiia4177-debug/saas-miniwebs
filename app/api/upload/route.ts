@@ -6,8 +6,22 @@ export async function POST(req: Request) {
   try {
     // 1. Verificamos que esté logueado
     const session = await getServerSession(authOptions);
-    if (!session) {
+    if (!session || !session.user?.id) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
+    // SEC-P1-007 Fix: Upload quotas (in-memory for Phase 1)
+    const globalAny: any = global;
+    if (!globalAny.UPLOAD_QUOTA) globalAny.UPLOAD_QUOTA = new Map<string, { count: number, timestamp: number }>();
+    
+    const now = Date.now();
+    const quota = globalAny.UPLOAD_QUOTA.get(session.user.id) || { count: 0, timestamp: now };
+    if (now - quota.timestamp > 86400000) { // 24 hours
+      quota.count = 0;
+      quota.timestamp = now;
+    }
+    if (quota.count >= 30 && session.user.role !== 'ADMIN') { // 30 uploads max per day per standard user
+      return NextResponse.json({ error: "Límite de subida diario excedido." }, { status: 429 });
     }
 
     const formData = await req.formData();
@@ -65,6 +79,11 @@ export async function POST(req: Request) {
     }
 
     const data = await res.json();
+    
+    // SEC-P1-007 Fix: Increment quota on success
+    quota.count++;
+    globalAny.UPLOAD_QUOTA.set(session.user.id, quota);
+
     return NextResponse.json({ url: data.data.url });
   } catch (error) {
     console.error("Upload route error:", error);

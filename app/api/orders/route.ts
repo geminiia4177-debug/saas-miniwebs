@@ -4,8 +4,24 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { requireSession, requireBusinessOwner } from "@/lib/auth-helpers";
 
+// SEC-P1-012 Fix: Orders POST rate limit
+const ORDERS_RATE_LIMIT = new Map<string, { count: number, timestamp: number }>();
+
 export async function POST(req: Request) {
   try {
+    const ip = req.headers.get("x-forwarded-for") || "unknown_ip";
+    const now = Date.now();
+    const rateRecord = ORDERS_RATE_LIMIT.get(ip) || { count: 0, timestamp: now };
+    
+    if (now - rateRecord.timestamp > 60000) { // 1 minute window
+      rateRecord.count = 0;
+      rateRecord.timestamp = now;
+    }
+    if (rateRecord.count >= 10) {
+      return NextResponse.json({ error: "Demasiados pedidos en poco tiempo. Intenta más tarde." }, { status: 429 });
+    }
+    rateRecord.count++;
+    ORDERS_RATE_LIMIT.set(ip, rateRecord);
     const data = await req.json();
     const { businessId, tableId, type, items, total, address, customerName, customerPhone } = data;
 
