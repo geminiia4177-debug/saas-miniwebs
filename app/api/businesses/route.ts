@@ -6,6 +6,7 @@ import { requireAdmin } from "@/lib/auth-helpers";
 import crypto from "crypto";
 import bcrypt from "bcryptjs"; // <- IMPORTANTE: El cerrajero que encripta la clave
 import { businessSchema } from "@/lib/validations";
+import { toSafeBusinessDTO } from "@/lib/dtos";
 import { BUSINESS_THEMES } from "@/lib/themes";
 
 // ── GET: OBTENER TODOS LOS NEGOCIOS (Para tu Panel Admin CRM) ──
@@ -36,7 +37,7 @@ export async function GET(req: Request) {
       if (!business) {
         return NextResponse.json({ error: "Negocio no encontrado" }, { status: 404 });
       }
-      return NextResponse.json(business);
+      return NextResponse.json(toSafeBusinessDTO(business));
     }
 
     const { session, error: authError } = await requireAdmin();
@@ -85,11 +86,11 @@ export async function GET(req: Request) {
     const d = new Date();
     for (let i = 5; i >= 0; i--) {
       const past = new Date(d.getFullYear(), d.getMonth() - i, 1);
-      const label = past.toLocaleDateString("es-AR", { month: "short" });
+      const label = past.toLocaleDateString("es-MX", { month: "short" });
       monthCounts[label] = 0;
     }
     allDates.forEach(b => {
-      const l = new Date(b.createdAt).toLocaleDateString("es-AR", { month: "short" });
+      const l = new Date(b.createdAt).toLocaleDateString("es-MX", { month: "short" });
       if (monthCounts[l] !== undefined) monthCounts[l]++;
     });
 
@@ -102,7 +103,8 @@ export async function GET(req: Request) {
       chartData: Object.entries(monthCounts).map(([month, count]) => ({ month, count }))
     };
 
-    return NextResponse.json({ data: businesses, total, stats });
+    const safeBusinesses = businesses.map(toSafeBusinessDTO);
+    return NextResponse.json({ data: safeBusinesses, total, stats });
   } catch (error) {
     console.error("Error obteniendo negocios:", error);
     return NextResponse.json({ error: "Error al cargar los datos" }, { status: 500 });
@@ -200,7 +202,7 @@ export async function POST(req: Request) {
       },
     });
 
-    return NextResponse.json(newBusiness, { status: 201 });
+    return NextResponse.json(toSafeBusinessDTO(newBusiness), { status: 201 });
   } catch (error) {
     console.error("Error creando negocio:", error);
     return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });

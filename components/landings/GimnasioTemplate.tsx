@@ -79,7 +79,7 @@ const DEMO_ENTRENADORES = [
 ];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-const fmt = (n: number) => new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n);
+const fmt = (n: number) => new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 }).format(n);
 
 function buildWhatsAppMessage(cart: CartItem[], negocio: Business, msgGral?: string): string {
   const parts = [`🏋️‍♂️ *Hola ${negocio.name}*`, ""];

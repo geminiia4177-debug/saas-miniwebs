@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { toSafeBusinessDTO } from "@/lib/dtos";
 import { ownerBusinessUpdateSchema, adminBusinessUpdateSchema } from "@/lib/validations";
 import { requireBusinessOwner } from "@/lib/auth-helpers";
 
@@ -50,7 +51,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       };
     }
 
-    return NextResponse.json(business);
+    return NextResponse.json(toSafeBusinessDTO(business));
   } catch (error) {
     return NextResponse.json({ error: "Error al obtener" }, { status: 500 });
   }
@@ -137,7 +138,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       },
     });
 
-    return NextResponse.json(updatedBusiness);
+    return NextResponse.json(toSafeBusinessDTO(updatedBusiness));
   } catch (error) {
     console.error("Error editando:", error);
     return NextResponse.json({ error: "Error al actualizar" }, { status: 500 });

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import confetti from "canvas-confetti";
-import { format, addDays, startOfWeek, isSameDay, parseISO } from "date-fns";
+import { format, addDays, startOfWeek, isSameDay } from "date-fns";
 import { es } from "date-fns/locale";
 import { CheckCircle2, ChevronRight, ChevronLeft, Calendar as CalendarIcon, Clock, User, Phone, Check } from "lucide-react";
 

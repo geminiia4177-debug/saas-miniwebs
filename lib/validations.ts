@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 const BusinessTypeEnum = z.enum(["barberia", "estetica", "gimnasio", "lavadero", "taller", "clinica", "cancha", "menu", "general"]);
-const BusinessStatusEnum = z.enum(["TRIAL", "DEMO", "ACTIVE", "BLOCKED"]);
+const BusinessStatusEnum = z.enum(["TRIAL", "DEMO", "ACTIVE", "BLOCKED", "ARCHIVED"]);
 const PaymentStatusEnum = z.enum(["pending", "paid", "overdue"]);
 
 export const businessSchema = z.object({
@@ -43,9 +43,9 @@ export const adminBusinessUpdateSchema = ownerBusinessUpdateSchema.extend({
   status: BusinessStatusEnum.optional(),
   paymentAmount: z.union([z.string(), z.number()]).optional().transform(val => val !== undefined ? Number(val) : undefined),
   paymentStatus: PaymentStatusEnum.optional(),
-  demoExpiresAt: z.any().optional(),
-  nextPayment: z.any().optional(),
-  paymentData: z.record(z.string(), z.any()).optional(),
+  demoExpiresAt: z.string().datetime({ offset: true }).optional().nullable().transform(val => val ? new Date(val) : undefined),
+  nextPayment: z.string().datetime({ offset: true }).optional().nullable().transform(val => val ? new Date(val) : undefined),
+  paymentData: z.record(z.string(), z.unknown()).optional(),
 });
 
 const AppointmentStatusEnum = z.enum(["PENDING", "CONFIRMED", "IN_PROGRESS", "COMPLETED", "CANCELLED"]);

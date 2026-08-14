@@ -299,7 +299,7 @@ async function fetchSlots(businessId: string, date: string, serviceName: string)
     };
 
     const bookedRanges = existing.map(app => {
-      const argDate = new Date(app.date.toLocaleString("en-US", { timeZone: "America/Argentina/Buenos_Aires" }));
+      const argDate = new Date(app.date.toLocaleString("en-US", { timeZone: "America/Mexico_City" }));
       const startMin = argDate.getHours() * 60 + argDate.getMinutes();
       const srvItem = allSrvs.find((s: any) => s.name === app.serviceName);
       return { start: startMin, end: startMin + (srvItem?.duration || 30) };

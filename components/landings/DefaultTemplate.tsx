@@ -193,7 +193,7 @@ export default function DefaultTemplate({ negocio, media, sections }: { negocio:
                         <div className="flex justify-between items-center">
                           <div className="text-left">
                             <p className="text-2xl font-black mb-0.5" style={{ color: primary }}>
-                              {!item.price || item.price == 0 ? 'Consultar' : new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(Number(item.price))}
+                              {!item.price || item.price == 0 ? 'Consultar' : new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(Number(item.price))}
                             </p>
                             <p className="text-xs font-medium tracking-widest uppercase" style={{ color: "var(--biz-text-sec)" }}>{item.duration} min</p>
                           </div>

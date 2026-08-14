@@ -181,7 +181,7 @@ export async function POST(req: Request) {
         const apiKey = business.callMeBotApiKey;
 
         if (phone && apiKey) {
-          const date = new Date(nuevoTurno.date).toLocaleString('es-AR', {
+          const date = new Date(nuevoTurno.date).toLocaleString('es-MX', {
             day: '2-digit', month: '2-digit', year: 'numeric',
             hour: '2-digit', minute: '2-digit'
           });
@@ -229,10 +229,10 @@ export async function POST(req: Request) {
         
         let diaTexto = "hoy";
         if (!esHoy) {
-          diaTexto = "el " + apptDate.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' });
+          diaTexto = "el " + apptDate.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
         }
 
-        const hora = apptDate.toLocaleTimeString('es-AR', {
+        const hora = apptDate.toLocaleTimeString('es-MX', {
           hour: '2-digit', minute: '2-digit'
         });
 

@@ -102,9 +102,9 @@ const DEMO_COURTS: Court[] = [
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const fmt = (n: number) =>
-  new Intl.NumberFormat("es-AR", {
+  new Intl.NumberFormat("es-MX", {
     style: "currency",
-    currency: "ARS",
+    currency: "MXN",
     maximumFractionDigits: 0,
   }).format(n);
 
@@ -473,7 +473,7 @@ export default function CanchaTemplate(props: { negocio?: any; media?: any[]; bu
             />
           ))}
           <p className="text-center text-gray-600 text-[11px] uppercase tracking-widest pt-8 font-bold">
-            Precios en ARS · Las reservas se confirman con seña del 50%
+            Precios en MXN · Las reservas se confirman con seña del 50%
           </p>
         </main>
 

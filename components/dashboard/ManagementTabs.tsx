@@ -320,7 +320,7 @@ export default function ManagementTabs({
                       <img src={img.url} className="w-12 h-12 rounded-lg object-cover flex-shrink-0" alt={img.name} />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-white truncate">{img.name}</p>
-                        <p className="text-[11px] text-slate-500">{img.size ? formatBytes(img.size) : "—"} • {img.uploadedAt ? new Date(img.uploadedAt).toLocaleDateString("es-AR") : "—"}</p>
+                        <p className="text-[11px] text-slate-500">{img.size ? formatBytes(img.size) : "—"} • {img.uploadedAt ? new Date(img.uploadedAt).toLocaleDateString("es-MX") : "—"}</p>
                       </div>
                       <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
                         <a href={img.url} target="_blank" rel="noreferrer" className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-white transition-colors" style={{ background: "rgba(255,255,255,0.05)" }}>
@@ -393,7 +393,7 @@ export default function ManagementTabs({
                         </span>
                       </div>
                       <p className="text-xs text-slate-400">
-                        {a.serviceName || "Servicio"} • {new Date(a.date).toLocaleDateString("es-AR")} a las {new Date(a.date).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}
+                        {a.serviceName || "Servicio"} • {new Date(a.date).toLocaleDateString("es-MX")} a las {new Date(a.date).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })}
                       </p>
                       {a.paymentMethod === 'TRANSFER' && a.paymentReference && (
                         <p className="text-[10px] font-bold text-indigo-400 mt-1 flex items-center gap-1.5">
@@ -470,7 +470,7 @@ export default function ManagementTabs({
                 <button onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))} className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center">
                   <Ico n="chevron-left" s={14} />
                 </button>
-                <h2 className="text-white font-bold">{currentDate.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' })}</h2>
+                <h2 className="text-white font-bold">{currentDate.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' })}</h2>
                 <button onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))} className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center">
                   <Ico n="chevron-right" s={14} />
                 </button>
@@ -495,7 +495,7 @@ export default function ManagementTabs({
                             background: a.status === "PENDING" ? "rgba(245,158,11,0.15)" : a.status === "CONFIRMED" ? "rgba(16,185,129,0.15)" : a.status === "COMPLETED" ? "rgba(99,102,241,0.15)" : "rgba(239,68,68,0.15)",
                             color: a.status === "PENDING" ? "#f59e0b" : a.status === "CONFIRMED" ? "#10b981" : a.status === "COMPLETED" ? "#818cf8" : "#ef4444"
                           }}>
-                            {new Date(a.date).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} - {a.clientName.split(" ")[0]}
+                            {new Date(a.date).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })} - {a.clientName.split(" ")[0]}
                           </div>
                         ))}
                       </div>

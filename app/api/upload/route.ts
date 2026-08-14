@@ -10,18 +10,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
-    // SEC-P1-007 Fix: Upload quotas (in-memory for Phase 1)
-    const globalAny: any = global;
-    if (!globalAny.UPLOAD_QUOTA) globalAny.UPLOAD_QUOTA = new Map<string, { count: number, timestamp: number }>();
-    
-    const now = Date.now();
-    const quota = globalAny.UPLOAD_QUOTA.get(session.user.id) || { count: 0, timestamp: now };
-    if (now - quota.timestamp > 86400000) { // 24 hours
-      quota.count = 0;
-      quota.timestamp = now;
-    }
-    if (quota.count >= 30 && session.user.role !== 'ADMIN') { // 30 uploads max per day per standard user
-      return NextResponse.json({ error: "Límite de subida diario excedido." }, { status: 429 });
+    // SEC-009: Pre-validar tamaño por header ANTES de cargar en memoria
+    const contentLength = req.headers.get("content-length");
+    const MAX_SIZE = 5 * 1024 * 1024;
+    if (contentLength && parseInt(contentLength) > MAX_SIZE) {
+      return NextResponse.json({ error: "El archivo es demasiado grande (pre-check)." }, { status: 413 });
     }
 
     const formData = await req.formData();
@@ -31,30 +24,28 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
+    if (file.size > MAX_SIZE) {
+      return NextResponse.json({ error: "El archivo es demasiado grande. Máximo 5MB." }, { status: 413 });
+    }
+
     // SEC-022 Fix: Validate MIME type strictly
     const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
     if (!ALLOWED_TYPES.includes(file.type)) {
       return NextResponse.json({ error: "Solo se permiten imágenes (JPEG, PNG, WEBP)." }, { status: 400 });
     }
 
-    // SEC-022 Fix: Basic magic bytes validation to prevent malicious fake extensions
+    // SEC-022, SEC-010 Fix: Magic bytes validation
     const buffer = await file.arrayBuffer();
-    const arr = new Uint8Array(buffer).subarray(0, 4);
+    const arr = new Uint8Array(buffer).subarray(0, 12); // Necesitamos 12 bytes para WEBP
     const header = Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('');
     
     let isImage = false;
     if (header.startsWith('ffd8')) isImage = true; // JPEG
     else if (header.startsWith('89504e47')) isImage = true; // PNG
-    else if (header.startsWith('52494646')) isImage = true; // WEBP (starts with RIFF)
+    else if (header.startsWith('52494646') && header.substring(16, 24) === '57454250') isImage = true; // RIFF + WEBP
     
     if (!isImage) {
-      return NextResponse.json({ error: "Contenido de archivo inválido." }, { status: 400 });
-    }
-
-    // 2. Límite de tamaño: 5MB
-    const MAX_SIZE = 5 * 1024 * 1024;
-    if (file.size > MAX_SIZE) {
-      return NextResponse.json({ error: "El archivo es demasiado grande. Máximo 5MB." }, { status: 413 });
+      return NextResponse.json({ error: "Contenido de archivo inválido o formato no soportado real." }, { status: 400 });
     }
 
     const imgbbFormData = new FormData();
@@ -79,10 +70,7 @@ export async function POST(req: Request) {
     }
 
     const data = await res.json();
-    
-    // SEC-P1-007 Fix: Increment quota on success
-    quota.count++;
-    globalAny.UPLOAD_QUOTA.set(session.user.id, quota);
+    // Rate limit can be implemented via DB if required, currently omitted.
 
     return NextResponse.json({ url: data.data.url });
   } catch (error) {

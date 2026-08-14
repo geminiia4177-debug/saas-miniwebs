@@ -167,7 +167,7 @@ export default function HomeTab({ biz, media, sections, pending, appointments, s
             {(() => {
               const last7Days = Array.from({ length: 7 }, (_, i) => {
                 const d = new Date(); d.setDate(d.getDate() - (6 - i));
-                return { name: d.toLocaleDateString('es-AR', { weekday: 'short' }), dateStr: d.toDateString(), turnos: 0 };
+                return { name: d.toLocaleDateString('es-MX', { weekday: 'short' }), dateStr: d.toDateString(), turnos: 0 };
               });
               appointments.forEach(a => {
                 const aDate = new Date(a.date).toDateString();

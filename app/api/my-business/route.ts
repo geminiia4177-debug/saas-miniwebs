@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { toSafeUserDTO, toSafeBusinessDTO } from "@/lib/dtos";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
@@ -27,7 +28,9 @@ export async function GET() {
     });
 
     // 4. Se lo entregamos a la pantalla
-    return NextResponse.json({ business: myBusiness, user: currentUser });
+    const safeUser = toSafeUserDTO(currentUser);
+    const safeBusiness = myBusiness ? toSafeBusinessDTO(myBusiness) : null;
+    return NextResponse.json({ business: safeBusiness, user: safeUser });
   } catch (error) {
     console.error("Error cargando el dashboard:", error);
     return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });

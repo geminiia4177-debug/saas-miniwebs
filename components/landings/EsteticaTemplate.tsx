@@ -205,7 +205,7 @@ export default function EsteticaTemplate(props: { negocio?: any; media?: any[]; 
             <div className="max-w-md mx-auto lg:mx-0 lg:ml-auto">
               <p className="font-dm text-[10px] uppercase tracking-[0.3em] text-[var(--accent)] mb-6">✦ Nuestra historia</p>
               <h2 className="font-playfair text-3xl md:text-[42px] leading-tight mb-8">
-                {layoutConfig.yearsInBusiness ? `Más de ${layoutConfig.yearsInBusiness} años cuidando tu bienestar` : 'Cuidando tu bienestar desde el primer día'}
+                {layoutConfig.yeMXNInBusiness ? `Más de ${layoutConfig.yeMXNInBusiness} años cuidando tu bienestar` : 'Cuidando tu bienestar desde el primer día'}
               </h2>
               <p className="font-dm font-light text-white/70 text-[15px] leading-relaxed mb-10">
                 {layoutConfig.aboutText || "Creemos que el verdadero lujo es el tiempo que te dedicas a ti misma. Hemos creado un espacio pensado para que te desconectes del mundo y te reconectes con tu esencia, con tratamientos personalizados y productos de la más alta calidad."}

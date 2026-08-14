@@ -37,7 +37,7 @@ export function parseBiolinksConfig(config: any) {
     return biolinksConfigSchema.parse(config || {});
   } catch (error) {
     console.error("Biolinks Config Validation Error:", error);
-    // Return safe defaults if parsing completely fails for some reason
+    // Return safe defaults if pMXNing completely fails for some reason
     return biolinksConfigSchema.parse({});
   }
 }

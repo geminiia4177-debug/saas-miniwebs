@@ -38,7 +38,7 @@ export async function GET(req: Request) {
     if (!hours) return NextResponse.json({ slots: [] });
 
     // 2. Determinar si abre ese día
-    // Parseamos la fecha sin 'T00:00:00' para evitar que el server lo interprete como UTC
+    // parseamos la fecha sin 'T00:00:00' para evitar que el server lo interprete como UTC
     // y reste horas por el timezone (ej: GMT-3) cayendo en el día anterior.
     const [year, month, day] = dateStr.split("-").map(Number);
     const dateObj = new Date(year, month - 1, day);
@@ -77,7 +77,7 @@ export async function GET(req: Request) {
     const bookedRanges = existingAppointments.map(app => {
       // Formatear en horario local de Argentina para validar la fecha real
       const dayStrFormatter = new Intl.DateTimeFormat('en-CA', {
-        timeZone: 'America/Argentina/Buenos_Aires',
+        timeZone: 'America/Mexico_City',
         year: 'numeric',
         month: '2-digit',
         day: '2-digit'
@@ -85,7 +85,7 @@ export async function GET(req: Request) {
       if (dayStrFormatter.format(app.date) !== dateStr) return null;
 
       // Extraer hora y minuto en la zona horaria local del negocio (por ahora asumimos Argentina)
-      const argDate = new Date(app.date.toLocaleString("en-US", { timeZone: "America/Argentina/Buenos_Aires" }));
+      const argDate = new Date(app.date.toLocaleString("en-US", { timeZone: "America/Mexico_City" }));
       const h = argDate.getHours();
       const m = argDate.getMinutes();
       const startMin = h * 60 + m;

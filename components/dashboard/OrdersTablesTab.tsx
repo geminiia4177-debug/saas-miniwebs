@@ -195,7 +195,7 @@ export default function OrdersTablesTab({ biz, showToast }: { biz: any; showToas
                       {order.status === "PENDING" ? "Pendiente" : order.status === "CONFIRMED" ? "Preparando" : order.status === "COMPLETED" ? "Listo/Entregado" : "Cancelado"}
                     </span>
                     <span className="text-xs text-slate-500">
-                      {new Date(order.createdAt).toLocaleTimeString("es-AR", {hour:"2-digit", minute:"2-digit"})}
+                      {new Date(order.createdAt).toLocaleTimeString("es-MX", {hour:"2-digit", minute:"2-digit"})}
                     </span>
                   </div>
                   <div className="space-y-1 mb-3">

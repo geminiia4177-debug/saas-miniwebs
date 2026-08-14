@@ -19,10 +19,13 @@ export async function DELETE(request: Request) {
     // SEC-035: Registrar log de auditoría antes de eliminar
     auditLog("DELETE_BUSINESS", { userId: session.user.id, businessId: business.id });
 
-    // En lugar de borrar la cuenta de usuario, solo borramos el negocio
-    // y limpiamos las sesiones (en un caso real, el borrado debe ser en cascada)
-    await prisma.business.delete({
+    // SEC-001: Implementar archivado mediante status (Soft Delete)
+    await prisma.business.update({
       where: { id: business.id },
+      data: {
+        status: "ARCHIVED",
+        archivedAt: new Date()
+      }
     });
 
     return NextResponse.json({ message: "Negocio eliminado exitosamente" });

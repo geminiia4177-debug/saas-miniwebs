@@ -34,10 +34,10 @@ const PAY_STATUS_META: Record<string, any> = {
 // ── UTILITY ──────────────────────────────────────────────────────────────────
 function fmtDate(d: string | null) {
   if (!d) return "—";
-  return new Date(d).toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" });
+  return new Date(d).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" });
 }
 function fmtMoney(n: number) {
-  return new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 }).format(n);
+  return new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 }).format(n);
 }
 function uid() { return Math.random().toString(36).slice(2, 10); }
 
@@ -193,7 +193,7 @@ function ExpandedDetail({ negocio, onSave, onNoteAdd, toast }: any) {
                 <input className={styles.finput} type="date" value={form.nextPayment || ""} onChange={e => setForm((p: any) => ({ ...p, nextPayment: e.target.value }))} />
               </div>
               <div className={styles.fgroup}>
-                <label className={styles.flabel}>Monto ($ARS)</label>
+                <label className={styles.flabel}>Monto ($MXN)</label>
                 <input className={styles.finput} type="number" value={form.paymentAmount || ""} onChange={e => setForm((p: any) => ({ ...p, paymentAmount: Number(e.target.value) }))} />
               </div>
               <div className={styles.fgroup}>
@@ -561,7 +561,7 @@ function AdminWhatsApp() {
           <div style={{ color: "var(--yellow)", fontSize: "40px", marginBottom: "16px" }}>⚠</div>
           <p style={{ color: "var(--red)", fontWeight: "bold", fontSize: "16px", marginBottom: "8px" }}>WhatsApp no está inicializado</p>
           <p style={{ color: "var(--t2)", fontSize: "14px", maxWidth: "400px" }}>
-            El bot de WhatsApp (Baileys) requiere ejecutarse en un entorno Node.js persistente (VPS, Servidor Dedicado, etc.). 
+            El bot de WhatsApp (Baileys) requiere ejecutMXNe en un entorno Node.js persistente (VPS, Servidor Dedicado, etc.). 
             Si estás alojando esta aplicación en Vercel, las funciones "Serverless" no soportan procesos en segundo plano ni conexiones WebSocket constantes, por lo que el bot no funcionará.
           </p>
         </div>
@@ -792,7 +792,7 @@ export default function AdminCRM() {
               <Link href="/" className={styles['btn-cancel']} style={{ padding: "8px 16px", textDecoration: "none" }}>Inicio</Link>
               <button onClick={() => signOut()} className={styles['btn-cancel']} style={{ padding: "8px 16px", border: "1px solid var(--border)" }}>Cerrar Sesión</button>
               <div className={styles['topbar-date']} suppressHydrationWarning>
-                {new Date().toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" })}
+                {new Date().toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long" })}
               </div>
             </div>
           </div>

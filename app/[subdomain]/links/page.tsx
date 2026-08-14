@@ -70,7 +70,7 @@ export default async function BiolinksPage({ params }: { params: Promise<{ subdo
   if (!bizData) return notFound();
   
   // Parse layoutConfig from JSON if needed (prisma returns it as JSON object or null)
-  const biz: any = { ...bizData, layoutConfig: typeof bizData.layoutConfig === "string" ? JSON.parse(bizData.layoutConfig) : bizData.layoutConfig };
+  const biz: any = { ...bizData, layoutConfig: typeof bizData.layoutConfig === "string" ? (JSON as any).parse(bizData.layoutConfig) : bizData.layoutConfig };
 
   // If biolinks is not active, return 404 or redirect to main
   const config = biz.layoutConfig?.biolinks;

@@ -228,11 +228,11 @@ export default function CrmTab({ biz, setBiz, saveAll, showToast }: { biz: any; 
           const d = new Date();
           for (let i = 5; i >= 0; i--) {
             const past = new Date(d.getFullYear(), d.getMonth() - i, 1);
-            const label = past.toLocaleDateString("es-AR", { month: "short" });
+            const label = past.toLocaleDateString("es-MX", { month: "short" });
             monthData[label] = 0;
           }
           visibleSales.forEach(s => {
-            const l = new Date(s.date).toLocaleDateString("es-AR", { month: "short" });
+            const l = new Date(s.date).toLocaleDateString("es-MX", { month: "short" });
             if (monthData[l] !== undefined) monthData[l] += s.amount;
           });
           const chartData = Object.entries(monthData).map(([month, amount]) => ({ month, amount }));
@@ -377,7 +377,7 @@ export default function CrmTab({ biz, setBiz, saveAll, showToast }: { biz: any; 
                 </div>
                 <div>
                   <p className="font-bold text-white text-sm">{sale.itemName || (sale.type === "SERVICE" ? "Servicio" : "Producto")}</p>
-                  <p className="text-[10px] text-slate-500">{new Date(sale.date).toLocaleDateString("es-AR")} {new Date(sale.date).toLocaleTimeString("es-AR", {hour: "2-digit", minute: "2-digit"})}</p>
+                  <p className="text-[10px] text-slate-500">{new Date(sale.date).toLocaleDateString("es-MX")} {new Date(sale.date).toLocaleTimeString("es-MX", {hour: "2-digit", minute: "2-digit"})}</p>
                 </div>
               </div>
               <div className="flex items-center gap-4">
