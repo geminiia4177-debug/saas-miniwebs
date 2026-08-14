@@ -9,14 +9,5 @@ export async function GET() {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   }
 
-  const globalAny: any = global;
-  
-  if (!globalAny.waStatus) {
-    return NextResponse.json({ status: 'NOT_INITIALIZED' });
-  }
-
-  return NextResponse.json({
-    status: globalAny.waStatus,
-    qrCode: globalAny.waQrCode // This contains the Base64 Data URL if QR is ready
-  });
+  return NextResponse.json({ status: 'NOT_INITIALIZED' });
 }

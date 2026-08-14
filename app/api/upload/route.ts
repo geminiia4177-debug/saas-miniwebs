@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/db";
 
 export async function POST(req: Request) {
   try {
@@ -19,9 +20,19 @@ export async function POST(req: Request) {
 
     const formData = await req.formData();
     const file = formData.get("file") as File;
+    const businessId = formData.get("businessId") as string;
     
     if (!file) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
+    }
+
+    if (businessId && session.user.role !== "ADMIN") {
+      const business = await prisma.business.findFirst({
+        where: { id: businessId, userId: session.user.id }
+      });
+      if (!business) {
+        return NextResponse.json({ error: "No autorizado para subir archivos a este negocio" }, { status: 403 });
+      }
     }
 
     if (file.size > MAX_SIZE) {

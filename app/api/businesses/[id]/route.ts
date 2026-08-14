@@ -163,8 +163,9 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
     const { error: authError } = await requireBusinessOwner(id);
     if (authError) return authError;
 
-    await prisma.business.delete({
+    await prisma.business.update({
       where: { id: id },
+      data: { status: "ARCHIVED" }
     });
 
     return NextResponse.json({ success: true });

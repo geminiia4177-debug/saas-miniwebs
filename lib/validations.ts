@@ -31,7 +31,7 @@ export const ownerBusinessUpdateSchema = z.object({
   logoUrl: z.string().optional().nullable(),
   bannerUrl: z.string().optional().nullable(),
   // SEC-P1-001 Fix: Use record for layoutConfig to avoid arbitrary deep prototype pollution
-  layoutConfig: z.record(z.string(), z.any()).optional(),
+  layoutConfig: z.record(z.string(), z.unknown()).optional(),
   customDomain: z.string().optional().nullable(),
   instagram: z.string().optional().nullable(),
   facebook: z.string().optional().nullable(),

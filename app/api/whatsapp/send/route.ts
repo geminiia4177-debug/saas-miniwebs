@@ -10,12 +10,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   }
 
-  const globalAny: any = global;
-  
-  if (globalAny.waStatus !== 'AUTHENTICATED' || !globalAny.waClient) {
-    return NextResponse.json({ error: 'WhatsApp no está autenticado aún. Por favor escanea el código QR primero.' }, { status: 400 });
-  }
-
   try {
     const { phone, message, businessId, idempotencyKey } = await request.json();
     
