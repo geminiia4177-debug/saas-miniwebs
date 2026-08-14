@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
-    statusBMXNtyle: "black-translucent",
+    statusBarStyle: "black-translucent",
     title: "MiniWebs",
   },
   other: {
