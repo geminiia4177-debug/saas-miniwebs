@@ -57,17 +57,26 @@ export const authOptions: NextAuthOptions = {
           // Fake delay to prevent timing attacks
           await new Promise(r => setTimeout(r, 1000));
           recordLoginFail(email);
+          if (user) {
+            await prisma.user.update({ where: { id: user.id }, data: { failedLoginCount: { increment: 1 } } });
+          }
           throw new Error("Usuario no encontrado o registrado con Google");
         }
         
         const isValid = await bcrypt.compare(credentials.password, user.password);
         if (!isValid) {
           recordLoginFail(email);
+          await prisma.user.update({ where: { id: user.id }, data: { failedLoginCount: { increment: 1 } } });
           throw new Error("Contraseña incorrecta");
         }
 
         // Success: clear failures
         LOGIN_RATE_LIMIT.delete(email);
+        
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { lastLoginAt: new Date(), failedLoginCount: 0 }
+        });
         
         if ((user as any).mustChangePassword) {
           (user as any).forcePasswordChange = true;
@@ -88,8 +97,15 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.role = user.role;
-        if (user.forcePasswordChange) {
+        token.sessionVersion = (user as any).sessionVersion || 1;
+        if ((user as any).forcePasswordChange) {
           token.forcePasswordChange = true;
+        }
+      } else if (token.sub) {
+        // SEC-P1-015 Fix: Verify session version to allow remote logout/password change invalidation
+        const dbUser = await prisma.user.findUnique({ where: { id: token.sub }, select: { sessionVersion: true } });
+        if (!dbUser || dbUser.sessionVersion !== token.sessionVersion) {
+          return {} as any; // Invalidate token if version mismatch (e.g. password changed)
         }
       }
       return token;

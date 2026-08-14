@@ -17,7 +17,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { phone, message, businessId } = await request.json();
+    const { phone, message, businessId, idempotencyKey } = await request.json();
     
     if (!phone || !message || !businessId) {
       return NextResponse.json({ error: 'Faltan parámetros: phone, message o businessId.' }, { status: 400 });
@@ -32,16 +32,26 @@ export async function POST(request: Request) {
       }
     }
 
-    // En vez de enviar sincrónicamente, encolamos el mensaje
-    const queuedMessage = await prisma.whatsappMessageQueue.create({
-      data: {
-        businessId,
-        toPhone: phone,
-        message
-      }
-    });
+    // BUG-P1-010 Fix: Idempotency support for WhatsApp queue
+    try {
+      const queuedMessage = await prisma.whatsappMessageQueue.create({
+        data: {
+          businessId,
+          toPhone: phone,
+          message,
+          idempotencyKey: idempotencyKey || null
+        }
+      });
 
-    return NextResponse.json({ success: true, queuedMessageId: queuedMessage.id });
+      return NextResponse.json({ success: true, queuedMessageId: queuedMessage.id });
+    } catch (e: any) {
+      if (e.code === 'P2002' && idempotencyKey) {
+        // Prisma error for unique constraint on idempotencyKey
+        const existing = await prisma.whatsappMessageQueue.findUnique({ where: { idempotencyKey } });
+        return NextResponse.json({ success: true, queuedMessageId: existing?.id, duplicate: true });
+      }
+      throw e;
+    }
   } catch (error: any) {
     console.error('Error enviando mensaje por WhatsApp:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });

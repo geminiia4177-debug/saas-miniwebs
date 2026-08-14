@@ -81,6 +81,14 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     }
     const data = parseResult.data as any;
     
+    // BUG-P1-008 Fix: Subdomain validation banned words
+    if (data.subdomain) {
+      const banned = ['admin', 'api', 'dashboard', 'auth', 'support', 'miniwebs', 'app', 'www'];
+      if (banned.includes(data.subdomain.toLowerCase())) {
+        return NextResponse.json({ error: "Este subdominio está reservado y no puede utilizarse." }, { status: 400 });
+      }
+    }
+    
     // Limpiar el customDomain si lo envían
     const cleanCustomDomain = data.customDomain 
       ? data.customDomain.toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '').trim() 

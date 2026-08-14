@@ -92,10 +92,14 @@ model User {
   image         String?
   password      String?    // Para login manual
   mustChangePassword Boolean @default(false)
+  passwordChangedAt DateTime?
+  sessionVersion Int        @default(1)
+  lastLoginAt   DateTime?
+  failedLoginCount Int      @default(0)
   role          String     @default("USER")
   accounts      Account[]
   sessions      Session[]
-  businesses    Business[] 
+  businesses    Business[]
 }
 
 // ─── MODELOS DEL SAAS (NEGOCIOS Y TURNOS) ───
@@ -105,12 +109,15 @@ model Business {
   name          String
   subdomain     String    @unique
   customDomain  String?   @unique
+  domainVerifiedAt DateTime?
+  domainVerificationTokenHash String?
   email         String?
   phone         String?
   description   String?
   type          BusinessType?   @default(general)
   status        BusinessStatus?   @default(DEMO)
   accentColor String? @default("#f59e0b")
+  timezone    String? @default("America/Argentina/Buenos_Aires")
   
   // Facturación
   paymentAmount Decimal?    @default(0) @db.Decimal(12,2)
@@ -134,6 +141,7 @@ model Business {
 
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+  archivedAt    DateTime?
 
   // Relaciones
   userId        String?
@@ -169,6 +177,11 @@ model WhatsappMessageQueue {
   message      String   @db.Text
   status       String   @default("PENDING") // PENDING, SENT, FAILED, PROCESSING
   retries      Int      @default(0)
+  attempts     Int      @default(0)
+  nextRetryAt  DateTime?
+  lockedAt     DateTime?
+  idempotencyKey String? @unique
+  senderId     String?
   errorMessage String?  @db.Text
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -188,13 +201,18 @@ model Appointment {
   date        DateTime
   status      AppointmentStatus   @default(PENDING) // PENDING, CONFIRMED, CANCELLED, COMPLETED
   serviceName String?
+  serviceId   String?
   notes       String?
   patente     String?
   employeeId  String?
+  source      String? @default("WEB") // WEB, ADMIN, WA
+  publicTrackingTokenHash String? @unique
   paymentMethod PaymentMethod? @default(LOCAL) // LOCAL, TRANSFER
   paymentReference String? @unique
   whatsappSent Boolean @default(false)
   reminderSent Boolean @default(false)
+  cancelledAt  DateTime?
+  cancelReason String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -213,6 +231,7 @@ model Sale {
   type        String   // "SERVICE" o "PRODUCT"
   itemName    String
   amount      Decimal  @db.Decimal(12,2)
+  currency    String   @default("ARS")
   employeeId  String?
   appointmentId String? @unique
   date        DateTime @default(now())

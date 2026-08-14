@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
-import { appointmentSchema } from "@/lib/validations";
+import { publicAppointmentCreateSchema } from "@/lib/validations";
 import crypto from "crypto";
 
 export async function GET(req: Request) {
@@ -35,14 +35,16 @@ export async function GET(req: Request) {
     }
 
     if (!isOwnerOrAdmin) {
-      // SEC-014 Fix: Eliminar búsqueda libre pública. Solo permitir búsqueda por ID exacto.
-      const appointmentId = searchParams.get("appointmentId");
-      if (!appointmentId) {
-        return NextResponse.json({ error: "No autorizado. Se requiere ID de turno exacto para consulta pública." }, { status: 401 });
+      // SEC-P1-011 Fix: Require secure tracking token for public access instead of predictable ID
+      const trackingToken = searchParams.get("trackingToken");
+      if (!trackingToken) {
+        return NextResponse.json({ error: "No autorizado. Se requiere token de seguimiento para consulta pública." }, { status: 401 });
       }
 
+      const publicTrackingTokenHash = crypto.createHash('sha256').update(trackingToken).digest('hex');
+
       const turnosPublicos = await prisma.appointment.findMany({
-        where: { businessId, id: appointmentId },
+        where: { businessId, publicTrackingTokenHash },
         orderBy: { date: 'asc' },
         select: {
           id: true,
@@ -81,7 +83,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const rawData = await req.json();
-    const parseResult = appointmentSchema.safeParse(rawData);
+    const parseResult = publicAppointmentCreateSchema.safeParse(rawData);
     if (!parseResult.success) {
       return NextResponse.json({ error: "Datos de turno inválidos", details: parseResult.error.format() }, { status: 400 });
     }
@@ -89,6 +91,15 @@ export async function POST(req: Request) {
 
     // SEC-011 Fix: Ignore client status and force PENDING
     data.status = "PENDING";
+
+    // BUG-P1-004 Fix: Reject dates in the past (allowing 5 mins buffer for clock drift)
+    if (data.date.getTime() < Date.now() - 5 * 60000) {
+      return NextResponse.json({ error: "La fecha y hora del turno no puede estar en el pasado." }, { status: 400 });
+    }
+
+    // SEC-P1-011 Fix: Generate public tracking token
+    const trackingToken = crypto.randomBytes(16).toString('hex');
+    data.publicTrackingTokenHash = crypto.createHash('sha256').update(trackingToken).digest('hex');
 
     // SEC-P0-007 Fix: Check business status before allowing booking
     const business = await prisma.business.findUnique({
@@ -258,7 +269,7 @@ export async function POST(req: Request) {
       }
     }
 
-    return NextResponse.json(nuevoTurno, { status: 201 });
+    return NextResponse.json({ ...nuevoTurno, trackingToken }, { status: 201 });
   } catch (error) {
     // 🔥 ACÁ ESTÁ LA MAGIA PARA VER EL ERROR 🔥
     console.error("🚨 ERROR FATAL AL CREAR TURNO:", error);

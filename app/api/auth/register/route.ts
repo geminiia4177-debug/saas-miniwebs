@@ -27,12 +27,25 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "Email y contraseña son obligatorios" }, { status: 400 });
     }
 
+    // SEC-P1-005 Fix: Normalize email
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // SEC-P1-005 Fix: Rate limit by email
+    const emailRateRecord = REGISTER_RATE_LIMIT.get(normalizedEmail) || { count: 0, timestamp: now };
+    if (now - emailRateRecord.timestamp > 3600000) {
+      emailRateRecord.count = 0;
+      emailRateRecord.timestamp = now;
+    }
+    if (emailRateRecord.count >= 3) {
+      return NextResponse.json({ message: "Demasiados intentos para este email. Intenta más tarde." }, { status: 429 });
+    }
+
     // SEC-019 Fix: Password Policy
     if (password.length < 8) {
       return NextResponse.json({ message: "La contraseña debe tener al menos 8 caracteres" }, { status: 400 });
     }
 
-    const exists = await prisma.user.findUnique({ where: { email } });
+    const exists = await prisma.user.findUnique({ where: { email: normalizedEmail } });
     if (exists) {
       return NextResponse.json({ message: "El usuario ya existe" }, { status: 400 });
     }
@@ -42,7 +55,7 @@ export async function POST(req: Request) {
     // Create user
     const user = await prisma.user.create({
       data: {
-        email,
+        email: normalizedEmail,
         name,
         password: hashedPassword,
       },
@@ -75,6 +88,9 @@ export async function POST(req: Request) {
     // SEC-018 Fix: Increment rate limit only on success
     rateRecord.count++;
     REGISTER_RATE_LIMIT.set(ip, rateRecord);
+    
+    emailRateRecord.count++;
+    REGISTER_RATE_LIMIT.set(normalizedEmail, emailRateRecord);
 
     return NextResponse.json({ message: "Usuario y negocio creados con éxito" }, { status: 201 });
   } catch (error) {

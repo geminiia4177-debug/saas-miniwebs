@@ -587,7 +587,7 @@ export default function ManagementTabs({
                   { key: "name", label: "Nombre del negocio", type: "text", colSpan: 1 },
                   { key: "tagline", label: "Slogan / Tagline", type: "text", colSpan: 1 },
                   { key: "phone", label: "Teléfono", type: "tel", colSpan: 1 },
-                  { key: "subdomain", label: "Subdominio (URL)", type: "text", colSpan: 1 },
+                  { key: "subdomain", label: "Link de tu página (URL)", type: "text", colSpan: 1 },
                 ].map(({ key, label, type, colSpan }) => (
                   <div key={key} className={colSpan === 2 ? "col-span-2" : ""}>
                     <label className="block text-[10px] text-slate-500 mb-1.5 font-semibold uppercase tracking-wide">{label}</label>
