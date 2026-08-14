@@ -2,6 +2,25 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { GoogleGenAI } from "@google/genai";
 
+// Simple in-memory rate limiter for Phase 0
+const RATE_LIMIT_MAP = new Map<string, { count: number, timestamp: number }>();
+function checkRateLimit(ip: string, businessId: string) {
+  const key = `${ip}-${businessId}`;
+  const now = Date.now();
+  const record = RATE_LIMIT_MAP.get(key) || { count: 0, timestamp: now };
+  
+  if (now - record.timestamp > 60000) {
+    record.count = 0;
+    record.timestamp = now;
+  }
+  
+  if (record.count >= 15) return false; // Max 15 requests per minute per IP per Business
+  
+  record.count++;
+  RATE_LIMIT_MAP.set(key, record);
+  return true;
+}
+
 export async function POST(req: Request) {
   try {
     if (!process.env.GEMINI_API_KEY) {
@@ -16,6 +35,18 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Faltan parámetros" }, { status: 400 });
     }
 
+    // SEC-010 Fix: Rate Limiting
+    const ip = req.headers.get("x-forwarded-for") || "unknown_ip";
+    if (!checkRateLimit(ip, businessId)) {
+      return NextResponse.json({ error: "Demasiadas solicitudes. Intenta en un minuto." }, { status: 429 });
+    }
+
+    // SEC-010 Fix: Limit messages length to prevent context abuse
+    let chatMessages = messages;
+    if (chatMessages.length > 15) {
+      chatMessages = chatMessages.slice(-15);
+    }
+
     // 1. Fetch business info from DB
     const biz = await prisma.business.findUnique({
       where: { id: businessId },
@@ -23,6 +54,11 @@ export async function POST(req: Request) {
     });
 
     if (!biz) return NextResponse.json({ error: "Negocio no encontrado" }, { status: 404 });
+
+    // SEC-010 Fix: Check if business is active
+    if (biz.status !== 'ACTIVE' && biz.status !== 'DEMO') {
+      return NextResponse.json({ error: "El asistente no está disponible para este negocio temporalmente." }, { status: 403 });
+    }
 
     const layoutConfig = (biz.layoutConfig as any) || {};
     const botName = chatbotName || layoutConfig.chatbotName || "Asistente Virtual";
@@ -121,9 +157,11 @@ Ejemplo correcto:
 
     // 6. Build conversation history
     let fullPrompt = systemPrompt + "\n\n## CONVERSACIÓN:\n";
-    for (const msg of messages) {
-      if (msg.role === "user") fullPrompt += `Cliente: ${msg.content}\n`;
-      else if (msg.role === "assistant") fullPrompt += `${botName}: ${msg.content}\n`;
+    for (const msg of chatMessages) {
+      // SEC-010 Fix: Limit content length per message
+      const text = msg.content?.substring(0, 500) || ""; 
+      if (msg.role === "user") fullPrompt += `Cliente: ${text}\n`;
+      else if (msg.role === "assistant") fullPrompt += `${botName}: ${text}\n`;
     }
     fullPrompt += `\n${botName}:`;
 

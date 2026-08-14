@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { requireBusinessOwner } from "@/lib/auth-helpers";
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -9,6 +10,16 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
     const { id } = await params;
+    
+    // SEC-013 Fix: Check ownership
+    const existingAppointment = await prisma.appointment.findUnique({ where: { id } });
+    if (!existingAppointment) {
+      return NextResponse.json({ error: "Turno no encontrado" }, { status: 404 });
+    }
+
+    const { error: authError } = await requireBusinessOwner(existingAppointment.businessId);
+    if (authError) return authError;
+
     const body = await req.json();
 
     const { status, employeeId } = body;

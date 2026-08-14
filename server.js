@@ -17,19 +17,19 @@ const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
 
 // Global state to share between custom server and Next.js API routes
-global.waPool = []; // Pool de clientes de WhatsApp
-global.waQrCode = null;
-global.waStatus = 'STARTING'; // STARTING, QR_READY, AUTHENTICATED, ERROR
+global.waPool = new Map(); // Mapa de clientes de WhatsApp por businessId
+global.waStatus = new Map(); // Status por businessId
+global.waQrCode = new Map(); // QRCodes por businessId
 
-// Retenemos esto por retrocompatibilidad rápida, apunta al primer cliente del pool
+// Retenemos esto por retrocompatibilidad rápida temporal, pero ya no debería usarse
 Object.defineProperty(global, 'waClient', {
   get: function() {
-    return global.waPool.length > 0 ? global.waPool[0].sock : null;
+    return Array.from(global.waPool.values())[0]?.sock || null;
   }
 });
 
-async function connectToWhatsApp(poolIndex = 0) {
-  const sessionFolder = `baileys_auth_info_${poolIndex}`;
+async function connectToWhatsApp(businessId) {
+  const sessionFolder = `baileys_auth_info_${businessId}`;
   const { state, saveCreds } = await useMultiFileAuthState(sessionFolder);
 
   const sock = makeWASocket({
@@ -39,59 +39,55 @@ async function connectToWhatsApp(poolIndex = 0) {
   });
 
   const poolEntry = {
-    id: poolIndex,
+    id: businessId,
     sock: sock,
     status: 'STARTING',
     qrCode: null
   };
 
-  // Reemplazar o insertar en el pool
-  global.waPool[poolIndex] = poolEntry;
+  // Insertar en el mapa
+  global.waPool.set(businessId, poolEntry);
+  global.waStatus.set(businessId, 'STARTING');
 
   sock.ev.on('connection.update', async (update) => {
     const { connection, lastDisconnect, qr } = update;
     
     if (qr) {
-      console.log(`> [Pool ${poolIndex}] QR Code ready to be scanned!`);
+      console.log(`> [Business ${businessId}] QR Code ready to be scanned!`);
       poolEntry.status = 'QR_READY';
       poolEntry.qrCode = await QRCode.toDataURL(qr);
       
-      // Para la UI actual que espera leer del global
-      if (poolIndex === 0) {
-        global.waStatus = 'QR_READY';
-        global.waQrCode = poolEntry.qrCode;
-      }
+      global.waStatus.set(businessId, 'QR_READY');
+      global.waQrCode.set(businessId, poolEntry.qrCode);
     }
     
     if (connection === 'close') {
       const shouldReconnect = lastDisconnect.error?.output?.statusCode !== DisconnectReason.loggedOut;
-      console.log(`> [Pool ${poolIndex}] Connection closed. Reconnecting:`, shouldReconnect);
+      console.log(`> [Business ${businessId}] Connection closed. Reconnecting:`, shouldReconnect);
       poolEntry.status = 'ERROR';
       poolEntry.qrCode = null;
       
-      if (poolIndex === 0) {
-        global.waStatus = 'ERROR';
-        global.waQrCode = null;
-      }
+      global.waStatus.set(businessId, 'ERROR');
+      global.waQrCode.set(businessId, null);
 
       if (shouldReconnect) {
         poolEntry.status = 'STARTING';
-        if (poolIndex === 0) global.waStatus = 'STARTING';
-        connectToWhatsApp(poolIndex);
+        global.waStatus.set(businessId, 'STARTING');
+        connectToWhatsApp(businessId);
       } else {
-        console.log(`> [Pool ${poolIndex}] WhatsApp Logged Out! Sesión borrada.`);
+        console.log(`> [Business ${businessId}] WhatsApp Logged Out! Sesión borrada.`);
         fs.rmSync(sessionFolder, { recursive: true, force: true });
-        global.waPool.splice(poolIndex, 1);
+        global.waPool.delete(businessId);
+        global.waStatus.delete(businessId);
+        global.waQrCode.delete(businessId);
       }
     } else if (connection === 'open') {
-      console.log(`> [Pool ${poolIndex}] WhatsApp Client is authenticated and ready!`);
+      console.log(`> [Business ${businessId}] WhatsApp Client is authenticated and ready!`);
       poolEntry.status = 'AUTHENTICATED';
       poolEntry.qrCode = null;
       
-      if (poolIndex === 0) {
-        global.waStatus = 'AUTHENTICATED';
-        global.waQrCode = null;
-      }
+      global.waStatus.set(businessId, 'AUTHENTICATED');
+      global.waQrCode.set(businessId, null);
     }
   });
 
@@ -117,15 +113,15 @@ app.prepare().then(() => {
       console.log(`> Ready on http://${hostname}:${port}`);
       
       console.log('> Initializing WhatsApp Pool...');
-      // Iniciamos solo un cliente por defecto para el pool
-      connectToWhatsApp(0);
+      // Start clients for all businesses that have a WhatsappConnection
+      prisma.whatsappConnection.findMany({ where: { isActive: true } }).then(conns => {
+         for (const conn of conns) {
+           if (conn.businessId) connectToWhatsApp(conn.businessId);
+         }
+      });
 
       // 🕒 TAREA PROGRAMADA 1: RECORDATORIOS (24 HORAS ANTES) 🕒
       cron.schedule('* * * * *', async () => {
-        if (!global.waPool[0] || global.waPool[0].status !== 'AUTHENTICATED') return;
-        const activeClient = global.waPool[0].sock;
-
-        // Buscamos turnos que estén a exactamente entre 24 horas y 24 horas con 1 minuto de distancia
         const now = new Date();
         const targetStart = new Date(now.getTime() + 24 * 60 * 60 * 1000);
         const targetEnd = new Date(now.getTime() + (24 * 60 + 1) * 60 * 1000);
@@ -141,6 +137,11 @@ app.prepare().then(() => {
 
           for (const appt of upcomingAppointments) {
             if (!appt.clientPhone) continue;
+            
+            const businessClient = global.waPool.get(appt.businessId);
+            if (!businessClient || businessClient.status !== 'AUTHENTICATED') continue;
+
+            const activeClient = businessClient.sock;
 
             let cleanPhone = appt.clientPhone.replace(/\D/g, '');
             if (cleanPhone.length === 10) cleanPhone = `52${cleanPhone}`;
@@ -158,7 +159,7 @@ app.prepare().then(() => {
               where: { id: appt.id },
               data: { reminderSent: true }
             });
-            console.log(`> Recordatorio enviado a ${appt.clientName} (${cleanPhone})`);
+            console.log(`> Recordatorio enviado a ${appt.clientName} (${cleanPhone}) vía Business[${appt.businessId}]`);
           }
         } catch (error) {
           console.error("Error en cron job de recordatorios:", error);
@@ -167,9 +168,6 @@ app.prepare().then(() => {
 
       // 🕒 TAREA PROGRAMADA 2: COLA DE MENSAJES (ASÍNCRONO) 🕒
       cron.schedule('* * * * *', async () => {
-        const authenticatedClients = global.waPool.filter(c => c.status === 'AUTHENTICATED');
-        if (authenticatedClients.length === 0) return;
-
         try {
           // Obtener hasta 50 mensajes pendientes
           const pendingMessages = await prisma.whatsappMessageQueue.findMany({
@@ -181,8 +179,12 @@ app.prepare().then(() => {
           for (let i = 0; i < pendingMessages.length; i++) {
             const msg = pendingMessages[i];
             
-            // Router simple (Round-Robin)
-            const senderEntry = authenticatedClients[i % authenticatedClients.length];
+            // Router by businessId
+            const senderEntry = global.waPool.get(msg.businessId);
+            if (!senderEntry || senderEntry.status !== 'AUTHENTICATED') {
+               continue; // Cannot send right now
+            }
+            
             const sender = senderEntry.sock;
 
             try {
@@ -203,7 +205,7 @@ app.prepare().then(() => {
                   where: { id: msg.id },
                   data: { status: 'SENT' }
                 });
-                console.log(`> Mensaje encolado enviado a ${cleanPhone} vía Pool[${senderEntry.id}]`);
+                console.log(`> Mensaje encolado enviado a ${cleanPhone} vía Business[${msg.businessId}]`);
               } else {
                  await prisma.whatsappMessageQueue.update({
                   where: { id: msg.id },

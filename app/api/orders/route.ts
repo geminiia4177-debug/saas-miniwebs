@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { requireSession, requireBusinessOwner } from "@/lib/auth-helpers";
 
 export async function POST(req: Request) {
   try {
@@ -54,35 +55,26 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const businessId = searchParams.get("businessId");
 
-    // If businessId is provided in URL, it's public access via token
-    // (In a real app, validate a secure token parameter)
-    if (businessId) {
-      const token = searchParams.get("token");
-      // Add simple validation if needed, or rely on obscure URLs
-      const orders = await prisma.order.findMany({
-        where: { businessId, status: "PENDING" },
-        orderBy: { createdAt: "desc" },
-        include: { table: true }
+    // SEC-004 Fix: Always require authentication
+    const { session, error: sessionError } = await requireSession();
+    if (sessionError) return sessionError;
+
+    if (!businessId) {
+      const business = await prisma.business.findFirst({
+        where: { userId: session.user.id },
       });
-      return NextResponse.json(orders);
+      if (!business) {
+        return NextResponse.json({ error: "Negocio no encontrado" }, { status: 404 });
+      }
+      businessId = business.id;
     }
 
-    // Otherwise, require authentication (for Dashboard use)
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.email) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-    }
-
-    const business = await prisma.business.findFirst({
-      where: { user: { email: session.user.email } },
-    });
-
-    if (!business) {
-      return NextResponse.json({ error: "Negocio no encontrado" }, { status: 404 });
-    }
+    // Ensure the logged in user actually owns this business
+    const { error: authError } = await requireBusinessOwner(businessId);
+    if (authError) return authError;
 
     const orders = await prisma.order.findMany({
-      where: { businessId: business.id },
+      where: { businessId: businessId },
       orderBy: { createdAt: "desc" },
       include: { table: true }
     });
@@ -103,6 +95,15 @@ export async function PATCH(req: Request) {
     if (!orderId || !status) {
       return NextResponse.json({ error: "Faltan datos" }, { status: 400 });
     }
+
+    // SEC-005 Fix: Resolve order -> businessId -> check ownership
+    const order = await prisma.order.findUnique({ where: { id: orderId } });
+    if (!order) {
+      return NextResponse.json({ error: "Orden no encontrada" }, { status: 404 });
+    }
+
+    const { error: authError } = await requireBusinessOwner(order.businessId);
+    if (authError) return authError;
 
     const updated = await prisma.order.update({
       where: { id: orderId },

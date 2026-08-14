@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { requireBusinessOwner } from "@/lib/auth-helpers";
 
 export async function GET(req: Request) {
   try {
@@ -92,24 +93,36 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: "Faltan datos" }, { status: 400 });
     }
 
-    const updated = await prisma.table.update({
-      where: { id: tableId },
-      data: { status }
-    });
-
-    if (status === "CLOSED") {
-      if (cancelOrders) {
-        await prisma.order.updateMany({
-          where: { tableId, status: { in: ["PENDING", "CONFIRMED"] } },
-          data: { status: "CANCELLED" }
-        });
-      } else {
-        await prisma.order.updateMany({
-          where: { tableId, status: { in: ["PENDING", "CONFIRMED"] } },
-          data: { status: "COMPLETED", paymentMethod: paymentMethod || null }
-        });
-      }
+    // SEC-006 Fix: Resolve table -> businessId -> check ownership
+    const table = await prisma.table.findUnique({ where: { id: tableId } });
+    if (!table) {
+      return NextResponse.json({ error: "Mesa no encontrada" }, { status: 404 });
     }
+
+    const { error: authError } = await requireBusinessOwner(table.businessId);
+    if (authError) return authError;
+
+    const updated = await prisma.$transaction(async (tx) => {
+      const updatedTable = await tx.table.update({
+        where: { id: tableId },
+        data: { status }
+      });
+
+      if (status === "CLOSED") {
+        if (cancelOrders) {
+          await tx.order.updateMany({
+            where: { tableId, status: { in: ["PENDING", "CONFIRMED"] } },
+            data: { status: "CANCELLED" }
+          });
+        } else {
+          await tx.order.updateMany({
+            where: { tableId, status: { in: ["PENDING", "CONFIRMED"] } },
+            data: { status: "COMPLETED", paymentMethod: paymentMethod || null }
+          });
+        }
+      }
+      return updatedTable;
+    });
 
     return NextResponse.json(updated);
   } catch (error) {

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { requireBusinessOwner } from "@/lib/auth-helpers";
 
 export async function DELETE(
   request: Request,
@@ -17,22 +18,35 @@ export async function DELETE(
   const { id } = await params;
 
   try {
+    let businessId: string;
     if (type === "sales") {
-      await (prisma as any).sale.delete({ where: { id } });
-      return NextResponse.json({ success: true });
-    }
-    
-    if (type === "employees") {
-      await (prisma as any).employee.delete({ where: { id } });
-      return NextResponse.json({ success: true });
-    }
-    
-    if (type === "suppliers") {
-      await (prisma as any).supplier.delete({ where: { id } });
-      return NextResponse.json({ success: true });
+      const entity = await (prisma as any).sale.findUnique({ where: { id } });
+      if (!entity) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
+      businessId = entity.businessId;
+    } else if (type === "employees") {
+      const entity = await (prisma as any).employee.findUnique({ where: { id } });
+      if (!entity) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
+      businessId = entity.businessId;
+    } else if (type === "suppliers") {
+      const entity = await (prisma as any).supplier.findUnique({ where: { id } });
+      if (!entity) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
+      businessId = entity.businessId;
+    } else {
+      return NextResponse.json({ error: "Tipo inválido" }, { status: 400 });
     }
 
-    return NextResponse.json({ error: "Tipo inválido" }, { status: 400 });
+    // SEC-009 Fix: Verify ownership before deleting
+    const { error: authError } = await requireBusinessOwner(businessId);
+    if (authError) return authError;
+
+    if (type === "sales") {
+      await (prisma as any).sale.delete({ where: { id } });
+    } else if (type === "employees") {
+      await (prisma as any).employee.delete({ where: { id } });
+    } else if (type === "suppliers") {
+      await (prisma as any).supplier.delete({ where: { id } });
+    }
+    return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error deleting CRM data:", error);
     return NextResponse.json({ error: "Error del servidor" }, { status: 500 });

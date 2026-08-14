@@ -13,18 +13,13 @@ export const businessSchema = z.object({
   paymentStatus: z.string().optional().default("pending"),
 });
 
-export const businessUpdateSchema = z.object({
+export const ownerBusinessUpdateSchema = z.object({
   name: z.string().min(2).optional(),
   subdomain: z.string().optional(),
   email: z.string().email().optional().nullable(),
   phone: z.string().optional().nullable(),
   description: z.string().optional().nullable(),
   type: z.string().optional(),
-  status: z.string().optional(),
-  paymentAmount: z.union([z.string(), z.number()]).optional().transform(val => val !== undefined ? Number(val) : undefined),
-  paymentStatus: z.string().optional(),
-  demoExpiresAt: z.any().optional(),
-  nextPayment: z.any().optional(),
   accentColor: z.string().optional(),
   primaryColor: z.string().optional(),
   secondaryColor: z.string().optional(),
@@ -32,12 +27,20 @@ export const businessUpdateSchema = z.object({
   logoUrl: z.string().optional().nullable(),
   bannerUrl: z.string().optional().nullable(),
   layoutConfig: z.any().optional(),
-  paymentData: z.any().optional(),
   customDomain: z.string().optional().nullable(),
   instagram: z.string().optional().nullable(),
   facebook: z.string().optional().nullable(),
   whatsapp: z.string().optional().nullable(),
   tiktok: z.string().optional().nullable(),
+});
+
+export const adminBusinessUpdateSchema = ownerBusinessUpdateSchema.extend({
+  status: z.string().optional(),
+  paymentAmount: z.union([z.string(), z.number()]).optional().transform(val => val !== undefined ? Number(val) : undefined),
+  paymentStatus: z.string().optional(),
+  demoExpiresAt: z.any().optional(),
+  nextPayment: z.any().optional(),
+  paymentData: z.any().optional(),
 });
 
 export const appointmentSchema = z.object({

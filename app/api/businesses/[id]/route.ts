@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { businessUpdateSchema } from "@/lib/validations";
+import { ownerBusinessUpdateSchema, adminBusinessUpdateSchema } from "@/lib/validations";
+import { requireBusinessOwner } from "@/lib/auth-helpers";
 
 // Función ninja para evitar que las fechas exploten
 const parseDate = (d: any) => {
@@ -17,8 +18,24 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     const { id } = await params;
     const business = await prisma.business.findUnique({
       where: { id: id },
-      select: { layoutConfig: true }
+      select: { layoutConfig: true, name: true, subdomain: true, logoUrl: true }
     });
+    
+    if (!business) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
+
+    // SEC-001 Fix: Check session to see if we return full layoutConfig or public only
+    const session = await getServerSession(authOptions);
+    const isOwnerOrAdmin = session?.user && (session.user.role === 'ADMIN' || session.user.id === (await prisma.business.findUnique({where:{id},select:{userId:true}}))?.userId);
+
+    if (!isOwnerOrAdmin && business.layoutConfig) {
+      // Strip private config
+      const layout: any = { ...business.layoutConfig };
+      delete layout.callMeBotApiKey;
+      delete layout.bankDetails;
+      delete layout.privateConfig;
+      business.layoutConfig = layout;
+    }
+
     return NextResponse.json(business);
   } catch (error) {
     return NextResponse.json({ error: "Error al obtener" }, { status: 500 });
@@ -34,21 +51,21 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     // Esperamos a que Next.js nos desempaquete el ID
     const { id } = await params;
     
-    // VERIFICACIÓN DE PROPIEDAD (IDOR FIX)
-    const existingBusiness = await prisma.business.findUnique({ where: { id } });
-    if (!existingBusiness) {
-      return NextResponse.json({ error: "Negocio no encontrado" }, { status: 404 });
-    }
+    // SEC-003 Fix: Require business owner
+    const { session: _, error: authError, business: existingBusiness } = await requireBusinessOwner(id);
+    if (authError) return authError;
+    if (!existingBusiness) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
+
     const isAdmin = session.user.role === 'ADMIN';
-    if (existingBusiness.userId !== session.user.id && !isAdmin) {
-      return NextResponse.json({ error: "Prohibido: No tienes permiso para editar este negocio" }, { status: 403 });
-    }
+
     const rawData = await req.json();
-    const parseResult = businessUpdateSchema.safeParse(rawData);
+    const schema = isAdmin ? adminBusinessUpdateSchema : ownerBusinessUpdateSchema;
+    const parseResult = schema.safeParse(rawData);
+    
     if (!parseResult.success) {
       return NextResponse.json({ error: "Datos inválidos", details: parseResult.error.format() }, { status: 400 });
     }
-    const data = parseResult.data;
+    const data = parseResult.data as any;
     
     // Limpiar el customDomain si lo envían
     const cleanCustomDomain = data.customDomain 
@@ -115,14 +132,8 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
     const { id } = await params;
 
     // VERIFICACIÓN DE PROPIEDAD (IDOR FIX)
-    const existingBusiness = await prisma.business.findUnique({ where: { id } });
-    if (!existingBusiness) {
-      return NextResponse.json({ error: "Negocio no encontrado" }, { status: 404 });
-    }
-    const isAdmin = session.user.role === 'ADMIN';
-    if (existingBusiness.userId !== session.user.id && !isAdmin) {
-      return NextResponse.json({ error: "Prohibido: No tienes permiso para borrar este negocio" }, { status: 403 });
-    }
+    const { error: authError } = await requireBusinessOwner(id);
+    if (authError) return authError;
 
     await prisma.business.delete({
       where: { id: id },

@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth-helpers";
+import crypto from "crypto";
 import bcrypt from "bcryptjs"; // <- IMPORTANTE: El cerrajero que encripta la clave
 import { businessSchema } from "@/lib/validations";
 import { BUSINESS_THEMES } from "@/lib/themes";
@@ -37,8 +39,8 @@ export async function GET(req: Request) {
       return NextResponse.json(business);
     }
 
-    const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    const { session, error: authError } = await requireAdmin();
+    if (authError) return authError;
 
     const limit = parseInt(url.searchParams.get("limit") || "20");
     const offset = parseInt(url.searchParams.get("offset") || "0");
@@ -110,10 +112,8 @@ export async function GET(req: Request) {
 // ── POST: CREAR UN NEGOCIO DESDE EL ADMIN ──
 export async function POST(req: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.email) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-    }
+    const { session, error: authError } = await requireAdmin();
+    if (authError) return authError;
 
     const rawData = await req.json();
     const parseResult = businessSchema.safeParse(rawData);
@@ -144,9 +144,10 @@ export async function POST(req: Request) {
       where: { email: email }
     });
 
-    // Si no existe el usuario, lo creamos y le encriptamos la clave "admin"
+    // Si no existe el usuario, lo creamos y le generamos una contraseña aleatoria
     if (!clientUser) {
-      const hashedPassword = await bcrypt.hash("admin", 10); 
+      const randomPassword = crypto.randomBytes(8).toString('hex');
+      const hashedPassword = await bcrypt.hash(randomPassword, 10); 
       
       clientUser = await prisma.user.create({
         data: {

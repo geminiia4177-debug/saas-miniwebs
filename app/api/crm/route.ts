@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { requireBusinessOwner } from "@/lib/auth-helpers";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -11,6 +12,10 @@ export async function GET(request: Request) {
   if (!businessId) {
     return NextResponse.json({ error: "Falta businessId" }, { status: 400 });
   }
+
+  // SEC-007 Fix: Require business ownership
+  const { error: authError } = await requireBusinessOwner(businessId);
+  if (authError) return authError;
 
   try {
     if (type === "sales") {
@@ -129,6 +134,14 @@ export async function PUT(request: Request) {
     }
 
     if (type === "employees") {
+      // SEC-008 Fix: Resolve employee -> businessId -> check ownership
+      const existingEmployee = await (prisma as any).employee.findUnique({ where: { id } });
+      if (!existingEmployee) {
+        return NextResponse.json({ error: "Empleado no encontrado" }, { status: 404 });
+      }
+
+      const { error: authError } = await requireBusinessOwner(existingEmployee.businessId);
+      if (authError) return authError;
       // If we are passing addServicesDone or addHoursWorked, we increment
       if (payload.addServicesDone !== undefined) {
         const emp = await (prisma as any).employee.update({

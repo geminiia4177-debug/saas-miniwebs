@@ -100,18 +100,18 @@ export default function EditorTab({
       if (e.data && e.data.type === 'EDIT_SECTION') {
         const { section } = e.data;
         
-        // 1. Si estamos usando el constructor visual (Default Template)
-        if (biz.type === 'general' || biz.type === 'personalizado' || !biz.type || biz.layoutConfig?.themeVariant === 'modern' || biz.layoutConfig?.themeVariant === 'dark' || biz.layoutConfig?.themeVariant === 'list') {
+        // 1. Si estamos usando el constructor visual (Default Template) o temas dinámicos
+        if (biz.type === 'general' || biz.type === 'personalizado' || !biz.type || ['modern', 'dark', 'list'].includes(biz.layoutConfig?.themeVariant)) {
           const sec = sections?.find((s: any) => s.id === section);
           if (sec) {
-            setMainTab("generalConfig"); // Asumiendo que el constructor está aquí, o "diseno"
+            setMainTab("generalConfig"); // Asumiendo que el constructor está aquí
             openSectionEditor(sec);
             showToast(`Editando: ${sec.label || section}`);
             return;
           }
         }
         
-        // 2. Si es una plantilla premium
+        // 2. Fallback: Si no se encontró como sección dinámica, mapear a pestañas estáticas
         if (section === 'hero' || section === 'header') {
           setMainTab('diseno');
         } else if (section === 'services') {

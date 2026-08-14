@@ -93,7 +93,18 @@ export async function POST(req: Request) {
     if (!parseResult.success) {
       return NextResponse.json({ error: "Datos de turno inválidos", details: parseResult.error.format() }, { status: 400 });
     }
-    const data = parseResult.data;
+    const data = parseResult.data as any;
+
+    // SEC-011 Fix: Ignore client status and force PENDING
+    data.status = "PENDING";
+
+    // Validate employeeId if present
+    if (data.employeeId) {
+      const emp = await prisma.employee.findUnique({ where: { id: data.employeeId } });
+      if (!emp || emp.businessId !== data.businessId) {
+        return NextResponse.json({ error: "Empleado inválido para este negocio" }, { status: 400 });
+      }
+    }
 
     if (data.paymentMethod === 'TRANSFER') {
       data.paymentReference = "TRX-" + Math.random().toString(36).substring(2, 6).toUpperCase();
