@@ -1,5 +1,15 @@
 import React from "react";
 
+export const APP_CONSTANTS = {
+  MAX_UPLOAD_SIZE: 5 * 1024 * 1024, // 5MB
+  MAX_AI_MESSAGE_LENGTH: 2000,
+  AI_RATE_LIMIT_PER_MINUTE: 15,
+  APPOINTMENT_DURATION_DEFAULT: 30, // mins
+  DEFAULT_TIMEZONE: "America/Mexico_City",
+  SUPPORTED_IMAGE_TYPES: ["image/jpeg", "image/png", "image/webp"],
+  SESSION_TIMEOUT: 24 * 60 * 60 * 1000 // 24 hours in ms
+} as const;
+
 // ─────────────────────────────────────────────
 // TIPOS (Migrated to types.ts)
 // ─────────────────────────────────────────────

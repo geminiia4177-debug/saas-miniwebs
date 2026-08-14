@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect } from "react";
 import { signOut } from "next-auth/react";
@@ -158,6 +158,16 @@ export default function Dashboard() {
     else setSidebarCollapsed(false);
   }, [tab]);
 
+  // â”€â”€ AUTOSAVE (UX-011) â”€â”€
+  useEffect(() => {
+    if (hasUnsavedChanges && !saving) {
+      const timer = setTimeout(() => {
+        saveAll(false, true); // AutoSave flag true
+      }, 3000); // 3 seconds debounce
+      return () => clearTimeout(timer);
+    }
+  }, [hasUnsavedChanges]);
+
   // â”€â”€ CARGAR TURNOS â”€â”€
   useEffect(() => {
     if (!biz?.id) return;
@@ -177,25 +187,28 @@ export default function Dashboard() {
     }
   }, [biz?.id, tab]);
 
-  // â”€â”€ GUARDAR EN BASE DE DATOS â”€â”€
-  const saveAll = async (publish = false) => {
+  // ── GUARDAR EN BASE DE DATOS ──
+  const saveAll = async (publish: boolean | any = false, isAutoSave: boolean = false) => {
     if (!biz) return;
-    setSaving(true);
+    if (!isAutoSave) setSaving(true);
     try {
+      const isPublish = typeof publish === 'boolean' ? publish : false;
       const res = await fetch(`/api/businesses/${biz.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...biz, layoutConfig: { ...(biz.layoutConfig || {}), sections, media }, publish }),
+        body: JSON.stringify({ ...biz, layoutConfig: { ...(biz.layoutConfig || {}), sections, media }, publish: isPublish }),
       });
       if (res.ok) {
-        pushToast(publish ? "Â¡Web publicada con Ã©xito! ðŸš€" : "Borrador guardado âœ“", "success");
+        if (!isAutoSave) pushToast(isPublish ? "¡Web publicada con éxito! 🚀" : "Borrador guardado ✓", "success");
         setInitialDataStr(JSON.stringify({ biz, sections, media }));
       }
-      else pushToast("Error al guardar en el servidor", "error");
+      else {
+        if (!isAutoSave) pushToast("Error al guardar en el servidor", "error");
+      }
     } catch {
-      pushToast("Error de conexiÃ³n", "error");
+      if (!isAutoSave) pushToast("Error de conexión", "error");
     }
-    setSaving(false);
+    if (!isAutoSave) setSaving(false);
   };
 
   // â”€â”€ SUBIR ARCHIVOS DE LA GALERÃA â”€â”€

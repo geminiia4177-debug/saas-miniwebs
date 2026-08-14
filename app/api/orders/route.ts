@@ -145,10 +145,15 @@ export async function GET(req: Request) {
     const { error: authError } = await requireBusinessOwner(businessId);
     if (authError) return authError;
 
+    const limit = parseInt(searchParams.get("limit") || "50");
+    const offset = parseInt(searchParams.get("offset") || "0");
+
     const orders = await prisma.order.findMany({
       where: { businessId: businessId },
       orderBy: { createdAt: "desc" },
-      include: { table: true }
+      include: { table: true },
+      take: limit,
+      skip: offset,
     });
 
     return NextResponse.json(orders);

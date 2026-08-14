@@ -1,24 +1,26 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireSession } from "@/lib/auth-helpers";
+import { auditLog } from "@/lib/logger";
 
-export async function DELETE(req: Request) {
+export async function DELETE(request: Request) {
+  const { session, error } = await requireSession();
+  if (error) return error;
+
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-    }
-
     const business = await prisma.business.findFirst({
       where: { userId: session.user.id },
     });
 
     if (!business) {
-      return NextResponse.json({ error: "No se encontró el negocio" }, { status: 404 });
+      return NextResponse.json({ error: "Negocio no encontrado" }, { status: 404 });
     }
 
-    // Delete the business. All related data will be deleted automatically because of onDelete: Cascade
+    // SEC-035: Registrar log de auditoría antes de eliminar
+    auditLog("DELETE_BUSINESS", { userId: session.user.id, businessId: business.id });
+
+    // En lugar de borrar la cuenta de usuario, solo borramos el negocio
+    // y limpiamos las sesiones (en un caso real, el borrado debe ser en cascada)
     await prisma.business.delete({
       where: { id: business.id },
     });

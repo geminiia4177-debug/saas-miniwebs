@@ -2,15 +2,26 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { requireBusinessOwner } from "@/lib/auth-helpers";
+import { requireBusinessOwner, requireSession } from "@/lib/auth-helpers";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const businessId = searchParams.get("businessId");
-  const type = searchParams.get("type"); // "sales", "employees", "suppliers"
+  let businessId = searchParams.get("businessId");
+  const type = searchParams.get("type"); // "sales", "employees", "suppliers", "clients"
+  const limit = parseInt(searchParams.get("limit") || "50");
+  const offset = parseInt(searchParams.get("offset") || "0");
+
+  const { session, error: sessionError } = await requireSession();
+  if (sessionError) return sessionError;
 
   if (!businessId) {
-    return NextResponse.json({ error: "Falta businessId" }, { status: 400 });
+    const business = await prisma.business.findFirst({
+      where: { userId: session.user.id },
+    });
+    if (!business) {
+      return NextResponse.json({ error: "Negocio no encontrado" }, { status: 404 });
+    }
+    businessId = business.id;
   }
 
   // SEC-007 Fix: Require business ownership
@@ -18,10 +29,22 @@ export async function GET(request: Request) {
   if (authError) return authError;
 
   try {
+    if (type === "clients") {
+      const clients = await (prisma as any).cRMClient.findMany({
+        where: { businessId: businessId },
+        orderBy: { lastContactAt: "desc" },
+        take: limit,
+        skip: offset,
+      });
+      return NextResponse.json(clients);
+    }
+
     if (type === "sales") {
       const sales = await (prisma as any).sale.findMany({
         where: { businessId },
-        orderBy: { date: 'desc' }
+        orderBy: { date: 'desc' },
+        take: limit,
+        skip: offset,
       });
       return NextResponse.json(sales);
     }
