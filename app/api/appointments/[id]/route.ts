@@ -28,35 +28,47 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       return NextResponse.json({ error: "Estado inválido" }, { status: 400 });
     }
 
-    const updatedAppointment = await prisma.appointment.update({
-      where: { id },
-      data: { status },
-      include: { business: true } // We need business layoutConfig
-    });
-
-    // Auto-create Sale if completed
-    if (status === "COMPLETED") {
+    // SEC-039 & SEC-040 Fix: Auto-create Sale atomically and idempotently if completed
+    if (status === "COMPLETED" && existingAppointment.status !== "COMPLETED") {
       try {
-        const layoutConfig = updatedAppointment.business.layoutConfig as any;
+        const business = await prisma.business.findUnique({ where: { id: existingAppointment.businessId } });
+        const layoutConfig = business?.layoutConfig as any;
         const servicios = layoutConfig?.servicios || [];
-        const servicio = servicios.find((s: any) => s.name === updatedAppointment.serviceName);
+        const servicio = servicios.find((s: any) => s.name === existingAppointment.serviceName);
         const amount = servicio ? parseFloat(servicio.price) : 0;
 
-        await (prisma as any).sale.create({
-          data: {
-            businessId: updatedAppointment.businessId,
-            type: "SERVICE",
-            amount: amount,
-            itemName: updatedAppointment.serviceName || "Servicio Turno",
-            employeeId: employeeId || null,
-          }
-        });
+        const [, updatedAppointment] = await prisma.$transaction([
+          prisma.sale.upsert({
+            where: { appointmentId: id },
+            update: {},
+            create: {
+              businessId: existingAppointment.businessId,
+              type: "SERVICE",
+              amount: amount,
+              itemName: existingAppointment.serviceName || "Servicio Turno",
+              employeeId: employeeId || null,
+              appointmentId: id
+            }
+          }),
+          prisma.appointment.update({
+            where: { id },
+            data: { status },
+            include: { business: true }
+          })
+        ]);
+        return NextResponse.json(updatedAppointment);
       } catch (e) {
         console.error("Error auto-creating sale:", e);
+        return NextResponse.json({ error: "Error al completar el turno y crear venta" }, { status: 500 });
       }
+    } else {
+      const updatedAppointment = await prisma.appointment.update({
+        where: { id },
+        data: { status },
+        include: { business: true }
+      });
+      return NextResponse.json(updatedAppointment);
     }
-
-    return NextResponse.json(updatedAppointment);
   } catch (error) {
     console.error("Error actualizando turno:", error);
     return NextResponse.json({ error: "Error al actualizar el turno" }, { status: 500 });

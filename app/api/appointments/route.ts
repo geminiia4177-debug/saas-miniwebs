@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { appointmentSchema } from "@/lib/validations";
+import crypto from "crypto";
 
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
@@ -34,29 +35,20 @@ export async function GET(req: Request) {
     }
 
     if (!isOwnerOrAdmin) {
-      // Para búsquedas públicas es obligatorio enviar patente o término de búsqueda
-      if (!patente && !search) {
-        return NextResponse.json({ error: "No autorizado. Se requiere término de búsqueda." }, { status: 401 });
+      // SEC-014 Fix: Eliminar búsqueda libre pública. Solo permitir búsqueda por ID exacto.
+      const appointmentId = searchParams.get("appointmentId");
+      if (!appointmentId) {
+        return NextResponse.json({ error: "No autorizado. Se requiere ID de turno exacto para consulta pública." }, { status: 401 });
       }
 
-      const q = patente || search;
-      whereClause = {
-        ...whereClause,
-        OR: [
-          { patente: { contains: q, mode: 'insensitive' } },
-          { notes: { contains: `PATENTE:${q}`, mode: 'insensitive' } }
-        ]
-      };
-
       const turnosPublicos = await prisma.appointment.findMany({
-        where: whereClause,
+        where: { businessId, id: appointmentId },
         orderBy: { date: 'asc' },
         select: {
           id: true,
           date: true,
           status: true,
           serviceName: true,
-          patente: true,
           businessId: true,
         }
       });
@@ -106,8 +98,23 @@ export async function POST(req: Request) {
       }
     }
 
+    // SEC-012 Fix: Check overlap right before creation to mitigate race conditions
+    const existingSlot = await prisma.appointment.findFirst({
+      where: {
+        businessId: data.businessId,
+        date: data.date,
+        status: { in: ['PENDING', 'CONFIRMED'] },
+        ...(data.employeeId ? { employeeId: data.employeeId } : {})
+      }
+    });
+
+    if (existingSlot) {
+      return NextResponse.json({ error: "El horario seleccionado acaba de ser reservado." }, { status: 409 });
+    }
+
+    // SEC-037 Fix: Secure paymentReference generation
     if (data.paymentMethod === 'TRANSFER') {
-      data.paymentReference = "TRX-" + Math.random().toString(36).substring(2, 6).toUpperCase();
+      data.paymentReference = "TRX-" + crypto.randomUUID().substring(0, 8).toUpperCase();
     }
     const nuevoTurno = await prisma.appointment.create({ data: data as any });
 
@@ -119,7 +126,8 @@ export async function POST(req: Request) {
       if (business?.layoutConfig) {
         const layoutConfig = business.layoutConfig as any;
         const phone = layoutConfig.callMeBotPhone;
-        const apiKey = layoutConfig.callMeBotApiKey;
+        // Obtenemos apiKey desde el campo directo en Business
+        const apiKey = business.callMeBotApiKey;
 
         if (phone && apiKey) {
           const date = new Date(nuevoTurno.date).toLocaleString('es-AR', {
@@ -150,7 +158,7 @@ export async function POST(req: Request) {
       try {
         const businessInfo = await prisma.business.findUnique({
           where: { id: data.businessId },
-          select: { name: true, layoutConfig: true }
+          select: { name: true, layoutConfig: true, bankDetails: true }
         });
 
         // Limpiar el teléfono
@@ -192,7 +200,7 @@ export async function POST(req: Request) {
           .replace(/{{hora}}/g, hora)
           .replace(/{{servicio}}/g, nuevoTurno.serviceName || "servicio")
           .replace(/{{referencia}}/g, nuevoTurno.paymentReference || "")
-          .replace(/{{datos_bancarios}}/g, layoutConfig.bankDetails || "nuestra cuenta bancaria");
+          .replace(/{{datos_bancarios}}/g, businessInfo?.bankDetails || "nuestra cuenta bancaria");
 
         // Guardar en la cola en lugar de enviar directo
         await prisma.whatsappMessageQueue.create({

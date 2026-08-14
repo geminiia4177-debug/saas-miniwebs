@@ -155,20 +155,19 @@ Ejemplo correcto:
 |||CONSULTAR_TURNOS:${todayISO}:Corte de pelo|||"
 `;
 
-    // 6. Build conversation history
-    let fullPrompt = systemPrompt + "\n\n## CONVERSACIÓN:\n";
-    for (const msg of chatMessages) {
-      // SEC-010 Fix: Limit content length per message
-      const text = msg.content?.substring(0, 500) || ""; 
-      if (msg.role === "user") fullPrompt += `Cliente: ${text}\n`;
-      else if (msg.role === "assistant") fullPrompt += `${botName}: ${text}\n`;
-    }
-    fullPrompt += `\n${botName}:`;
+    // SEC-015 Fix: Use structured messages and systemInstruction to prevent prompt injection
+    const formattedMessages = chatMessages.map((msg: any) => ({
+      role: msg.role === "user" ? "user" : "model",
+      parts: [{ text: msg.content?.substring(0, 500) || "" }]
+    }));
 
     // 7. Generate AI response
     const aiResponse = await ai.models.generateContent({
-      model: "gemini-3.5-flash-lite",
-      contents: fullPrompt,
+      model: "gemini-2.5-flash",
+      contents: formattedMessages,
+      config: {
+        systemInstruction: systemPrompt
+      }
     });
 
     let responseText = aiResponse.text || "Lo siento, tuve un error. ¿Me puedes repetir eso?";
@@ -337,6 +336,12 @@ async function createAppointment(
     const localDate = new Date(isoString);
     localDate.setUTCHours(localDate.getUTCHours() + 3);
 
+    // SEC-010 Fix: Verify slot is still available before creating the appointment
+    const slots = await fetchSlots(businessId, date, serviceName);
+    if (!slots.includes(time)) {
+      return { success: false }; // Slot is not valid or taken
+    }
+
     await prisma.appointment.create({
       data: {
         businessId,
@@ -344,7 +349,7 @@ async function createAppointment(
         clientPhone: clientPhone.trim(),
         serviceName: serviceName.trim(),
         date: localDate,
-        status: "CONFIRMED",
+        status: "PENDING", // Force PENDING instead of CONFIRMED for safety
         notes: "Reservado vía chatbot ✅"
       }
     });

@@ -37,25 +37,26 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Prohibido" }, { status: 403 });
     }
 
-    // Prepare prompt
+    // SEC-034 & SEC-035 Fix: Remove PII. Do not send real client names to Gemini.
     let prompt = `Actúa como un experto en marketing para un negocio llamado "${business.name}" (Rubro: ${business.type}).
 Tu objetivo es escribir un mensaje persuasivo para enviar por WhatsApp a un cliente.
 El mensaje debe ser corto, amigable, usar lenguaje argentino/neutro, incluir algunos emojis relevantes y tener un llamado a la acción claro (ej: reservar un turno).
+Usa el texto "{{cliente}}" exactamente así para referirte al nombre de la persona. No asumas ni inventes nombres reales.
 La URL para reservar es: https://${business.customDomain || `${business.subdomain}.saas-miniwebs.com`}
 
 `;
 
     if (campaignType === "INACTIVE_CLIENT") {
-      prompt += `Contexto: El cliente ${clientName ? `llamado ${clientName}` : ""} no ha venido en más de ${context.days} días. Su servicio favorito era ${context.service}.
+      prompt += `Contexto: El cliente no ha venido en más de ${context.days} días. Su servicio favorito era ${context.service}.
 Escribe un mensaje ofreciéndole un 15% de descuento si vuelve esta semana. Hazle saber que lo extrañan.`;
     } else if (campaignType === "WEAK_DAY") {
       prompt += `Contexto: Queremos llenar la agenda del día ${context.day}, que viene con baja ocupación.
 Escribe un mensaje para ofrecer un beneficio especial (ej. 2x1 o 20% off) para quienes reserven este ${context.day}.`;
     } else if (campaignType === "VIP_CLIENT") {
-      prompt += `Contexto: El cliente ${clientName ? `llamado ${clientName}` : ""} es uno de los clientes VIP del negocio (ha venido ${context.visits} veces).
+      prompt += `Contexto: El cliente es uno de los clientes VIP del negocio (ha venido ${context.visits} veces).
 Escribe un mensaje agradeciéndole por su fidelidad y regalándole un upgrade en su próximo servicio de forma gratuita.`;
     } else {
-      prompt += `Contexto: Escribe una promoción atractiva para que el cliente ${clientName || ""} reserve un turno esta semana.`;
+      prompt += `Contexto: Escribe una promoción atractiva para que el cliente reserve un turno esta semana.`;
     }
 
     const response = await ai.models.generateContent({

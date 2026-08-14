@@ -113,7 +113,7 @@ model Business {
   accentColor String? @default("#f59e0b")
   
   // Facturación
-  paymentAmount Float?    @default(0)
+  paymentAmount Decimal?    @default(0) @db.Decimal(12,2)
   paymentStatus PaymentStatus?   @default(pending)
   demoExpiresAt DateTime?
   nextPayment   DateTime?
@@ -127,6 +127,10 @@ model Business {
   layoutConfig   Json?
   publishedConfig Json?
   paymentData    Json?
+  
+  // 🌟 NUEVOS CAMPOS PRIVADOS 🌟
+  callMeBotApiKey String?
+  bankDetails    String?
 
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -170,6 +174,8 @@ model WhatsappMessageQueue {
   updatedAt    DateTime @updatedAt
 
   business     Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt])
 }
 
 // 🌟 NUEVA TABLA PARA LOS TURNOS 🌟
@@ -194,6 +200,10 @@ model Appointment {
 
   business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
   employee    Employee? @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+  sale        Sale?
+
+  @@index([businessId, date])
+  @@index([businessId, status, date])
 }
 
 // 🌟 NUEVOS MODELOS PARA EL CRM 🌟
@@ -202,12 +212,16 @@ model Sale {
   businessId  String
   type        String   // "SERVICE" o "PRODUCT"
   itemName    String
-  amount      Float
+  amount      Decimal  @db.Decimal(12,2)
   employeeId  String?
+  appointmentId String? @unique
   date        DateTime @default(now())
 
   business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
   employee    Employee? @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+  appointment Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+
+  @@index([businessId, date])
 }
 
 model Employee {
@@ -219,9 +233,9 @@ model Employee {
 
   // Financial and HR
   salaryType  String?  @default("FIXED") // FIXED, PERCENTAGE, HOURLY
-  salaryValue Float?   @default(0)
+  salaryValue Decimal? @default(0) @db.Decimal(12,2)
   servicesDone Int?    @default(0)
-  hoursWorked Float?   @default(0)
+  hoursWorked Decimal? @default(0) @db.Decimal(10,2)
 
   // Public Profile for Landing
   imageUrl    String?
@@ -231,6 +245,8 @@ model Employee {
   business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
   sales       Sale[]
   appointments Appointment[]
+
+  @@index([businessId])
 }
 
 model Supplier {
@@ -267,13 +283,15 @@ model Order {
   customerPhone String?
   address       String?
   items         Json     // Array de items del carrito
-  total         Float    @default(0)
+  total         Decimal  @default(0) @db.Decimal(12,2)
   paymentMethod String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   business      Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
   table         Table?   @relation(fields: [tableId], references: [id], onDelete: SetNull)
+
+  @@index([businessId, status, createdAt])
 }
 
 // 🌟 NUEVOS MODELOS PARA SOPORTE Y ALERTAS 🌟
@@ -287,6 +305,8 @@ model Message {
   createdAt  DateTime @default(now())
 
   business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId, createdAt])
 }
 
 model Alert {

@@ -96,9 +96,30 @@ export default async function PublicLandingPage({ params, searchParams }: { para
 
   const activeConfig = (rawBiz as any).publishedConfig || (rawBiz as any).layoutConfig || {};
 
+  // SEC-033 Fix: Create a strict PublicBusinessDTO to avoid data leakage
   const biz = {
-    ...(rawBiz as any),
-    layoutConfig: activeConfig,
+    id: rawBiz.id,
+    name: rawBiz.name,
+    type: rawBiz.type,
+    description: rawBiz.description,
+    address: activeConfig.address || "",
+    phone: rawBiz.phone,
+    logoUrl: rawBiz.logoUrl,
+    primaryColor: rawBiz.primaryColor,
+    employees: rawBiz.employees,
+    layoutConfig: {
+       sections: activeConfig.sections || [],
+       media: activeConfig.media || [],
+       themeVariant: activeConfig.themeVariant || "classic",
+       chatbotEnabled: activeConfig.chatbotEnabled,
+       chatbotName: activeConfig.chatbotName,
+       barberiaServices: activeConfig.barberiaServices,
+       clinicaServices: activeConfig.clinicaServices,
+       tallerServices: activeConfig.tallerServices,
+       canchaTarifas: activeConfig.canchaTarifas,
+       menuCategorias: activeConfig.menuCategorias,
+       hours: activeConfig.hours,
+    },
     instagram: activeConfig.instagram || "",
     facebook: activeConfig.facebook || "",
     whatsapp: activeConfig.whatsapp || "",
@@ -111,7 +132,7 @@ export default async function PublicLandingPage({ params, searchParams }: { para
   // ─────────────────────────────────────────────────────────
   const jsonLd = {
     "@context": "https://schema.org",
-    "@type": biz.type === "barberia" ? "HairSalon" : biz.type === "restaurante" ? "Restaurant" : biz.type === "clinica" ? "MedicalClinic" : biz.type === "estetica" ? "BeautySalon" : biz.type === "gimnasio" ? "ExerciseGym" : biz.type === "taller" ? "AutoRepair" : biz.type === "lavadero" ? "AutoWash" : "LocalBusiness",
+    "@type": biz.type === "barberia" ? "HairSalon" : biz.type === "menu" ? "Restaurant" : biz.type === "clinica" ? "MedicalClinic" : biz.type === "estetica" ? "BeautySalon" : biz.type === "gimnasio" ? "ExerciseGym" : biz.type === "taller" ? "AutoRepair" : biz.type === "lavadero" ? "AutoWash" : "LocalBusiness",
     "name": biz.name,
     "image": biz.logoUrl || "https://saas-miniwebs.com/default-logo.jpg",
     "url": `https://${subdomain}.saas-miniwebs.com`,
@@ -140,7 +161,7 @@ export default async function PublicLandingPage({ params, searchParams }: { para
     if (biz.type === "general") return <GeneralTemplate negocio={biz} media={media} businessId={biz.id} sections={sections} />;
     
     if (biz.type === "cancha") return <CanchaTemplate negocio={biz} businessId={biz.id} />;
-    if (biz.type === "restaurante" || biz.type === "menu") return <MenuTemplate negocio={biz} businessId={biz.id} />;
+    if (biz.type === "menu") return <MenuTemplate negocio={biz} businessId={biz.id} />;
     if (biz.type === "clinica") return <ClinicaTemplate negocio={biz} businessId={biz.id} />;
     if (biz.type === "estetica") return <EsteticaTemplate negocio={biz} businessId={biz.id} />;
     if (biz.type === "gimnasio") return <GimnasioTemplate negocio={biz} businessId={biz.id} />;
@@ -150,12 +171,20 @@ export default async function PublicLandingPage({ params, searchParams }: { para
   const TemplateComponent = renderTemplate();
   const theme = getTheme(biz.type);
 
+  // SEC-031 Fix: Sanitize primaryColor to prevent CSS injection
+  const safeColor = (color: string | null | undefined) => {
+    if (!color) return null;
+    return /^[a-zA-Z0-9#\-\(\)\.,% ]+$/.test(color) ? color : null;
+  };
+  
+  const accentColor = safeColor(biz.primaryColor) || theme.accent;
+
   // Generamos el bloque de CSS dinámico para este negocio
   const themeStyles = `
     :root {
       --biz-bg: ${theme.bg};
       --biz-surface: ${theme.surface};
-      --biz-accent: ${biz.primaryColor || theme.accent};
+      --biz-accent: ${accentColor};
       --biz-text: ${theme.textPrimary};
       --biz-text-sec: ${theme.textSecondary};
       --biz-border: ${theme.border};
@@ -177,7 +206,7 @@ export default async function PublicLandingPage({ params, searchParams }: { para
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
         {TemplateComponent}
         {biz.layoutConfig?.chatbotEnabled !== false && (
-          <ChatbotWidget businessId={biz.id} bizName={biz.name} primaryColor={biz.primaryColor || theme.accent} chatbotName={biz.layoutConfig?.chatbotName || "Asistente Virtual"} />
+          <ChatbotWidget businessId={biz.id} bizName={biz.name} primaryColor={accentColor} chatbotName={biz.layoutConfig?.chatbotName || "Asistente Virtual"} />
         )}
         {EditModeWrapper && <EditModeWrapper />}
       </div>
@@ -197,7 +226,7 @@ export default async function PublicLandingPage({ params, searchParams }: { para
       <style dangerouslySetInnerHTML={{ __html: themeStyles }} />
       <DefaultTemplate negocio={biz} media={media} sections={sections} />
       {layoutConfig.chatbotEnabled !== false && (
-        <ChatbotWidget businessId={biz.id} bizName={biz.name} primaryColor={biz.primaryColor || theme.accent} chatbotName={layoutConfig.chatbotName || "Asistente Virtual"} />
+        <ChatbotWidget businessId={biz.id} bizName={biz.name} primaryColor={accentColor} chatbotName={layoutConfig.chatbotName || "Asistente Virtual"} />
       )}
       {EditModeWrapper && <EditModeWrapper />}
     </div>

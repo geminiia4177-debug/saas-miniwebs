@@ -5,6 +5,25 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 
+// SEC-020 Fix: Login rate limiting (in-memory)
+const LOGIN_RATE_LIMIT = new Map<string, { attempts: number, lockUntil: number }>();
+
+function checkLoginRateLimit(email: string) {
+  const record = LOGIN_RATE_LIMIT.get(email);
+  const now = Date.now();
+  if (record && record.lockUntil > now) return false;
+  return true;
+}
+
+function recordLoginFail(email: string) {
+  const record = LOGIN_RATE_LIMIT.get(email) || { attempts: 0, lockUntil: 0 };
+  record.attempts++;
+  if (record.attempts >= 5) {
+    record.lockUntil = Date.now() + 15 * 60 * 1000; // Lock for 15 mins
+  }
+  LOGIN_RATE_LIMIT.set(email, record);
+}
+
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma) as any,
   providers: [
@@ -22,19 +41,33 @@ export const authOptions: NextAuthOptions = {
         if (!credentials?.email || !credentials?.password) {
           throw new Error("Faltan datos");
         }
+
+        const email = credentials.email.toLowerCase();
+
+        // SEC-020 Fix: Check lockout
+        if (!checkLoginRateLimit(email)) {
+          throw new Error("Demasiados intentos fallidos. Cuenta bloqueada temporalmente por 15 minutos.");
+        }
         
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email }
+          where: { email }
         });
         
         if (!user || !user.password) {
+          // Fake delay to prevent timing attacks
+          await new Promise(r => setTimeout(r, 1000));
+          recordLoginFail(email);
           throw new Error("Usuario no encontrado o registrado con Google");
         }
         
         const isValid = await bcrypt.compare(credentials.password, user.password);
         if (!isValid) {
+          recordLoginFail(email);
           throw new Error("Contraseña incorrecta");
         }
+
+        // Success: clear failures
+        LOGIN_RATE_LIMIT.delete(email);
         
         if ((user as any).mustChangePassword) {
           (user as any).forcePasswordChange = true;

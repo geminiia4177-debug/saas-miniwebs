@@ -29,7 +29,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
     if (!isOwnerOrAdmin && business.layoutConfig) {
       // Strip private config
-      const layout: any = { ...business.layoutConfig };
+      const layout: any = typeof business.layoutConfig === 'object' && business.layoutConfig !== null 
+        ? { ...business.layoutConfig as any } 
+        : {};
       delete layout.callMeBotApiKey;
       delete layout.bankDetails;
       delete layout.privateConfig;

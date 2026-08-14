@@ -1,13 +1,35 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
+
+// SEC-018 Fix: Simple rate limiter (in-memory for Phase 1)
+const REGISTER_RATE_LIMIT = new Map<string, { count: number, timestamp: number }>();
 
 export async function POST(req: Request) {
   try {
+    // SEC-018 Fix: Rate limiting
+    const ip = req.headers.get("x-forwarded-for") || "unknown_ip";
+    const now = Date.now();
+    const rateRecord = REGISTER_RATE_LIMIT.get(ip) || { count: 0, timestamp: now };
+    
+    if (now - rateRecord.timestamp > 3600000) { // 1 hour
+      rateRecord.count = 0;
+      rateRecord.timestamp = now;
+    }
+    if (rateRecord.count >= 5) {
+      return NextResponse.json({ message: "Demasiados registros desde esta IP. Intenta más tarde." }, { status: 429 });
+    }
+
     const { email, password, name } = await req.json();
 
     if (!email || !password) {
       return NextResponse.json({ message: "Email y contraseña son obligatorios" }, { status: 400 });
+    }
+
+    // SEC-019 Fix: Password Policy
+    if (password.length < 8) {
+      return NextResponse.json({ message: "La contraseña debe tener al menos 8 caracteres" }, { status: 400 });
     }
 
     const exists = await prisma.user.findUnique({ where: { email } });
@@ -27,8 +49,9 @@ export async function POST(req: Request) {
     });
 
     // Generate unique subdomain based on name
+    // SEC-038 Fix: Secure subdomain generation
     const baseSubdomain = name ? name.toLowerCase().replace(/[^a-z0-9]/g, "") : "negocio";
-    const randomSuffix = Math.random().toString(36).substring(2, 6);
+    const randomSuffix = crypto.randomBytes(3).toString("hex");
     const subdomain = `${baseSubdomain}-${randomSuffix}`;
 
     // Create default business for the user
@@ -48,6 +71,10 @@ export async function POST(req: Request) {
         }
       }
     });
+
+    // SEC-018 Fix: Increment rate limit only on success
+    rateRecord.count++;
+    REGISTER_RATE_LIMIT.set(ip, rateRecord);
 
     return NextResponse.json({ message: "Usuario y negocio creados con éxito" }, { status: 201 });
   } catch (error) {

@@ -1,0 +1,1260 @@
+<USER_REQUEST>
+/goat {
+  "audit": {
+    "project": "SaaS MiniWebs",
+    "audit_type": "Static security, architecture, API, multi-tenancy, data exposure, business logic and production-readiness audit",
+    "scope": [
+      "Next.js application",
+      "NextAuth authentication",
+      "Prisma/PostgreSQL",
+      "API routes",
+      "Multi-tenant business isolation",
+      "Appointments",
+      "CRM",
+      "Orders and tables",
+      "WhatsApp/Baileys",
+      "Gemini AI",
+      "ImgBB uploads",
+      "Public landing pages",
+      "Middleware",
+      "Production configuration"
+    ],
+    "overall_risk": "CRITICAL",
+    "production_readiness": "NOT_READY",
+    "main_reason": "La aplicación tiene varios endpoints con autenticación incompleta o autorización insuficiente. El riesgo más importante es el aislamiento entre tenants: un usuario autenticado o incluso un visitante público puede, dependiendo del endpoint, consultar, modificar o crear datos asociados a otro businessId.",
+    "severity_summary": {
+      "critical": 10,
+      "high": 14,
+      "medium": 16,
+      "low": 10
+    }
+  },
+
+  "critical_findings": [
+    {
+      "id": "SEC-001",
+      "severity": "CRITICAL",
+      "category": "Broken Access Control / IDOR",
+      "file": "app/api/businesses/[id]/route.ts",
+      "evidence": "GET /api/businesses/:id devuelve layoutConfig sin comprobar sesión ni propietario.",
+      "impact": [
+        "Cualquier persona que conozca o adivine un business ID puede consultar configuración privada.",
+        "layoutConfig puede contener bankDetails, callMeBotApiKey, configuración de WhatsApp y otros secretos.",
+        "La API es utilizada desde BookingForm para obtener datos del negocio."
+      ],
+      "recommendation": [
+        "No devolver nunca layoutConfig completo mediante un endpoint público.",
+        "Crear un DTO público explícito con únicamente los campos necesarios.",
+        "Separar configuración pública de configuración privada.",
+        "Los secretos nunca deben almacenarse dentro de layoutConfig."
+      ],
+      "priority": "FIX_BEFORE_LAUNCH"
+    },
+    {
+      "id": "SEC-002",
+      "severity": "CRITICAL",
+      "category": "Broken Access Control / Tenant Isolation",
+      "file": "app/api/businesses/route.ts",
+      "evidence": "GET requiere sesión pero no comprueba role ADMIN antes de devolver todos los negocios.",
+      "impact": [
+        "Cualquier usuario autenticado puede consultar el listado global de businesses.",
+        "Puede obtener nombres, emails, teléfonos, estados, importes, dominios y otros datos administrativos.",
+        "Rompe completamente el aislamiento entre tenants."
+      ],
+      "recommendation": [
+        "GET sin subdomain: permitir únicamente role ADMIN.",
+        "GET con subdomain/customDomain: devolver solamente un DTO público.",
+        "Nunca usar la misma respuesta para endpoint administrativo y endpoint público."
+      ],
+      "priority": "FIX_BEFORE_LAUNCH"
+    },
+    {
+      "id": "SEC-003",
+      "severity": "CRITICAL",
+      "category": "Privilege Escalation",
+      "file": "app/api/businesses/[id]/route.ts",
+      "evidence": "El propietario puede modificar status, paymentStatus, paymentAmount, demoExpiresAt, nextPayment y customDomain.",
+      "impact": [
+        "Un cliente puede potencialmente cambiar su negocio a ACTIVE.",
+        "Puede modificar información de facturación.",
+        "Puede alterar fechas de demo/pago.",
+        "Puede cambiar dominio/subdominio.",
+        "La autorización comprueba ownership pero no qué campos puede editar cada rol."
+      ],
+      "recommendation": [
+        "Separar AdminBusinessUpdateSchema y OwnerBusinessUpdateSchema.",
+        "Los clientes no deben poder modificar status, paymentStatus, paymentAmount, demoExpiresAt ni nextPayment.",
+        "El customDomain debería requerir flujo específico de verificación.",
+        "Los cambios administrativos deben estar limitados a ADMIN."
+      ],
+      "priority": "FIX_BEFORE_LAUNCH"
+    },
+    {
+      "id": "SEC-004",
+      "severity": "CRITICAL",
+      "category": "Broken Access Control",
+      "file": "app/api/orders/route.ts",
+      "evidence": "GET con businessId ignora completamente el token recibido y devuelve pedidos pendientes.",
+      "impact": [
+        "Cualquier persona que conozca un businessId puede consultar pedidos pendientes.",
+        "Los pedidos pueden contener nombres, teléfonos, direcciones, productos y totales.",
+        "El comentario del código reconoce que el token todavía no está implementado."
+      ],
+      "recommendation": [
+        "Eliminar inmediatamente el acceso público por businessId.",
+        "Implementar un token aleatorio criptográficamente seguro si realmente se necesita acceso público.",
+        "Guardar hash del token en DB y verificarlo.",
+        "Nunca confiar en un ID opaco como mecanismo de seguridad."
+      ],
+      "priority": "FIX_BEFORE_LAUNCH"
+    },
+    {
+      "id": "SEC-005",
+      "severity": "CRITICAL",
+      "category": "Broken Access Control",
+      "file": "app/api/orders/route.ts",
+      "evidence": "PATCH actualiza cualquier orderId sin autenticación.",
+      "impact": [
+        "Un atacante puede cambiar estados de pedidos de cualquier negocio.",
+        "Puede completar, cancelar o alterar el flujo operativo de otro negocio.",
+        "No existe comprobación de business ownership."
+      ],
+      "recommendation": [
+        "Exigir sesión.",
+        "Resolver order -> business -> owner.",
+        "Comprobar ADMIN o propietario.",
+        "Validar transición de estados permitida.",
+        "No aceptar estados arbitrarios."
+      ],
+      "priority": "FIX_BEFORE_LAUNCH"
+    },
+    {
+      "id": "SEC-006",
+      "severity": "CRITICAL",
+      "category": "Broken Access Control",
+      "file": "app/api/tables/route.ts",
+      "evidence": "PATCH exige login pero actualiza tableId sin comprobar que la mesa pertenece al negocio del usuario.",
+      "impact": [
+        "Un usuario autenticado puede manipular mesas de otro tenant si conoce el ID.",
+        "Cerrar una mesa además modifica los pedidos relacionados.",
+        "Esto puede causar alteraciones financieras y operativas."
+      ],
+      "recommendation": [
+        "Buscar table con business incluido.",
+        "Comprobar ownership antes de actualizar.",
+        "Ejecutar actualización de mesa y pedidos dentro de una transacción Prisma.",
+        "Validar status y paymentMethod contra enums permitidos."
+      ],
+      "priority": "FIX_BEFORE_LAUNCH"
+    },
+    {
+      "id": "SEC-007",
+      "severity": "CRITICAL",
+      "category": "Broken Access Control",
+      "file": "app/api/crm/route.ts",
+      "evidence": "GET /api/crm no requiere autenticación.",
+      "impact": [
+        "Sales, employees y suppliers pueden consultarse públicamente usando businessId.",
+        "Sales contienen importes.",
+        "Employees contienen datos salariales.",
+        "Suppliers pueden contener teléfonos y productos."
+      ],
+      "recommendation": [
+        "GET debe exigir sesión.",
+        "Comprobar ownership del business.",
+        "ADMIN puede acceder globalmente.",
+        "No devolver salaryValue/salaryType a usuarios que no necesiten ese dato."
+      ],
+      "priority": "FIX_BEFORE_LAUNCH"
+    },
+    {
+      "id": "SEC-008",
+      "severity": "CRITICAL",
+      "category": "IDOR",
+      "file": "app/api/crm/route.ts",
+      "evidence": "PUT modifica employees por id sin comprobar que el employee pertenece al negocio del usuario.",
+      "impact": [
+        "Un usuario autenticado podría modificar empleados de otro tenant.",
+        "Puede alterar salaryValue, servicesDone, hoursWorked y otros datos."
+      ],
+      "recommendation": [
+        "Resolver employee -> business -> userId.",
+        "Comprobar ownership.",
+        "Separar campos administrativos de campos operativos.",
+        "Usar Zod para validar cada operación."
+      ],
+      "priority": "FIX_BEFORE_LAUNCH"
+    },
+    {
+      "id": "SEC-009",
+      "severity": "CRITICAL",
+      "category": "IDOR",
+      "file": "app/api/crm/[id]/route.ts",
+      "evidence": "DELETE elimina sales/employees/suppliers por id sin verificar propietario.",
+      "impact": [
+        "Un usuario autenticado puede borrar registros de otro negocio.",
+        "Es destrucción de datos multi-tenant."
+      ],
+      "recommendation": [
+        "Resolver el registro y verificar business.userId.",
+        "ADMIN bypass explícito.",
+        "Registrar auditoría de operaciones destructivas."
+      ],
+      "priority": "FIX_BEFORE_LAUNCH"
+    },
+    {
+      "id": "SEC-010",
+      "severity": "CRITICAL",
+      "category": "Public API Abuse",
+      "file": "app/api/chat/route.ts",
+      "evidence": "El endpoint de IA es público y acepta businessId arbitrario.",
+      "impact": [
+        "Cualquier persona puede consumir tu Gemini API usando tu infraestructura.",
+        "Puede generar costos.",
+        "Puede enviar enormes historiales de conversación.",
+        "Puede intentar abusar del flujo de comandos.",
+        "Puede crear reservas para cualquier business."
+      ],
+      "recommendation": [
+        "Rate limit por IP + businessId.",
+        "Limitar cantidad de mensajes y tamaño de payload.",
+        "Validar businessId y que el negocio esté activo.",
+        "Añadir protección anti-bot.",
+        "Limitar longitud de messages.",
+        "No permitir que la IA sea la autoridad final para crear una reserva."
+      ],
+      "priority": "FIX_BEFORE_LAUNCH"
+    }
+  ],
+
+  "high_findings": [
+    {
+      "id": "SEC-011",
+      "severity": "HIGH",
+      "category": "Appointment Integrity",
+      "file": "app/api/appointments/route.ts",
+      "issue": "POST de appointments es público y permite enviar status, businessId, employeeId, serviceName y date desde el cliente.",
+      "risk": [
+        "Se pueden crear reservas para cualquier business.",
+        "Se puede enviar status CONFIRMED/COMPLETED.",
+        "Se puede asignar employeeId arbitrario.",
+        "No se valida que la hora elegida sea realmente un slot disponible."
+      ],
+      "recommendation": [
+        "Para reservas públicas aceptar únicamente clientName, clientPhone, serviceId, employeeId opcional, date/time y paymentMethod.",
+        "Ignorar status enviado por cliente y establecer PENDING en servidor.",
+        "Resolver servicio desde DB/configuración confiable.",
+        "Recalcular disponibilidad en servidor.",
+        "Crear la reserva únicamente si el slot continúa libre."
+      ]
+    },
+    {
+      "id": "SEC-012",
+      "severity": "HIGH",
+      "category": "Race Condition",
+      "file": "app/api/appointments/route.ts",
+      "issue": "La disponibilidad se consulta previamente pero POST no vuelve a verificar atomicamente el slot.",
+      "impact": [
+        "Dos clientes pueden seleccionar el mismo horario.",
+        "Ambas solicitudes pueden crear el turno.",
+        "Esto es especialmente probable en horarios populares."
+      ],
+      "recommendation": [
+        "Implementar constraint/estrategia de locking.",
+        "Como mínimo, volver a comprobar disponibilidad dentro de una transacción.",
+        "Crear una clave de slot normalizada cuando el modelo lo permita.",
+        "Usar transaction isolation adecuada."
+      ]
+    },
+    {
+      "id": "SEC-013",
+      "severity": "HIGH",
+      "category": "Appointment IDOR",
+      "file": "app/api/appointments/[id]/route.ts",
+      "issue": "Cualquier usuario autenticado puede modificar cualquier appointment por ID.",
+      "impact": [
+        "Permite cancelar/completar turnos de otros negocios.",
+        "No existe ownership check."
+      ],
+      "recommendation": [
+        "Resolver appointment.business.userId.",
+        "Comprobar ADMIN o propietario.",
+        "Validar employeeId contra el mismo business."
+      ]
+    },
+    {
+      "id": "SEC-014",
+      "severity": "HIGH",
+      "category": "Data Exposure",
+      "file": "app/api/appointments/route.ts",
+      "issue": "Endpoint público de búsqueda permite buscar por patente o texto y devuelve información del turno.",
+      "impact": [
+        "Puede utilizarse para enumerar datos.",
+        "Patente puede ser dato personal.",
+        "La combinación patente + horarios puede revelar hábitos del cliente."
+      ],
+      "recommendation": [
+        "No utilizar búsqueda libre como mecanismo público.",
+        "Usar un código privado de reserva o token.",
+        "Mostrar únicamente información mínima necesaria."
+      ]
+    },
+    {
+      "id": "SEC-015",
+      "severity": "HIGH",
+      "category": "AI Prompt Injection / Cost Abuse",
+      "file": "app/api/chat/route.ts",
+      "issue": "messages enviados por el usuario se concatenan directamente al prompt.",
+      "impact": [
+        "El usuario puede intentar modificar instrucciones.",
+        "Puede provocar respuestas inesperadas.",
+        "Puede aumentar consumo de tokens.",
+        "Puede intentar inducir al bot a generar comandos de reserva."
+      ],
+      "recommendation": [
+        "Separar claramente contenido no confiable de instrucciones.",
+        "Validar comandos estructuradamente.",
+        "No permitir que el LLM determine businessId.",
+        "No permitir que el LLM determine autorización.",
+        "Validar cada parámetro del comando antes de ejecutarlo."
+      ]
+    },
+    {
+      "id": "SEC-016",
+      "severity": "HIGH",
+      "category": "Sensitive Secret Storage",
+      "file": "app/api/appointments/route.ts",
+      "issue": "callMeBotApiKey se obtiene desde layoutConfig.",
+      "impact": [
+        "layoutConfig también se expone mediante /api/businesses/:id.",
+        "La API key puede terminar expuesta al navegador."
+      ],
+      "recommendation": [
+        "Mover callMeBotApiKey a una tabla de credenciales cifrada o secret manager.",
+        "Nunca devolverla en APIs públicas.",
+        "Nunca incluir secretos dentro de layoutConfig."
+      ]
+    },
+    {
+      "id": "SEC-017",
+      "severity": "HIGH",
+      "category": "Weak Bootstrap Password",
+      "file": "app/api/businesses/route.ts",
+      "issue": "Los usuarios creados por el administrador reciben inicialmente la contraseña literal 'admin'.",
+      "impact": [
+        "Todos los usuarios nuevos parten de una contraseña predecible.",
+        "Si forcePasswordChange falla o existe un bypass, las cuentas quedan comprometidas."
+      ],
+      "recommendation": [
+        "Generar contraseña temporal criptográficamente aleatoria.",
+        "Mejor aún: magic link de establecimiento de contraseña.",
+        "Forzar expiración del token.",
+        "Invalidar sesiones antiguas al cambiar contraseña."
+      ]
+    },
+    {
+      "id": "SEC-018",
+      "severity": "HIGH",
+      "category": "Registration Abuse",
+      "file": "app/api/auth/register/route.ts",
+      "issue": "Registro público sin rate limiting, captcha, verificación de email ni controles anti-abuso.",
+      "impact": [
+        "Creación masiva de cuentas.",
+        "Spam.",
+        "Consumo de DB.",
+        "Enumeración de emails."
+      ],
+      "recommendation": [
+        "Rate limit.",
+        "Verificación de email.",
+        "CAPTCHA/Turnstile.",
+        "Password policy.",
+        "Normalizar email."
+      ]
+    },
+    {
+      "id": "SEC-019",
+      "severity": "HIGH",
+      "category": "Password Policy",
+      "file": "app/api/auth/register/route.ts",
+      "issue": "No existe política mínima de contraseña.",
+      "recommendation": [
+        "Mínimo 10-12 caracteres.",
+        "Bloquear contraseñas comunes.",
+        "Rate limiting en login.",
+        "No imponer reglas arbitrarias de complejidad si no aportan seguridad."
+      ]
+    },
+    {
+      "id": "SEC-020",
+      "severity": "HIGH",
+      "category": "Authentication Abuse",
+      "file": "lib/auth.ts",
+      "issue": "Credentials authorize no muestra rate limiting ni lockout.",
+      "impact": [
+        "Brute force de contraseñas.",
+        "Credential stuffing."
+      ],
+      "recommendation": [
+        "Rate limit por IP y cuenta.",
+        "Backoff progresivo.",
+        "Registrar intentos fallidos.",
+        "Considerar CAPTCHA después de varios intentos."
+      ]
+    },
+    {
+      "id": "SEC-021",
+      "severity": "HIGH",
+      "category": "Session Security",
+      "file": "lib/auth.ts",
+      "issue": "No se observa invalidación global de sesiones al cambiar contraseña.",
+      "recommendation": [
+        "Implementar passwordChangedAt/version de sesión.",
+        "Rechazar JWTs emitidos antes del cambio de contraseña.",
+        "Permitir logout de todas las sesiones."
+      ]
+    },
+    {
+      "id": "SEC-022",
+      "severity": "HIGH",
+      "category": "Upload Security",
+      "file": "app/api/upload/route.ts",
+      "issue": "Se valida únicamente tamaño, no MIME real, extensión, tipo de imagen ni cuota por negocio.",
+      "recommendation": [
+        "Aceptar únicamente JPEG/PNG/WebP.",
+        "Validar magic bytes.",
+        "Rechazar SVG salvo sanitización explícita.",
+        "Limitar dimensiones.",
+        "Limitar cantidad de uploads por usuario.",
+        "Rate limit."
+      ]
+    },
+    {
+      "id": "SEC-023",
+      "severity": "HIGH",
+      "category": "Business Logic",
+      "file": "app/api/orders/route.ts",
+      "issue": "El total y los items vienen del cliente.",
+      "impact": [
+        "El cliente puede modificar total.",
+        "Puede modificar items.",
+        "Puede generar órdenes inconsistentes."
+      ],
+      "recommendation": [
+        "Enviar IDs de productos/servicios.",
+        "Calcular precios en servidor.",
+        "Guardar snapshot de precio.",
+        "Calcular total en servidor."
+      ]
+    },
+    {
+      "id": "SEC-024",
+      "severity": "HIGH",
+      "category": "Multi-Tenant WhatsApp",
+      "file": "server.js",
+      "issue": "El estado global de WhatsApp y los sockets son globales y no están claramente asociados a un business.",
+      "impact": [
+        "Puede terminar enviándose un mensaje de un negocio desde el número de otro.",
+        "El modelo WhatsappConnection existe pero el envío utiliza global.waPool.",
+        "No hay aislamiento claro de remitente por tenant."
+      ],
+      "recommendation": [
+        "Asociar cada sender WhatsApp a un business o cuenta de envío explícita.",
+        "Resolver sender por businessId.",
+        "Nunca utilizar global.waClient como identidad de negocio.",
+        "Agregar pruebas de aislamiento de remitente."
+      ]
+    },
+    {
+      "id": "SEC-025",
+      "severity": "HIGH",
+      "category": "Production Architecture",
+      "file": "server.js",
+      "issue": "Baileys utiliza filesystem local para sesiones y estado global en memoria.",
+      "impact": [
+        "No es adecuado para arquitectura serverless como Vercel.",
+        "Reinicios pueden perder sesión.",
+        "Múltiples instancias no comparten estado.",
+        "Cron puede ejecutarse múltiples veces."
+      ],
+      "recommendation": [
+        "Mover WhatsApp worker a proceso persistente separado.",
+        "Guardar credenciales de forma persistente y segura.",
+        "Usar Redis/cola para jobs.",
+        "Separar web app y WhatsApp worker."
+      ]
+    }
+  ],
+
+  "medium_findings": [
+    {
+      "id": "SEC-026",
+      "severity": "MEDIUM",
+      "category": "Middleware",
+      "file": "middleware.ts",
+      "issue": "Todas las rutas /api quedan fuera del middleware.",
+      "recommendation": "No es necesariamente un bug porque cada API puede autenticar individualmente, pero debe existir una política centralizada de autorización y rate limiting."
+    },
+    {
+      "id": "SEC-027",
+      "severity": "MEDIUM",
+      "category": "Host Header",
+      "file": "middleware.ts",
+      "issue": "El hostname se utiliza para construir rewrites.",
+      "recommendation": [
+        "Validar hostname contra allowlist.",
+        "Normalizar puerto y hostname.",
+        "No confiar ciegamente en Host/X-Forwarded-Host.",
+        "Crear resolución de tenant centralizada."
+      ]
+    },
+    {
+      "id": "SEC-028",
+      "severity": "MEDIUM",
+      "category": "Custom Domains",
+      "file": "app/api/businesses/[id]/route.ts",
+      "issue": "customDomain se acepta como texto y no existe proceso visible de verificación DNS.",
+      "recommendation": [
+        "Requerir dominio verificado.",
+        "No activar customDomain hasta comprobar ownership.",
+        "Normalizar punycode.",
+        "Prevenir dominios internos o reservados."
+      ]
+    },
+    {
+      "id": "SEC-029",
+      "severity": "MEDIUM",
+      "category": "Validation",
+      "file": "lib/validations.ts",
+      "issue": "businessUpdateSchema permite z.any() para fechas y layoutConfig.",
+      "recommendation": [
+        "Eliminar z.any().",
+        "Usar schemas estrictos.",
+        "Validar estructura de layoutConfig.",
+        "Limitar tamaño máximo del JSON."
+      ]
+    },
+    {
+      "id": "SEC-030",
+      "severity": "MEDIUM",
+      "category": "Validation",
+      "file": "lib/validations.ts",
+      "issue": "Campos status/paymentStatus/type son strings abiertos en varias partes.",
+      "recommendation": "Usar z.enum con los mismos valores que Prisma."
+    },
+    {
+      "id": "SEC-031",
+      "severity": "MEDIUM",
+      "category": "XSS",
+      "file": "app/[subdomain]/page.tsx",
+      "issue": "Uso de dangerouslySetInnerHTML.",
+      "recommendation": [
+        "El CSS generado actualmente debería construirse desde valores validados.",
+        "Validar primaryColor, fuentes y cualquier valor inyectado.",
+        "Para JSON-LD usar serialización segura.",
+        "No permitir HTML arbitrario en configuración del negocio."
+      ]
+    },
+    {
+      "id": "SEC-032",
+      "severity": "MEDIUM",
+      "category": "Stored XSS",
+      "file": "components/landings/ChatbotWidget.tsx",
+      "issue": "Existe dangerouslySetInnerHTML y debe revisarse el origen de cualquier contenido que termine allí.",
+      "recommendation": "Eliminarlo si no es imprescindible o sanitizar cualquier HTML proveniente del tenant/usuario."
+    },
+    {
+      "id": "SEC-033",
+      "severity": "MEDIUM",
+      "category": "Public Data Exposure",
+      "file": "app/[subdomain]/page.tsx",
+      "issue": "Se construye biz desde rawBiz y se pasa como prop a templates client-side.",
+      "recommendation": [
+        "Crear PublicBusinessDTO.",
+        "No pasar el objeto Prisma completo.",
+        "Excluir paymentData, layoutConfig privado, datos internos y campos administrativos."
+      ]
+    },
+    {
+      "id": "SEC-034",
+      "severity": "MEDIUM",
+      "category": "Privacy",
+      "file": "app/api/intelligence/route.ts",
+      "issue": "Se devuelven nombres y teléfonos de clientes al dashboard.",
+      "recommendation": [
+        "Definir retención de datos.",
+        "Solicitar consentimiento para marketing.",
+        "No enviar más datos de los necesarios a Gemini.",
+        "Agregar política de privacidad y mecanismo de eliminación."
+      ]
+    },
+    {
+      "id": "SEC-035",
+      "severity": "MEDIUM",
+      "category": "AI Privacy",
+      "file": "app/api/intelligence/generate/route.ts",
+      "issue": "Se envía clientName/context a un proveedor externo de IA.",
+      "recommendation": [
+        "Minimizar PII.",
+        "Enviar un identificador interno o nombre solo si es estrictamente necesario.",
+        "Documentar proveedor y tratamiento de datos.",
+        "Definir retención."
+      ]
+    },
+    {
+      "id": "SEC-036",
+      "severity": "MEDIUM",
+      "category": "WhatsApp Privacy",
+      "file": "server.js",
+      "issue": "Se utiliza onWhatsApp sobre números de clientes.",
+      "recommendation": [
+        "Documentar finalidad.",
+        "Minimizar consultas.",
+        "Evitar procesar números innecesarios.",
+        "Implementar opt-out de recordatorios."
+      ]
+    },
+    {
+      "id": "SEC-037",
+      "severity": "MEDIUM",
+      "category": "Business Logic",
+      "file": "app/api/appointments/route.ts",
+      "issue": "paymentReference se genera con Math.random().",
+      "recommendation": "Usar crypto.randomUUID() o crypto.randomBytes()."
+    },
+    {
+      "id": "SEC-038",
+      "severity": "MEDIUM",
+      "category": "Business Logic",
+      "file": "app/api/auth/register/route.ts",
+      "issue": "Subdomain usa Math.random().",
+      "recommendation": "Usar crypto.randomUUID/randomBytes o dejar que DB genere identificador y usar slug + suffix seguro."
+    },
+    {
+      "id": "SEC-039",
+      "severity": "MEDIUM",
+      "category": "Transactions",
+      "file": "app/api/appointments/[id]/route.ts",
+      "issue": "Completar appointment y crear Sale son operaciones separadas.",
+      "impact": "Puede quedar turno COMPLETED sin Sale o Sale duplicada.",
+      "recommendation": "Usar transaction y una referencia única appointmentId en Sale."
+    },
+    {
+      "id": "SEC-040",
+      "severity": "MEDIUM",
+      "category": "Duplicate Sales",
+      "file": "app/api/appointments/[id]/route.ts",
+      "issue": "Cada PATCH con status COMPLETED puede crear una nueva Sale.",
+      "recommendation": "Crear Sale idempotente usando appointmentId único."
+    },
+    {
+      "id": "SEC-041",
+      "severity": "MEDIUM",
+      "category": "Pagination",
+      "file": "app/api/intelligence/route.ts",
+      "issue": "Carga todos los appointments históricos de un negocio.",
+      "impact": "Puede degradarse severamente con negocios con miles de reservas.",
+      "recommendation": "Agregar agregaciones SQL, límites temporales e índices."
+    },
+    {
+      "id": "SEC-042",
+      "severity": "MEDIUM",
+      "category": "Performance",
+      "file": "app/api/businesses/route.ts",
+      "issue": "allDates obtiene todos los businesses para construir un gráfico.",
+      "recommendation": "Hacer aggregation/groupBy por período en DB."
+    }
+  ],
+
+  "low_findings": [
+    {
+      "id": "SEC-043",
+      "severity": "LOW",
+      "category": "Error Handling",
+      "file": "app/api/orders/route.ts",
+      "issue": "Algunos endpoints devuelven error.message directamente.",
+      "recommendation": "No devolver mensajes internos de excepciones en producción."
+    },
+    {
+      "id": "SEC-044",
+      "severity": "LOW",
+      "category": "Logging",
+      "file": "server.js",
+      "issue": "Logs contienen nombres y teléfonos de clientes.",
+      "recommendation": "Redactar PII en logs."
+    },
+    {
+      "id": "SEC-045",
+      "severity": "LOW",
+      "category": "Logging",
+      "file": "app/api/appointments/route.ts",
+      "issue": "Se registra información de WhatsApp y teléfonos.",
+      "recommendation": "Masking de números."
+    },
+    {
+      "id": "SEC-046",
+      "severity": "LOW",
+      "category": "Configuration",
+      "file": "next.config.ts",
+      "issue": "eslint.ignoreDuringBuilds=true.",
+      "recommendation": "No ignorar lint en producción; convertir errores en CI failures."
+    },
+    {
+      "id": "SEC-047",
+      "severity": "LOW",
+      "category": "Configuration",
+      "file": "next.config.ts",
+      "issue": "typescript.ignoreBuildErrors=true.",
+      "recommendation": "Eliminarlo antes del lanzamiento."
+    },
+    {
+      "id": "SEC-048",
+      "severity": "LOW",
+      "category": "Dependency Security",
+      "file": "package.json",
+      "issue": "No se pudo ejecutar npm audit online desde este entorno.",
+      "recommendation": "Ejecutar npm audit en CI y bloquear builds ante vulnerabilidades high/critical."
+    },
+    {
+      "id": "SEC-049",
+      "severity": "LOW",
+      "category": "Testing",
+      "file": ".github/workflows/ci.yml",
+      "issue": "El pipeline debe garantizar tests de autorización y build estricto.",
+      "recommendation": "Agregar tests automáticos de tenant isolation, auth, IDOR y business rules."
+    },
+    {
+      "id": "SEC-050",
+      "severity": "LOW",
+      "category": "Database",
+      "file": "prisma/schema.prisma",
+      "issue": "Faltan índices visibles para consultas frecuentes.",
+      "recommendation": [
+        "Appointment: businessId + date.",
+        "Appointment: businessId + status + date.",
+        "Order: businessId + status + createdAt.",
+        "Message: businessId + createdAt.",
+        "Queue: status + createdAt."
+      ]
+    }
+  ],
+
+  "authentication_review": {
+    "status": "PARTIALLY_ACCEPTABLE",
+    "good": [
+      "NextAuth está utilizado.",
+      "Credentials usa bcrypt.",
+      "Google OAuth está disponible.",
+      "JWT session strategy está configurada.",
+      "Existe control de roles."
+    ],
+    "problems": [
+      "No hay rate limiting visible para login.",
+      "No hay política de contraseñas.",
+      "No hay invalidación de sesiones al cambiar contraseña.",
+      "Existe contraseña temporal predecible 'admin'.",
+      "No hay MFA.",
+      "No hay protección anti-bot en registro.",
+      "mustChangePassword/forcePasswordChange tienen implementación confusa y parcialmente redundante."
+    ],
+    "recommended_target": [
+      "NextAuth/Auth.js correctamente configurado.",
+      "Password hashing robusto.",
+      "Rate limiting.",
+      "MFA opcional para ADMIN.",
+      "Magic link para primer acceso.",
+      "Session version/passwordChangedAt.",
+      "Audit log."
+    ]
+  },
+
+  "authorization_architecture": {
+    "current_problem": "La autorización está implementada endpoint por endpoint de forma inconsistente.",
+    "recommended_architecture": {
+      "principle": "Deny by default",
+      "helpers": [
+        "requireSession()",
+        "requireAdmin()",
+        "requireBusinessOwner(businessId)",
+        "requireBusinessAccess(businessId)",
+        "requireAppointmentAccess(appointmentId)",
+        "requireOrderAccess(orderId)",
+        "requireEmployeeAccess(employeeId)"
+      ],
+      "rule": "Nunca realizar prisma.update/delete/findMany sensible usando únicamente un ID proporcionado por el cliente sin incluir la condición de tenant/autorización."
+    },
+    "example_pattern": "prisma.appointment.updateMany({ where: { id: appointmentId, business: { userId: session.user.id } }, data: ... })"
+  },
+
+  "multi_tenant_rules": [
+    "Todo registro perteneciente a un negocio debe poder resolverse hasta businessId.",
+    "Toda operación del usuario debe verificar business.userId === session.user.id.",
+    "ADMIN debe tener bypass explícito y auditado.",
+    "Nunca confiar únicamente en IDs opacos/cuid.",
+    "Nunca usar email como única capa de autorización si ya existe session.user.id.",
+    "No mezclar DTO público con DTO administrativo.",
+    "Los endpoints públicos deben operar con tokens o identificadores públicos diseñados para ese fin.",
+    "Las configuraciones secretas deben estar separadas del layoutConfig."
+  ],
+
+  "public_endpoints_that_need_special_attention": [
+    {
+      "endpoint": "POST /api/chat",
+      "current": "Public",
+      "risk": "Gemini abuse + booking abuse + prompt injection + cost"
+    },
+    {
+      "endpoint": "POST /api/appointments",
+      "current": "Public",
+      "risk": "Fake bookings + duplicate bookings + arbitrary status"
+    },
+    {
+      "endpoint": "GET /api/appointments/slots",
+      "current": "Public",
+      "risk": "Low/medium; needs rate limiting and strict validation"
+    },
+    {
+      "endpoint": "GET /api/appointments",
+      "current": "Partially public",
+      "risk": "Customer data enumeration"
+    },
+    {
+      "endpoint": "GET /api/orders?businessId=",
+      "current": "Public",
+      "risk": "Critical data leak"
+    },
+    {
+      "endpoint": "POST /api/orders",
+      "current": "Public",
+      "risk": "Fake orders and price manipulation"
+    },
+    {
+      "endpoint": "GET /api/crm",
+      "current": "Public",
+      "risk": "Critical CRM data leak"
+    },
+    {
+      "endpoint": "POST /api/biolinks/click",
+      "current": "Public",
+      "risk": "Click counter manipulation / write abuse"
+    }
+  ],
+
+  "recommended_api_split": {
+    "public": [
+      "/api/public/business/:slug",
+      "/api/public/services/:slug",
+      "/api/public/slots/:slug",
+      "/api/public/appointments"
+    ],
+    "authenticated": [
+      "/api/dashboard/business",
+      "/api/dashboard/appointments",
+      "/api/dashboard/orders",
+      "/api/dashboard/crm",
+      "/api/dashboard/messages"
+    ],
+    "admin": [
+      "/api/admin/businesses",
+      "/api/admin/users",
+      "/api/admin/messages",
+      "/api/admin/billing",
+      "/api/admin/whatsapp"
+    ],
+    "benefit": "Hace mucho más difícil confundir una API pública con una administrativa."
+  },
+
+  "data_model_improvements": {
+    "business": [
+      "Agregar tenant-safe ownership constraints.",
+      "Agregar verifiedCustomDomainAt.",
+      "Separar publicConfig de privateConfig.",
+      "Separar billing fields de owner-editable fields."
+    ],
+    "appointment": [
+      "Agregar serviceId.",
+      "Agregar businessId index.",
+      "Agregar unique/idempotency key cuando corresponda.",
+      "Agregar cancellation reason.",
+      "Agregar source: PUBLIC_FORM | CHATBOT | DASHBOARD | ADMIN.",
+      "Agregar consent/marketing opt-in si se realizarán campañas."
+    ],
+    "sale": [
+      "Agregar appointmentId nullable unique.",
+      "Guardar currency.",
+      "Evitar Float para dinero; usar Decimal."
+    ],
+    "order": [
+      "Usar Decimal para dinero.",
+      "Guardar product/service references.",
+      "Guardar immutable price snapshot."
+    ],
+    "whatsapp": [
+      "Asociar sender explícitamente a business.",
+      "Separar credenciales de configuración pública.",
+      "Agregar status, lastConnectedAt y health information."
+    ]
+  },
+
+  "financial_data": {
+    "problem": "Float se utiliza para paymentAmount, Sale.amount y Order.total.",
+    "risk": "Errores de precisión monetaria.",
+    "recommendation": "Usar Prisma Decimal para importes monetarios y almacenar currency explícitamente.",
+    "example": "Decimal(12,2)"
+  },
+
+  "whatsapp_architecture": {
+    "current_risks": [
+      "Estado global en memoria.",
+      "Filesystem local para auth state.",
+      "Un pool global.",
+      "No existe aislamiento claro por business.",
+      "Cron en el mismo proceso web.",
+      "Round-robin no considera qué número pertenece a qué negocio.",
+      "Posibilidad de duplicación si hay múltiples instancias."
+    ],
+    "recommended": [
+      "Web app separada.",
+      "WhatsApp worker separado.",
+      "Redis/BullMQ o equivalente para cola.",
+      "DB como source of truth.",
+      "Credenciales persistentes y cifradas.",
+      "Sender routing por business.",
+      "Idempotency key para cada mensaje.",
+      "Retry con exponential backoff.",
+      "Dead-letter queue."
+    ]
+  },
+
+  "rate_limiting": {
+    "missing": true,
+    "must_have": [
+      {
+        "endpoint": "POST /api/chat",
+        "suggested": "10-30 requests/min/IP"
+      },
+      {
+        "endpoint": "POST /api/appointments",
+        "suggested": "10-20/min/IP/business"
+      },
+      {
+        "endpoint": "POST /api/upload",
+        "suggested": "10/min/user"
+      },
+      {
+        "endpoint": "POST /api/auth/register",
+        "suggested": "3-5/hour/IP"
+      },
+      {
+        "endpoint": "Credentials login",
+        "suggested": "progressive backoff"
+      },
+      {
+        "endpoint": "POST /api/messages",
+        "suggested": "20-60/min/user"
+      }
+    ],
+    "implementation": "Redis/Upstash o rate limiter equivalente."
+  },
+
+  "security_headers": {
+    "recommended": [
+      "Content-Security-Policy",
+      "Strict-Transport-Security",
+      "X-Content-Type-Options",
+      "Referrer-Policy",
+      "Permissions-Policy",
+      "frame-ancestors",
+      "X-Frame-Options"
+    ],
+    "additional": [
+      "Configurar cookies Secure.",
+      "Configurar SameSite apropiadamente.",
+      "No permitir framing del dashboard."
+    ]
+  },
+
+  "observability": {
+    "recommended": [
+      "Sentry o equivalente.",
+      "Structured logging.",
+      "Request ID.",
+      "Audit log para operaciones administrativas.",
+      "Alertas de errores.",
+      "Alertas de abuso.",
+      "Métricas de API.",
+      "Métricas de WhatsApp queue.",
+      "Métricas de Gemini."
+    ],
+    "audit_events": [
+      "LOGIN_FAILED",
+      "LOGIN_SUCCESS",
+      "PASSWORD_CHANGED",
+      "BUSINESS_CREATED",
+      "BUSINESS_UPDATED",
+      "BUSINESS_DELETED",
+      "APPOINTMENT_CREATED",
+      "APPOINTMENT_CANCELLED",
+      "ORDER_UPDATED",
+      "CRM_DELETED",
+      "WHATSAPP_MESSAGE_SENT",
+      "ADMIN_ACCESS"
+    ]
+  },
+
+  "privacy": {
+    "data_present": [
+      "Client names",
+      "Client phone numbers",
+      "Client emails",
+      "Vehicle license plates",
+      "Appointment history",
+      "Employee salary data",
+      "Supplier phone numbers",
+      "Customer addresses",
+      "Business payment data"
+    ],
+    "recommendations": [
+      "Privacy policy.",
+      "Terms of service.",
+      "Data retention policy.",
+      "Delete/export customer data.",
+      "Consent mechanism for marketing.",
+      "Opt-out from WhatsApp marketing.",
+      "Data minimization.",
+      "Vendor/subprocessor documentation for Gemini, ImgBB and WhatsApp infrastructure."
+    ]
+  },
+
+  "database_indexes": [
+    {
+      "model": "Appointment",
+      "index": ["businessId", "date"]
+    },
+    {
+      "model": "Appointment",
+      "index": ["businessId", "status", "date"]
+    },
+    {
+      "model": "Order",
+      "index": ["businessId", "status", "createdAt"]
+    },
+    {
+      "model": "Message",
+      "index": ["businessId", "createdAt"]
+    },
+    {
+      "model": "WhatsappMessageQueue",
+      "index": ["status", "createdAt"]
+    },
+    {
+      "model": "Sale",
+      "index": ["businessId", "date"]
+    },
+    {
+      "model": "Employee",
+      "index": ["businessId"]
+    }
+  ],
+
+  "frontend_improvements": [
+    {
+      "priority": "HIGH",
+      "suggestion": "No pasar objetos Prisma completos a componentes client.",
+      "reason": "Reduce accidental data leakage."
+    },
+    {
+      "priority": "HIGH",
+      "suggestion": "Crear DTOs explícitos.",
+      "reason": "Evita que agregar un campo privado al modelo lo exponga accidentalmente."
+    },
+    {
+      "priority": "HIGH",
+      "suggestion": "Validar colores, URLs, fuentes y configuración visual.",
+      "reason": "Reduce XSS y CSS injection."
+    },
+    {
+      "priority": "MEDIUM",
+      "suggestion": "Separar preview/editor de página pública.",
+      "reason": "Evita que ?preview=true active funcionalidades administrativas."
+    },
+    {
+      "priority": "MEDIUM",
+      "suggestion": "Añadir estados de error y retry consistentes.",
+      "reason": "Mejora resiliencia."
+    }
+  ],
+
+  "architecture_improvements": [
+    {
+      "current": "Next.js + API routes + Prisma + Baileys + cron en un único proceso",
+      "recommended": "Next.js web/API + PostgreSQL + Redis/queue + WhatsApp worker + scheduler"
+    },
+    {
+      "current": "layoutConfig contiene casi toda la configuración",
+      "recommended": "Separar publicConfig, privateConfig y business settings"
+    },
+    {
+      "current": "Autorización distribuida",
+      "recommended": "Authorization service/helpers centralizados"
+    },
+    {
+      "current": "Cliente puede enviar muchos datos de negocio",
+      "recommended": "Servidor como source of truth"
+    }
+  ],
+
+  "testing_plan": {
+    "priority": "CRITICAL",
+    "tests_to_add": [
+      {
+        "name": "Tenant isolation",
+        "description": "User A cannot read/update/delete User B business data."
+      },
+      {
+        "name": "Admin isolation",
+        "description": "Only ADMIN can access global business list."
+      },
+      {
+        "name": "Appointment IDOR",
+        "description": "User A cannot modify User B appointment."
+      },
+      {
+        "name": "Order IDOR",
+        "description": "User A cannot read/update User B orders."
+      },
+      {
+        "name": "CRM IDOR",
+        "description": "User A cannot read/update/delete User B CRM."
+      },
+      {
+        "name": "Public API abuse",
+        "description": "Public endpoints cannot expose private data."
+      },
+      {
+        "name": "Booking race",
+        "description": "Two simultaneous requests cannot book the same slot."
+      },
+      {
+        "name": "Privilege escalation",
+        "description": "USER cannot change payment/status/admin-only fields."
+      },
+      {
+        "name": "WhatsApp isolation",
+        "description": "Business A never sends through Business B sender."
+      },
+      {
+        "name": "Prompt injection",
+        "description": "Chatbot cannot bypass business rules through crafted messages."
+      }
+    ]
+  },
+
+  "priority_roadmap": {
+    "phase_0_before_any_real_customer": [
+      "SEC-001",
+      "SEC-002",
+      "SEC-003",
+      "SEC-004",
+      "SEC-005",
+      "SEC-006",
+      "SEC-007",
+      "SEC-008",
+      "SEC-009",
+      "SEC-010",
+      "SEC-011",
+      "SEC-013",
+      "SEC-017",
+      "SEC-024",
+      "SEC-025"
+    ],
+    "phase_1_before_public_launch": [
+      "SEC-012",
+      "SEC-014",
+      "SEC-015",
+      "SEC-016",
+      "SEC-018",
+      "SEC-019",
+      "SEC-020",
+      "SEC-021",
+      "SEC-022",
+      "SEC-023",
+      "SEC-026",
+      "SEC-027",
+      "SEC-028",
+      "SEC-029",
+      "SEC-030",
+      "SEC-031",
+      "SEC-032",
+      "SEC-033"
+    ],
+    "phase_2_scalability_and_hardening": [
+      "SEC-034",
+      "SEC-035",
+      "SEC-036",
+      "SEC-037",
+      "SEC-038",
+      "SEC-039",
+      "SEC-040",
+      "SEC-041",
+      "SEC-042",
+      "SEC-043",
+      "SEC-044",
+      "SEC-045",
+      "SEC-046",
+      "SEC-047",
+      "SEC-048",
+      "SEC-049",
+      "SEC-050"
+    ]
+  },
+
+  "most_important_changes_in_plain_language": [
+    "1. Crear una capa de autorización centralizada y aplicarla a TODOS los endpoints.",
+    "2. Nunca confiar en businessId, appointmentId, orderId, employeeId o tableId enviados por el cliente sin comprobar ownership.",
+    "3. Separar APIs públicas de APIs administrativas.",
+    "4. Sacar secretos como callMeBotApiKey de layoutConfig.",
+    "5. Eliminar el acceso público a pedidos y CRM.",
+    "6. Eliminar la contraseña temporal literal 'admin'.",
+    "7. Proteger chat/IA y reservas con rate limiting.",
+    "8. Hacer que el servidor sea la autoridad sobre disponibilidad, precios, estados y permisos.",
+    "9. Separar Baileys/WhatsApp del proceso web.",
+    "10. Agregar tests automáticos específicos de IDOR y tenant isolation.",
+    "11. Dejar de usar Float para dinero.",
+    "12. Eliminar ignoreDuringBuilds e ignoreBuildErrors antes de producción."
+  ],
+
+  "final_assessment": {
+    "security": "Actualmente insuficiente para producción multi-tenant.",
+    "authentication": "Aceptable como base, pero necesita hardening.",
+    "authorization": "Principal debilidad del proyecto.",
+    "tenant_isolation": "Críticamente insuficiente.",
+    "public_api_security": "Insuficiente.",
+    "appointment_system": "Funcional pero susceptible a abuso y race conditions.",
+    "CRM": "Tiene fallos críticos de autorización.",
+    "orders": "Tiene fallos críticos de autorización y lógica de precios.",
+    "WhatsApp": "Arquitectura problemática para producción/serverless.",
+    "AI": "Necesita rate limiting, control de costos y validación server-side de comandos.",
+    "uploads": "Necesita validación de contenido y cuotas.",
+    "frontend": "Visualmente puede estar bien, pero debe reducirse la superficie de datos enviados al cliente.",
+    "database": "Base razonable, pero necesita índices, Decimal para dinero y algunos campos de integridad.",
+    "recommendation": "No lanzaría todavía el SaaS a clientes reales. Primero corregiría los CRITICAL/HIGH de autorización y aislamiento de tenants. Una vez corregidos, haría una segunda auditoría específicamente orientada a pentesting de los endpoints."
+  }
+}
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-08-14T10:23:51-03:00.
+
+The user's current state is as follows:
+Active Document: c:\Users\Jona\Desktop\Pagina proyecto\supabase\functions\process-order\index.ts (LANGUAGE_TYPESCRIPT)
+Cursor is on line: 1
+Other open documents:
+- c:\Users\Jona\Desktop\Pagina proyecto\.env.example (LANGUAGE_UNSPECIFIED)
+- c:\Users\Jona\Desktop\Pagina proyecto\supabase_client.py (LANGUAGE_PYTHON)
+- c:\Users\Jona\Bot\supabase_client.py (LANGUAGE_PYTHON)
+- c:\Users\Jona\Desktop\Pagina proyecto\supabase\functions\create-user\index.ts (LANGUAGE_TYPESCRIPT)
+- c:\Users\Jona\Desktop\Pagina proyecto\supabase\enable_rls_security.sql (LANGUAGE_SQL)
+</ADDITIONAL_METADATA>
+<USER_SETTINGS_CHANGE>
+The user changed setting `Model Selection` from None to Gemini 3.1 Pro (High). No need to comment on this change if the user doesn't ask about it. If reporting what model you are, please use a human readable name instead of the exact string.
+</USER_SETTINGS_CHANGE>

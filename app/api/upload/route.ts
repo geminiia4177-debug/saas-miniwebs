@@ -17,6 +17,26 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
+    // SEC-022 Fix: Validate MIME type strictly
+    const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      return NextResponse.json({ error: "Solo se permiten imágenes (JPEG, PNG, WEBP)." }, { status: 400 });
+    }
+
+    // SEC-022 Fix: Basic magic bytes validation to prevent malicious fake extensions
+    const buffer = await file.arrayBuffer();
+    const arr = new Uint8Array(buffer).subarray(0, 4);
+    const header = Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('');
+    
+    let isImage = false;
+    if (header.startsWith('ffd8')) isImage = true; // JPEG
+    else if (header.startsWith('89504e47')) isImage = true; // PNG
+    else if (header.startsWith('52494646')) isImage = true; // WEBP (starts with RIFF)
+    
+    if (!isImage) {
+      return NextResponse.json({ error: "Contenido de archivo inválido." }, { status: 400 });
+    }
+
     // 2. Límite de tamaño: 5MB
     const MAX_SIZE = 5 * 1024 * 1024;
     if (file.size > MAX_SIZE) {

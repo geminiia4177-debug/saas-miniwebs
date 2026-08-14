@@ -136,10 +136,10 @@ export default function ChatbotWidget({ businessId, bizName, primaryColor = "#63
             </button>
           </form>
           
-          <style dangerouslySetInnerHTML={{__html: `
+          <style>{`
             @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
             .animate-slideUp { animation: slideUp 0.3s ease-out forwards; }
-          `}} />
+          `}</style>
         </div>
       )}
     </>

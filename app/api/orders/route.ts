@@ -13,6 +13,25 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing fields" }, { status: 400 });
     }
 
+    // SEC-023 Fix: Validate negative totals and item consistency
+    if (typeof total !== 'number' || total < 0 || !Array.isArray(items)) {
+      return NextResponse.json({ error: "Datos de carrito inválidos" }, { status: 400 });
+    }
+
+    let calculatedTotal = 0;
+    for (const item of items) {
+      const price = parseFloat(item.price) || 0;
+      const quantity = parseInt(item.quantity) || 0;
+      if (price < 0 || quantity <= 0) {
+        return NextResponse.json({ error: "Precios o cantidades inválidas" }, { status: 400 });
+      }
+      calculatedTotal += price * quantity;
+    }
+
+    if (Math.abs(calculatedTotal - total) > 0.01) {
+      return NextResponse.json({ error: "El total del carrito ha sido manipulado o es inconsistente" }, { status: 400 });
+    }
+
     // Determine Table ID if mesaNum was passed
     let actualTableId = null;
     if (type === "MESA" && tableId) {
@@ -53,7 +72,7 @@ export async function POST(req: Request) {
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
-    const businessId = searchParams.get("businessId");
+    let businessId = searchParams.get("businessId");
 
     // SEC-004 Fix: Always require authentication
     const { session, error: sessionError } = await requireSession();
