@@ -190,10 +190,10 @@ export const ownerBusinessUpdateSchema = z.object({
   phone: z.string().max(30).optional().nullable(),
   description: z.string().max(2000).optional().nullable(),
   type: BusinessTypeEnum.optional(),
-  accentColor: z.string().regex(/^#[0-9a-fA-F]{3,8}$/).max(9).optional(),
-  primaryColor: z.string().regex(/^#[0-9a-fA-F]{3,8}$/).max(9).optional(),
-  secondaryColor: z.string().regex(/^#[0-9a-fA-F]{3,8}$/).max(9).optional(),
-  fontFamily: z.enum(["sans", "serif", "mono", "display"]).optional(),
+  accentColor: z.string().regex(/^#[0-9a-fA-F]{3,8}$/).max(9).optional().nullable(),
+  primaryColor: z.string().regex(/^#[0-9a-fA-F]{3,8}$/).max(9).optional().nullable(),
+  secondaryColor: z.string().regex(/^#[0-9a-fA-F]{3,8}$/).max(9).optional().nullable(),
+  fontFamily: z.enum(["sans", "serif", "mono", "display"]).optional().nullable(),
   logoUrl: z.string().url().max(500).optional().nullable(),
   bannerUrl: z.string().url().max(500).optional().nullable(),
   // P1-015: Strict layoutConfig — no catchall
@@ -201,7 +201,7 @@ export const ownerBusinessUpdateSchema = z.object({
   // P1-030: Validate customDomain hostname (no paths, no javascript:)
   customDomain: z.string()
     .max(253)
-    .regex(/^([a-z0-9-]+\.)+[a-z]{2,}$/, "Debe ser un hostname válido (ej: mi-dominio.com)")
+    .regex(/^$|^([a-z0-9-]+\.)+[a-z]{2,}$/, "Debe ser un hostname válido (ej: mi-dominio.com)")
     .optional()
     .nullable(),
   // Social links (top-level shortcuts, merged into layoutConfig server-side)
