@@ -32,13 +32,19 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Prohibido" }, { status: 403 });
     }
 
-    // Fetch all completed or confirmed appointments to analyze
+    // SEC-041 (P1-023): Limit historical fetch to prevent OOM errors
+    // Limit to the last 6 months and a maximum of 5000 appointments
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
     const appointments = await prisma.appointment.findMany({
       where: {
         businessId: businessId,
-        status: { in: ["COMPLETED", "CONFIRMED"] }
+        status: { in: ["COMPLETED", "CONFIRMED"] },
+        date: { gte: sixMonthsAgo }
       },
-      orderBy: { date: "desc" }
+      orderBy: { date: "desc" },
+      take: 5000
     });
 
     // 1. Client Analysis (Group by Phone)

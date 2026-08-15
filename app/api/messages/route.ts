@@ -3,6 +3,12 @@ import { prisma } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { requireBusinessOwner } from "@/lib/auth-helpers";
+import { checkRateLimit, getRateLimitRetryAfterMs } from "@/lib/rate-limit";
+
+// ─── RATE LIMITING: Messages ──────────────────────────────────────────────────
+// P1-004: Prevent abuse of the message system and AI bot.
+const MSG_RATE_WINDOW_MS = 60_000;
+const MSG_RATE_MAX = 10;
 
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
@@ -50,7 +56,22 @@ export async function POST(req: Request) {
     if (!businessId || !content) {
       return NextResponse.json({ error: "Missing fields" }, { status: 400 });
     }
+
+    // P1-020: Enforce message content length limit
+    if (typeof content !== "string" || content.length > 2000) {
+      return NextResponse.json({ error: "El mensaje es demasiado largo (máximo 2000 caracteres)." }, { status: 400 });
+    }
     
+    // P1-004: Rate limit message creation by user
+    const userKey = `msg:user:${session.user.id}`;
+    if (!checkRateLimit(userKey, MSG_RATE_MAX, MSG_RATE_WINDOW_MS)) {
+      const retryAfter = Math.ceil(getRateLimitRetryAfterMs(userKey, MSG_RATE_WINDOW_MS) / 1000);
+      return NextResponse.json(
+        { error: "Estás enviando mensajes demasiado rápido. Intenta en un momento." },
+        { status: 429, headers: { "Retry-After": String(retryAfter) } }
+      );
+    }
+
     // SEC-P0-002 Fix: Validate ownership before creating message
     const { error: authError } = await requireBusinessOwner(businessId);
     if (authError) return authError;
@@ -118,14 +139,18 @@ Eres amable, claro y resolutivo.
 3. Sé breve (máximo 2 o 3 oraciones). No uses jerga.
 `;
 
-          let fullPrompt = systemPrompt + "\n\n## CONVERSACIÓN:\n";
-          // Reverse to chronological order
-          const chronoMsgs = [...recentMsgs].reverse();
-          for (const m of chronoMsgs) {
-            if (m.senderType === "USER") fullPrompt += `Usuario: ${m.content}\n`;
-            else fullPrompt += `Soporte AI: ${m.content}\n`;
-          }
-          fullPrompt += `\nSoporte AI:`;
+          // P1-012: Build structured conversation history.
+          // User messages are enclosed in literal markers to prevent prompt injection.
+          const conversationHistory = [...recentMsgs].reverse().map((m) => {
+            // Sanitize by slicing to a safe length
+            const safeContent = String(m.content).substring(0, 500);
+            if (m.senderType === "USER") {
+              return `[USER_MSG]${safeContent}[/USER_MSG]`;
+            }
+            return `[AI_MSG]${safeContent}[/AI_MSG]`;
+          }).join("\n");
+
+          const fullPrompt = systemPrompt + "\n\n## CONVERSACIÓN (más reciente al final):\n" + conversationHistory + "\n\n[AI_MSG]";
 
           const aiResponse = await ai.models.generateContent({
             model: "gemini-3.5-flash-lite",
@@ -156,8 +181,8 @@ Eres amable, claro y resolutivo.
 
     return NextResponse.json(msg);
   } catch (error) {
-    console.error("Error creating message:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    console.error("Error creating message:", error instanceof Error ? error.message : "unknown");
+    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
   }
 }
 

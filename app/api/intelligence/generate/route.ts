@@ -3,12 +3,28 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { GoogleGenAI } from "@google/genai";
+import { checkRateLimit, getRateLimitRetryAfterMs } from "@/lib/rate-limit";
+
+// ─── RATE LIMITING: AI Generation ─────────────────────────────────────────────
+// P1-004: Prevent abuse of AI models. Limit to 5 per minute per user.
+const AI_RATE_WINDOW_MS = 60_000;
+const AI_RATE_MAX = 5;
 
 export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
+    // P1-004: Rate limit by user for AI generation
+    const userKey = `ai:gen:${session.user.id}`;
+    if (!checkRateLimit(userKey, AI_RATE_MAX, AI_RATE_WINDOW_MS)) {
+      const retryAfter = Math.ceil(getRateLimitRetryAfterMs(userKey, AI_RATE_WINDOW_MS) / 1000);
+      return NextResponse.json(
+        { error: "Límite de generación de inteligencia artificial excedido. Intenta más tarde." },
+        { status: 429, headers: { "Retry-After": String(retryAfter) } }
+      );
     }
 
     if (!process.env.GEMINI_API_KEY) {

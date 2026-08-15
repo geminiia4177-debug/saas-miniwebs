@@ -1,53 +1,95 @@
-import { NextResponse } from 'next/server';
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { requireSession } from "@/lib/auth-helpers";
+import { requireBusinessOwner } from "@/lib/auth-helpers";
+import { checkRateLimit, getRateLimitRetryAfterMs } from "@/lib/rate-limit";
+import { z } from "zod";
+
+// P1-024: Rate limiting for WhatsApp sends
+const WA_RATE_WINDOW_MS = 60_000;
+const WA_RATE_MAX = 30;
+
+const SendMessageSchema = z.object({
+  phone: z.string().min(6).max(50),
+  message: z.string().min(1).max(4096),
+  businessId: z.string().min(1),
+  idempotencyKey: z.string().max(128).optional().nullable(),
+});
 
 export async function POST(request: Request) {
-  const session = await getServerSession(authOptions);
-  
-  if (!session) {
-    return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-  }
+  const { session, error: sessionError } = await requireSession();
+  if (sessionError) return sessionError;
 
   try {
-    const { phone, message, businessId, idempotencyKey } = await request.json();
-    
-    if (!phone || !message || !businessId) {
-      return NextResponse.json({ error: 'Faltan parámetros: phone, message o businessId.' }, { status: 400 });
+    const rawBody = await request.json();
+    const parsed = SendMessageSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Datos inválidos" }, { status: 400 });
+    }
+    const { phone, message, businessId, idempotencyKey } = parsed.data;
+
+    // P1-021: Verify ownership — owner or admin only
+    const { error: authError } = await requireBusinessOwner(businessId);
+    if (authError) return authError;
+
+    // P1-024: Rate limit per business
+    const rateLimitKey = `wa:${businessId}:${session.user.id}`;
+    if (!checkRateLimit(rateLimitKey, WA_RATE_MAX, WA_RATE_WINDOW_MS)) {
+      const retryAfter = Math.ceil(
+        getRateLimitRetryAfterMs(rateLimitKey, WA_RATE_WINDOW_MS) / 1000
+      );
+      return NextResponse.json(
+        { error: "Demasiados mensajes en poco tiempo. Intenta más tarde." },
+        { status: 429, headers: { "Retry-After": String(retryAfter) } }
+      );
     }
 
-    if (session.user?.role !== 'ADMIN') {
-      const business = await prisma.business.findUnique({
-        where: { id: businessId }
-      });
-      if (!business || business.userId !== session.user?.id) {
-        return NextResponse.json({ error: 'No autorizado para enviar mensajes en nombre de este negocio.' }, { status: 403 });
-      }
+    // P1-024: Check Business.status before enqueuing — never send for BLOCKED or ARCHIVED
+    const business = await prisma.business.findUnique({
+      where: { id: businessId },
+      select: { status: true },
+    });
+
+    if (!business) {
+      return NextResponse.json({ error: "Negocio no encontrado" }, { status: 404 });
     }
 
-    // BUG-P1-010 Fix: Idempotency support for WhatsApp queue
+    if (business.status === "BLOCKED" || business.status === "ARCHIVED") {
+      return NextResponse.json(
+        { error: "Este negocio no puede enviar mensajes." },
+        { status: 403 }
+      );
+    }
+
+    // P1-022: Idempotency support — prevent duplicate messages
     try {
       const queuedMessage = await prisma.whatsappMessageQueue.create({
         data: {
           businessId,
           toPhone: phone,
           message,
-          idempotencyKey: idempotencyKey || null
-        }
+          idempotencyKey: idempotencyKey || null,
+        },
       });
 
       return NextResponse.json({ success: true, queuedMessageId: queuedMessage.id });
     } catch (e: any) {
-      if (e.code === 'P2002' && idempotencyKey) {
-        // Prisma error for unique constraint on idempotencyKey
-        const existing = await prisma.whatsappMessageQueue.findUnique({ where: { idempotencyKey } });
-        return NextResponse.json({ success: true, queuedMessageId: existing?.id, duplicate: true });
+      if (e.code === "P2002" && idempotencyKey) {
+        // Unique constraint on idempotencyKey — return existing record
+        const existing = await prisma.whatsappMessageQueue.findUnique({
+          where: { idempotencyKey },
+          select: { id: true },
+        });
+        return NextResponse.json({
+          success: true,
+          queuedMessageId: existing?.id,
+          duplicate: true,
+        });
       }
       throw e;
     }
   } catch (error: any) {
-    console.error('Error enviando mensaje por WhatsApp:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("Error encolando mensaje WhatsApp:", error instanceof Error ? error.message : "unknown");
+    return NextResponse.json({ error: "Error al enviar el mensaje" }, { status: 500 });
   }
 }

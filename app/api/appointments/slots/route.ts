@@ -2,48 +2,100 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { BusinessHours, Section, ServiceItem, DEFAULT_HOURS } from "@/lib/constants";
+import { checkRateLimit, getRateLimitRetryAfterMs } from "@/lib/rate-limit";
+import {
+  getBusinessDayName,
+  getBusinessDateStr,
+  getBusinessMinutesSinceMidnight,
+  parseTimeToMinutes,
+  DEFAULT_BUSINESS_TIMEZONE,
+} from "@/lib/date-helpers";
+
+// ─── RATE LIMITING: Slots ─────────────────────────────────────────────────────
+// P1-002: Prevent mass scraping of slot availability.
+// Limit: 60 requests per minute per IP per business.
+const SLOTS_RATE_WINDOW_MS = 60_000;
+const SLOTS_RATE_MAX = 60;
 
 export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
-  const businessId = searchParams.get("businessId");
+  // P1-002: Rate limiting
+  const ip =
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const rawUrl = new URL(req.url);
+  const businessId = rawUrl.searchParams.get("businessId");
+
+  if (!businessId) {
+    return NextResponse.json({ error: "Faltan parámetros" }, { status: 400 });
+  }
+
+  const rateLimitKey = `slots:${ip}:${businessId}`;
+  if (!checkRateLimit(rateLimitKey, SLOTS_RATE_MAX, SLOTS_RATE_WINDOW_MS)) {
+    const retryAfter = Math.ceil(
+      getRateLimitRetryAfterMs(rateLimitKey, SLOTS_RATE_WINDOW_MS) / 1000
+    );
+    return NextResponse.json(
+      { error: "Demasiadas consultas. Intenta más tarde." },
+      { status: 429, headers: { "Retry-After": String(retryAfter) } }
+    );
+  }
+
+  const { searchParams } = rawUrl;
   const dateStr = searchParams.get("date"); // YYYY-MM-DD
   const serviceName = searchParams.get("serviceName");
 
-  if (!businessId || !dateStr || !serviceName) {
+  if (!dateStr || !serviceName) {
     return NextResponse.json({ error: "Faltan parámetros" }, { status: 400 });
   }
 
   try {
-    // 1. Obtener negocio y su configuración
+    // 1. Fetch business config including status and timezone
     const biz = await prisma.business.findUnique({
       where: { id: businessId },
-      select: { layoutConfig: true }
+      select: { layoutConfig: true, status: true, timezone: true },
     });
 
-    if (!biz) return NextResponse.json({ error: "Negocio no encontrado" }, { status: 404 });
+    if (!biz) {
+      return NextResponse.json({ error: "Negocio no encontrado" }, { status: 404 });
+    }
+
+    // P1-007: Reject slots for disabled businesses
+    if (biz.status === "BLOCKED" || biz.status === "ARCHIVED") {
+      return NextResponse.json({ error: "Este negocio no acepta reservas." }, { status: 403 });
+    }
+
+    // P1-006: Use the business timezone, defaulting to Mexico City only as fallback
+    const timezone = biz.timezone ?? DEFAULT_BUSINESS_TIMEZONE;
 
     const layout = biz.layoutConfig as any;
     const sections: Section[] = layout?.sections || [];
-    
-    // Buscar configuración de reservas
-    const bookingSection = sections.find(s => s.id === "booking");
-    const hours: BusinessHours = layout?.hours || bookingSection?.config?.hours || DEFAULT_HOURS;
-    
-    // Buscar duración del servicio
-    const servicesSection = sections.find(s => s.id === "services");
-    const allServices = [...(servicesSection?.config?.items || []), ...(layout?.barberiaServices || [])];
-    const serviceItem = allServices.find((s: ServiceItem) => s.name === serviceName);
-    const duration = serviceItem?.duration || bookingSection?.config?.slotDuration || 30;
+
+    // 2. Get business hours
+    const bookingSection = sections.find((s) => s.id === "booking");
+    const hours: BusinessHours =
+      layout?.hours || bookingSection?.config?.hours || DEFAULT_HOURS;
+
+    // 3. Find service duration
+    const servicesSection = sections.find((s) => s.id === "services");
+    const allServices = [
+      ...(servicesSection?.config?.items || []),
+      ...(layout?.barberiaServices || []),
+      ...(layout?.clinicaServices || []),
+      ...(layout?.tallerServices || []),
+    ];
+    const serviceItem: ServiceItem | undefined = allServices.find(
+      (s: ServiceItem) => s.name === serviceName
+    );
+    const duration =
+      serviceItem?.duration || bookingSection?.config?.slotDuration || 30;
 
     if (!hours) return NextResponse.json({ slots: [] });
 
-    // 2. Determinar si abre ese día
-    // parseamos la fecha sin 'T00:00:00' para evitar que el server lo interprete como UTC
-    // y reste horas por el timezone (ej: GMT-3) cayendo en el día anterior.
+    // 4. P1-006: Determine if the business is open on this day using its timezone
+    // Parse the requested date as a local-midnight boundary in the business timezone
     const [year, month, day] = dateStr.split("-").map(Number);
-    const dateObj = new Date(year, month - 1, day);
-    const days = ["domingo", "lunes", "martes", "miercoles", "jueves", "viernes", "sabado"];
-    const dayName = days[dateObj.getDay()];
+    // Create a reference point: noon UTC of that day, then check what day it is locally
+    const noonUTC = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+    const dayName = getBusinessDayName(noonUTC, timezone);
     const dayConfig = hours[dayName as keyof BusinessHours];
 
     if (!dayConfig || !dayConfig.open) {
@@ -52,18 +104,16 @@ export async function GET(req: Request) {
 
     const employeeId = searchParams.get("employeeId");
 
-    // 3. Obtener turnos ya agendados para ese día (que no estén cancelados)
-    // Buscamos turnos desde las 00:00 hasta las 23:59 de ese día
-    // Expandimos la búsqueda 24hs para no perder turnos por diferencias de UTC
-    const startOfDay = new Date(dateStr + "T00:00:00.000Z");
-    startOfDay.setUTCHours(-24);
-    const endOfDay = new Date(dateStr + "T23:59:59.999Z");
-    endOfDay.setUTCHours(48);
+    // 5. Fetch existing appointments for that business-local date
+    // We expand the search window by ±25 hours to account for any timezone offset,
+    // then filter precisely using the business timezone.
+    const searchStart = new Date(Date.UTC(year, month - 1, day - 1, 0, 0, 0));
+    const searchEnd = new Date(Date.UTC(year, month - 1, day + 1, 23, 59, 59));
 
     const whereClause: any = {
       businessId,
-      date: { gte: startOfDay, lte: endOfDay },
-      status: { not: "CANCELLED" }
+      date: { gte: searchStart, lte: searchEnd },
+      status: { not: "CANCELLED" },
     };
 
     if (employeeId) {
@@ -71,61 +121,49 @@ export async function GET(req: Request) {
     }
 
     const existingAppointments = await prisma.appointment.findMany({
-      where: whereClause
+      where: whereClause,
+      select: { date: true, serviceName: true },
     });
 
-    const bookedRanges = existingAppointments.map(app => {
-      // Formatear en horario local de Argentina para validar la fecha real
-      const dayStrFormatter = new Intl.DateTimeFormat('en-CA', {
-        timeZone: 'America/Mexico_City',
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit'
-      });
-      if (dayStrFormatter.format(app.date) !== dateStr) return null;
+    // 6. Build booked ranges in local minutes-since-midnight
+    const bookedRanges = existingAppointments
+      .map((app) => {
+        // P1-006: Filter using business timezone, not hardcoded Mexico_City
+        if (getBusinessDateStr(app.date, timezone) !== dateStr) return null;
 
-      // Extraer hora y minuto en la zona horaria local del negocio (por ahora asumimos Argentina)
-      const argDate = new Date(app.date.toLocaleString("en-US", { timeZone: "America/Mexico_City" }));
-      const h = argDate.getHours();
-      const m = argDate.getMinutes();
-      const startMin = h * 60 + m;
-      
-      // Buscar la duración de este servicio en particular
-      const allSrvs = [...(servicesSection?.config?.items || []), ...(layout?.barberiaServices || [])];
-      const appService = allSrvs.find((s: ServiceItem) => s.name === app.serviceName);
-      const appDuration = appService?.duration || 30;
-      
-      return { start: startMin, end: startMin + appDuration };
-    }).filter(Boolean) as { start: number, end: number }[];
+        const startMin = getBusinessMinutesSinceMidnight(app.date, timezone);
 
-    // 4. Generar slots posibles
-    const parseTime = (t: string) => {
-      if (!t || !t.includes(':')) return 0;
-      const [h, m] = t.split(":").map(Number);
-      return (h || 0) * 60 + (m || 0);
-    };
+        // Find the duration of the booked service
+        const appService = allServices.find(
+          (s: ServiceItem) => s.name === app.serviceName
+        );
+        const appDuration = appService?.duration || 30;
 
-    const openMin = parseTime(dayConfig.from || "09:00");
-    const closeMin = parseTime(dayConfig.to || "18:00");
-    // Usamos el duration del servicio específico para armar los bloques (ej: 60min)
+        return { start: startMin, end: startMin + appDuration };
+      })
+      .filter(Boolean) as { start: number; end: number }[];
+
+    // 7. Generate available slots
+    const openMin = parseTimeToMinutes(dayConfig.from || "09:00");
+    const closeMin = parseTimeToMinutes(dayConfig.to || "18:00");
     const slotStep = duration;
-    
+
     const availableSlots: string[] = [];
-    
-    // Iterar en bloques según el slotStep (ej: cada 60 min)
-    for (let current = openMin; current + duration <= closeMin; current += slotStep) {
-      const slotEnd = current + duration; // El slot terminará sumando la duración real del servicio
-      
-      // Chequear si este bloque se pisa con algún turno existente
-      const isOverlapping = bookedRanges.some(range => {
-        // Hay superposición si el inicio del slot es menor al fin del turno
-        // Y el fin del slot es mayor al inicio del turno
-        return current < range.end && slotEnd > range.start;
-      });
+
+    for (
+      let current = openMin;
+      current + duration <= closeMin;
+      current += slotStep
+    ) {
+      const slotEnd = current + duration;
+      const isOverlapping = bookedRanges.some(
+        (range) => current < range.end && slotEnd > range.start
+      );
 
       if (!isOverlapping) {
-        // Formatear a HH:MM
-        const h = Math.floor(current / 60).toString().padStart(2, "0");
+        const h = Math.floor(current / 60)
+          .toString()
+          .padStart(2, "0");
         const m = (current % 60).toString().padStart(2, "0");
         availableSlots.push(`${h}:${m}`);
       }
@@ -133,7 +171,10 @@ export async function GET(req: Request) {
 
     return NextResponse.json({ slots: availableSlots });
   } catch (error) {
-    console.error("Error calculando slots:", error);
+    console.error(
+      "Error calculando slots:",
+      error instanceof Error ? error.message : "unknown"
+    );
     return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }

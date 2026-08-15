@@ -1,139 +1,224 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { requireSession, requireBusinessOwner } from "@/lib/auth-helpers";
+import { checkRateLimit, getRateLimitRetryAfterMs } from "@/lib/rate-limit";
+import { z } from "zod";
 
-// SEC-P1-012 Fix: Orders POST rate limit
-const ORDERS_RATE_LIMIT = new Map<string, { count: number, timestamp: number }>();
+// ─── RATE LIMITING ─────────────────────────────────────────────────────────────
+const ORDERS_RATE_WINDOW_MS = 60_000; // 1 minute
+const ORDERS_RATE_MAX_IP = 10;
+const ORDERS_RATE_MAX_BUSINESS = 50;
 
+// ─── INPUT VALIDATION ─────────────────────────────────────────────────────────
+// P1-019: Enforce quantity limits
+// P1-020: Enforce string length limits
+const OrderItemSchema = z.object({
+  id: z.union([z.string(), z.number()]).transform(String),
+  quantity: z.number().int().min(1, "La cantidad mínima es 1").max(100, "La cantidad máxima es 100").optional(),
+  qty: z.number().int().min(1).max(100).optional(),
+  // These fields from the client are ignored for price/name — server resolves them
+  nombre: z.string().max(200).optional(),
+  precio: z.number().optional(),
+  name: z.string().max(200).optional(),
+  price: z.number().optional(),
+});
+
+const OrderCreateSchema = z.object({
+  businessId: z.string().min(1),
+  tableId: z.string().optional().nullable(),
+  type: z.enum(["TAKEAWAY", "DELIVERY", "LOCAL", "MESA"]).default("TAKEAWAY"),
+  items: z.array(OrderItemSchema).min(1, "El pedido debe tener al menos un ítem").max(50, "Demasiados ítems"),
+  // P1-018: The 'total' field from the client is only used for desync detection.
+  // The actual persisted total is ALWAYS server-calculated.
+  total: z.number().min(0).optional(),
+  // P1-020: Length limits for customer fields
+  customerName: z.string().max(100).optional().nullable(),
+  customerPhone: z.string().max(30).optional().nullable(),
+  address: z.string().max(300).optional().nullable(),
+  notes: z.string().max(1000).optional().nullable(),
+});
+
+const OrderStatusEnum = z.enum(["PENDING", "CONFIRMED", "COMPLETED", "CANCELLED"]);
+
+// ─── POST: CREATE ORDER ────────────────────────────────────────────────────────
 export async function POST(req: Request) {
   try {
-    const ip = req.headers.get("x-forwarded-for") || "unknown_ip";
-    const now = Date.now();
-    const rateRecord = ORDERS_RATE_LIMIT.get(ip) || { count: 0, timestamp: now };
-    
-    if (now - rateRecord.timestamp > 60000) { // 1 minute window
-      rateRecord.count = 0;
-      rateRecord.timestamp = now;
-    }
-    if (rateRecord.count >= 10) {
-      return NextResponse.json({ error: "Demasiados pedidos en poco tiempo. Intenta más tarde." }, { status: 429 });
-    }
-    rateRecord.count++;
-    ORDERS_RATE_LIMIT.set(ip, rateRecord);
-    const data = await req.json();
-    const { businessId, tableId, type, items, total, address, customerName, customerPhone } = data;
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const body = await req.json();
+    const { businessId } = body;
 
-    if (!businessId || !items) {
-      return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+    // P1-003 / Orders: Rate limit by IP
+    const ipKey = `orders:ip:${ip}`;
+    if (!checkRateLimit(ipKey, ORDERS_RATE_MAX_IP, ORDERS_RATE_WINDOW_MS)) {
+      const retryAfter = Math.ceil(getRateLimitRetryAfterMs(ipKey, ORDERS_RATE_WINDOW_MS) / 1000);
+      return NextResponse.json(
+        { error: "Demasiados pedidos desde esta IP. Intenta más tarde." },
+        { status: 429, headers: { "Retry-After": String(retryAfter) } }
+      );
     }
 
-    // SEC-P0-001 Fix: Calculate order price server-side
+    // Rate limit by business (to protect each business's notification system)
+    if (businessId) {
+      const bizKey = `orders:biz:${businessId}`;
+      if (!checkRateLimit(bizKey, ORDERS_RATE_MAX_BUSINESS, ORDERS_RATE_WINDOW_MS)) {
+        return NextResponse.json(
+          { error: "Este negocio está recibiendo demasiados pedidos. Intenta en un momento." },
+          { status: 429 }
+        );
+      }
+    }
+
+    // Validate input
+    const parsed = OrderCreateSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Datos de pedido inválidos", details: parsed.error.format() },
+        { status: 400 }
+      );
+    }
+    const data = parsed.data;
+
+    // Verify business exists and is not blocked
     const business = await prisma.business.findUnique({
-      where: { id: businessId },
-      select: { layoutConfig: true, status: true }
+      where: { id: data.businessId },
+      select: { layoutConfig: true, status: true },
     });
-    if (!business) return NextResponse.json({ error: "Negocio no encontrado" }, { status: 404 });
-    if (business.status === "BLOCKED") return NextResponse.json({ error: "Negocio bloqueado" }, { status: 403 });
+    if (!business) {
+      return NextResponse.json({ error: "Negocio no encontrado" }, { status: 404 });
+    }
+    if (business.status === "BLOCKED") {
+      return NextResponse.json({ error: "Negocio bloqueado" }, { status: 403 });
+    }
+    if (business.status === "ARCHIVED") {
+      return NextResponse.json({ error: "Este negocio no está disponible." }, { status: 403 });
+    }
 
+    // P1-018: Build server-authoritative product catalog
     const layoutConfig: any = business.layoutConfig || {};
-    const validProducts = new Map<string, { nombre: string, precio: number }>();
-    
+    const validProducts = new Map<string, { nombre: string; precio: number }>();
+
     if (Array.isArray(layoutConfig.menuCategorias)) {
       layoutConfig.menuCategorias.forEach((cat: any) => {
         if (Array.isArray(cat.products)) {
           cat.products.forEach((p: any) => {
-            if (p.id) validProducts.set(String(p.id), { nombre: p.nombre || p.name || "Producto", precio: Number(p.precio || p.price || 0) });
+            if (p.id) {
+              validProducts.set(String(p.id), {
+                nombre: p.nombre || p.name || "Producto",
+                precio: Number(p.precio || p.price || 0),
+              });
+            }
           });
         }
       });
     }
-    
+
     if (Array.isArray(layoutConfig.menuPromos)) {
       layoutConfig.menuPromos.forEach((p: any) => {
-        if (p.id) validProducts.set(String(p.id), { nombre: p.name || "Promo", precio: Number(p.price || 0) });
+        if (p.id) {
+          validProducts.set(String(p.id), {
+            nombre: p.name || "Promo",
+            precio: Number(p.price || 0),
+          });
+        }
       });
     }
 
+    // P1-018: Calculate total server-side — NEVER use client-submitted total
     let calculatedTotal = 0;
     const finalItems = [];
 
-    for (const item of items) {
-      const quantity = parseInt(item.quantity || item.qty) || 0;
+    for (const item of data.items) {
+      // P1-019: Use validated quantity
+      const quantity = item.quantity ?? item.qty ?? 0;
       if (quantity <= 0) {
         return NextResponse.json({ error: "Cantidades inválidas" }, { status: 400 });
       }
 
-      const validProduct = validProducts.get(String(item.id));
+      const validProduct = validProducts.get(item.id);
       if (!validProduct) {
-        return NextResponse.json({ error: `Producto no encontrado o no disponible: ${item.nombre || item.id}` }, { status: 400 });
+        return NextResponse.json(
+          { error: `Producto no encontrado o no disponible` },
+          { status: 400 }
+        );
       }
 
       calculatedTotal += validProduct.precio * quantity;
-      
+
       finalItems.push({
         id: item.id,
-        nombre: validProduct.nombre, // Force server name
+        nombre: validProduct.nombre, // Always use server name
         qty: quantity,
-        precio: validProduct.precio // Force server price
+        precio: validProduct.precio, // Always use server price
       });
     }
 
-    // Still compare to detect if client was desynced
-    if (Math.abs(calculatedTotal - total) > 0.01) {
-      return NextResponse.json({ error: "El precio de algunos productos ha cambiado. Refresca la página e intenta nuevamente." }, { status: 400 });
+    // P1-018: If client submitted a total, use it only for desync detection, not for storage
+    if (data.total !== undefined && Math.abs(calculatedTotal - data.total) > 0.01) {
+      return NextResponse.json(
+        { error: "El precio de algunos productos ha cambiado. Refresca la página e intenta nuevamente." },
+        { status: 400 }
+      );
     }
 
-    // Determine Table ID if mesaNum was passed
-    let actualTableId = null;
-    if (type === "MESA" && tableId) {
-      // Find table by number and businessId
+    // Resolve table if applicable
+    let actualTableId: string | null = null;
+    if (data.type === "MESA" && data.tableId) {
       const table = await prisma.table.findFirst({
-        where: { businessId, number: parseInt(tableId) }
+        where: { businessId: data.businessId, number: parseInt(data.tableId) },
+        select: { id: true, status: true },
       });
       if (table) {
         actualTableId = table.id;
-        // Optionally mark table as OPEN if it was closed
         if (table.status === "CLOSED") {
           await prisma.table.update({ where: { id: table.id }, data: { status: "OPEN" } });
         }
       }
     }
 
+    // P1-018: Always store the SERVER-CALCULATED total
     const newOrder = await prisma.order.create({
       data: {
-        businessId,
+        businessId: data.businessId,
         tableId: actualTableId,
-        type,
+        type: data.type === "MESA" ? "LOCAL" : data.type,
         status: "PENDING",
         items: finalItems,
-        total,
-        address,
-        customerName,
-        customerPhone,
+        total: calculatedTotal, // <-- server-calculated, never client-submitted
+        address: data.address || null,
+        customerName: data.customerName || null,
+        customerPhone: data.customerPhone || null,
       },
     });
 
-    return NextResponse.json(newOrder);
+    // Return only safe fields (no internal DB details)
+    return NextResponse.json({
+      id: newOrder.id,
+      status: newOrder.status,
+      total: Number(newOrder.total),
+      type: newOrder.type,
+      items: finalItems,
+      createdAt: newOrder.createdAt,
+    });
   } catch (error: any) {
-    console.error("Error creating order:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("Error creating order:", error instanceof Error ? error.message : "unknown");
+    return NextResponse.json({ error: "Error al crear el pedido" }, { status: 500 });
   }
 }
 
+// ─── GET: LIST ORDERS ─────────────────────────────────────────────────────────
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     let businessId = searchParams.get("businessId");
 
-    // SEC-004 Fix: Always require authentication
+    // Authentication required
     const { session, error: sessionError } = await requireSession();
     if (sessionError) return sessionError;
 
     if (!businessId) {
       const business = await prisma.business.findFirst({
         where: { userId: session.user.id },
+        select: { id: true },
       });
       if (!business) {
         return NextResponse.json({ error: "Negocio no encontrado" }, { status: 404 });
@@ -141,15 +226,15 @@ export async function GET(req: Request) {
       businessId = business.id;
     }
 
-    // Ensure the logged in user actually owns this business
+    // Ensure the logged-in user owns this business
     const { error: authError } = await requireBusinessOwner(businessId);
     if (authError) return authError;
 
-    const limit = parseInt(searchParams.get("limit") || "50");
+    const limit = Math.min(parseInt(searchParams.get("limit") || "50"), 200);
     const offset = parseInt(searchParams.get("offset") || "0");
 
     const orders = await prisma.order.findMany({
-      where: { businessId: businessId },
+      where: { businessId },
       orderBy: { createdAt: "desc" },
       include: { table: true },
       take: limit,
@@ -158,14 +243,14 @@ export async function GET(req: Request) {
 
     return NextResponse.json(orders);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Error interno";
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error("Error fetching orders:", error instanceof Error ? error.message : "unknown");
+    return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }
 
+// ─── PATCH: UPDATE ORDER STATUS ───────────────────────────────────────────────
 export async function PATCH(req: Request) {
   try {
-    // Both employee links and dashboard can update orders
     const data = await req.json();
     const { orderId, status } = data;
 
@@ -173,8 +258,17 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: "Faltan datos" }, { status: 400 });
     }
 
-    // SEC-005 Fix: Resolve order -> businessId -> check ownership
-    const order = await prisma.order.findUnique({ where: { id: orderId } });
+    // Validate status value
+    const statusParsed = OrderStatusEnum.safeParse(status);
+    if (!statusParsed.success) {
+      return NextResponse.json({ error: "Estado inválido" }, { status: 400 });
+    }
+
+    // Resolve order → business → check ownership
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      select: { businessId: true },
+    });
     if (!order) {
       return NextResponse.json({ error: "Orden no encontrada" }, { status: 404 });
     }
@@ -184,15 +278,13 @@ export async function PATCH(req: Request) {
 
     const updated = await prisma.order.update({
       where: { id: orderId },
-      data: { status }
+      data: { status: statusParsed.data },
+      select: { id: true, status: true, updatedAt: true },
     });
-
-    // If completed and tied to a table, we could check if table should be closed
-    // But usually you close the table manually or when paying.
 
     return NextResponse.json(updated);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Error interno";
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error("Error updating order:", error instanceof Error ? error.message : "unknown");
+    return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }

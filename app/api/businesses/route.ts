@@ -76,7 +76,9 @@ export async function GET(req: Request) {
         where: { status: 'ACTIVE' },
         _sum: { paymentAmount: true }
       }),
+      // SEC-042: Performance fix — only fetch dates from the last 6 months
       prisma.business.findMany({
+        where: { createdAt: { gte: new Date(new Date().setMonth(new Date().getMonth() - 6)) } },
         select: { createdAt: true }
       })
     ]);

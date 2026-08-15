@@ -18,9 +18,15 @@ function checkLoginRateLimit(email: string) {
 function recordLoginFail(email: string) {
   const record = LOGIN_RATE_LIMIT.get(email) || { attempts: 0, lockUntil: 0 };
   record.attempts++;
-  if (record.attempts >= 5) {
-    record.lockUntil = Date.now() + 15 * 60 * 1000; // Lock for 15 mins
+  
+  // P1-005: Progressive backoff. 1st=none, 3rd=1min, 4th=5min, 5th+=15min+
+  if (record.attempts >= 3) {
+    const backoffMinutes = Math.pow(5, record.attempts - 3); // 3rd=1, 4th=5, 5th=25...
+    const maxLock = 60 * 24; // max 24 hours
+    const lockMins = Math.min(backoffMinutes, maxLock);
+    record.lockUntil = Date.now() + lockMins * 60 * 1000;
   }
+  
   LOGIN_RATE_LIMIT.set(email, record);
 }
 
@@ -60,14 +66,16 @@ export const authOptions: NextAuthOptions = {
           if (user) {
             await prisma.user.update({ where: { id: user.id }, data: { failedLoginCount: { increment: 1 } } });
           }
-          throw new Error("Usuario no encontrado o registrado con Google");
+          // P1-005: Do not reveal if user exists
+          throw new Error("Credenciales inválidas");
         }
         
         const isValid = await bcrypt.compare(credentials.password, user.password);
         if (!isValid) {
           recordLoginFail(email);
           await prisma.user.update({ where: { id: user.id }, data: { failedLoginCount: { increment: 1 } } });
-          throw new Error("Contraseña incorrecta");
+          // P1-005: Do not reveal if user exists (use same generic message)
+          throw new Error("Credenciales inválidas");
         }
 
         // Success: clear failures

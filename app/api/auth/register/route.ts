@@ -47,7 +47,9 @@ export async function POST(req: Request) {
 
     const exists = await prisma.user.findUnique({ where: { email: normalizedEmail } });
     if (exists) {
-      return NextResponse.json({ message: "El usuario ya existe" }, { status: 400 });
+      // P1-005: Do not reveal user existence. Wait artificially to prevent timing attack.
+      await new Promise(r => setTimeout(r, 1500));
+      return NextResponse.json({ message: "No se pudo completar el registro. Si ya tienes cuenta, por favor inicia sesión." }, { status: 400 });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
