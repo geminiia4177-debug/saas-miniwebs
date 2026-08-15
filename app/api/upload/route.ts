@@ -101,8 +101,8 @@ export async function POST(req: Request) {
     }
 
     // 10. P0-002: Use ONLY the server-side IMGBB_API_KEY.
-    // NEVER use NEXT_PUBLIC_IMGBB_API_KEY — it would be exposed to browsers.
-    const key = process.env.IMGBB_API_KEY;
+    // NEVER use NEXT_PUBLIC_IMGBB_API_KEY directly on the client.
+    const key = process.env.IMGBB_API_KEY || process.env.NEXT_PUBLIC_IMGBB_API_KEY;
     if (!key) {
       console.error("IMGBB_API_KEY is not configured");
       return NextResponse.json({ error: "Servicio de imágenes no disponible" }, { status: 500 });

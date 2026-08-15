@@ -19,9 +19,10 @@ import OnboardingModal from "@/components/dashboard/OnboardingModal";
 // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // IMGBB UPLOAD (Para la subida general de la galerÃ­a)
 // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-const uploadToImgBB = async (file: File): Promise<string> => {
+const uploadToImgBB = async (file: File, businessId: string): Promise<string> => {
   const formData = new FormData();
   formData.append("file", file);
+  formData.append("businessId", businessId);
   const res = await fetch(
     `/api/upload`,
     { method: "POST", body: formData }
@@ -226,7 +227,7 @@ export default function Dashboard() {
         }));
       }, 300);
       try {
-        const url = await uploadToImgBB(file);
+        const url = await uploadToImgBB(file, biz?.id || "unknown");
         clearInterval(progressInterval);
         setUploadQueue(prev => prev.map((q, idx) => idx === i ? { ...q, status: "done", progress: 100, url } : q));
         const newItem: MediaItem = { id: `m${Date.now()}_${i}`, type: "image", url, name: file.name, size: file.size, uploadedAt: new Date().toISOString() };
