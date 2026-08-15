@@ -447,7 +447,10 @@ function NewClientDrawer({ onClose, onSave }: any) {
               </div>
               <div className={styles.fgroup}>
                 <label className={styles.flabel}>Subdominio *</label>
-                <input className={styles.finput} placeholder="barberiavip" value={form.subdomain} onChange={e => set("subdomain", e.target.value.toLowerCase())} />
+                <input className={styles.finput} placeholder="barberiavip" value={form.subdomain} onChange={e => {
+                  const val = e.target.value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9-]/g, "");
+                  set("subdomain", val);
+                }} />
               </div>
             </div>
             <div className={`${styles['form-row']} ${styles.full}`}>
@@ -759,7 +762,16 @@ export default function AdminCRM() {
         body: JSON.stringify(data),
       });
 
-      if (!res.ok) throw new Error("Error al guardar");
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        let errMsg = errData.error || "Error al guardar";
+        if (errData.details) {
+           // Extraer un poco de info si es de Zod
+           const issues = Object.keys(errData.details).filter(k => k !== "_errors");
+           if (issues.length > 0) errMsg += `: Revisa el campo ${issues[0]}`;
+        }
+        throw new Error(errMsg);
+      }
 
       const newBusiness = await res.json();
       
@@ -769,8 +781,8 @@ export default function AdminCRM() {
       setNegocios(p => [newBusiness, ...p]);
       pushToast("Cliente creado con éxito", "ok");
       // Trigger a re-fetch to update stats? We can just do a page reload or let it be.
-    } catch (error) {
-      pushToast("Error al crear cliente", "warn");
+    } catch (error: any) {
+      pushToast(error.message || "Error al crear cliente", "warn");
     }
   };
 
