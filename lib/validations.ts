@@ -232,16 +232,16 @@ export const ownerBusinessUpdateSchema = z.object({
 
 export const adminBusinessUpdateSchema = ownerBusinessUpdateSchema.extend({
   status: BusinessStatusEnum.optional(),
-  paymentAmount: z.union([z.string(), z.number()])
-    .optional()
-    .transform((val) => (val !== undefined ? Number(val) : undefined)),
+  paymentAmount: z.union([z.string(), z.number(), z.any()])
+    .optional().nullable()
+    .transform((val) => (val !== undefined && val !== null ? Number(val) : undefined)),
   paymentStatus: PaymentStatusEnum.optional(),
-  demoExpiresAt: z.string().datetime({ offset: true }).optional().nullable()
+  demoExpiresAt: z.union([z.string().datetime({ offset: true }), z.date(), z.any()]).optional().nullable()
     .transform((val) => (val ? new Date(val) : undefined)),
-  nextPayment: z.string().datetime({ offset: true }).optional().nullable()
+  nextPayment: z.union([z.string().datetime({ offset: true }), z.date(), z.any()]).optional().nullable()
     .transform((val) => (val ? new Date(val) : undefined)),
   // P1-016: Strict paymentData
-  paymentData: PaymentDataSchema.optional(),
+  paymentData: PaymentDataSchema.optional().nullable(),
 });
 
 // ─── APPOINTMENT SCHEMAS ──────────────────────────────────────────────────────
