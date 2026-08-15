@@ -204,7 +204,13 @@ export default function Dashboard() {
         setInitialDataStr(JSON.stringify({ biz, sections, media }));
       }
       else {
-        if (!isAutoSave) pushToast("Error al guardar en el servidor", "error");
+        let errMsg = "Error en el servidor";
+        try {
+          const errData = await res.json();
+          errMsg = errData.error || JSON.stringify(errData.details) || "Error en el servidor";
+          console.error("BACKEND REJECTED:", errData);
+        } catch(e) {}
+        if (!isAutoSave) pushToast("Fallo: " + errMsg, "error");
       }
     } catch {
       if (!isAutoSave) pushToast("Error de conexión", "error");
