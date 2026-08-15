@@ -72,16 +72,29 @@ export async function POST(req: Request) {
       );
     }
 
-    // Limit message history to prevent context budget abuse
+    // Limit message history to prevent context budget abuse and speed up token processing
     let chatMessages = messages;
-    if (chatMessages.length > 15) {
-      chatMessages = chatMessages.slice(-15);
+    if (chatMessages.length > 8) {
+      chatMessages = chatMessages.slice(-8);
     }
 
-    // Fetch business from DB
+    // Fetch business from DB with lean projection for fast response (<20ms)
     const biz = await prisma.business.findUnique({
       where: { id: businessId },
-      include: { employees: { where: { isPublic: true } } },
+      select: {
+        id: true,
+        name: true,
+        type: true,
+        description: true,
+        phone: true,
+        status: true,
+        timezone: true,
+        layoutConfig: true,
+        employees: {
+          where: { isPublic: true },
+          select: { name: true, role: true }
+        }
+      },
     });
 
     if (!biz) return NextResponse.json({ error: "Negocio no encontrado" }, { status: 404 });
@@ -249,12 +262,14 @@ Para crear una reserva confirmada:
       parts: [{ text: String(msg.content || "").substring(0, 500) }],
     }));
 
-    const modelName = process.env.GEMINI_MODEL || "gemini-3.5-flash";
+    const modelName = process.env.GEMINI_MODEL || "gemini-2.5-flash";
     const aiResponse = await ai.models.generateContent({
       model: modelName,
       contents: formattedMessages,
       config: {
         systemInstruction: systemPrompt,
+        temperature: 0.2,
+        maxOutputTokens: 350,
       },
     });
 
