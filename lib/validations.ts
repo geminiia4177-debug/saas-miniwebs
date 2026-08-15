@@ -124,7 +124,15 @@ export const LayoutConfigSchema = z.object({
   waTemplateConfirmed: z.string().max(1000).optional().nullable(),
   waTemplateTransfer: z.string().max(1000).optional().nullable(),
   // Display options
-  bannerOpacity: z.number().min(0).max(1).optional(),
+  bannerOpacity: z.number().min(0).max(100).optional(),
+  fontSizeHero: z.number().optional().nullable(),
+  fontSizeTitles: z.number().optional().nullable(),
+  fontSizeBody: z.number().optional().nullable(),
+  heroTitle: z.string().max(200).optional().nullable(),
+  heroTitleColor: z.string().regex(/^#[0-9a-fA-F]{3,8}$/).max(9).optional().nullable(),
+  footerBgColor: z.string().regex(/^#[0-9a-fA-F]{3,8}$/).max(9).optional().nullable(),
+  footerTextColor: z.string().regex(/^#[0-9a-fA-F]{3,8}$/).max(9).optional().nullable(),
+  bookingBgColor: z.string().regex(/^#[0-9a-fA-F]{3,8}$/).max(9).optional().nullable(),
   reservaMesaActiva: z.boolean().optional(),
   // Menu
   menuCategorias: z.array(MenuCategoriaSchema).max(50).optional(),
