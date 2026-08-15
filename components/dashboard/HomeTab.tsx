@@ -17,7 +17,7 @@ interface HomeTabProps {
 
 export default function HomeTab({ biz, media, sections, pending, appointments, setTab, copyUrl, copiedUrl }: HomeTabProps) {
   return (
-    <div className="max-w-4xl animate-fadeIn">
+    <div className="max-w-4xl animate-fadeIn pb-24 md:pb-8">
       <div className="mb-8">
         <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight mb-1">Bienvenido, <span style={{ backgroundImage: `linear-gradient(135deg,${biz.primaryColor},${biz.secondaryColor})`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>{biz.name}</span></h1>
         <p className="text-slate-500">Esto es lo que está pasando hoy.</p>

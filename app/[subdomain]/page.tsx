@@ -4,6 +4,8 @@ import { Metadata } from "next";
 import { getTheme } from "@/lib/themes";
 import BookingForm from "./BookingForm";
 
+export const revalidate = 0; // Disable aggressive caching for public lands
+
 export async function generateMetadata({ params }: { params: Promise<{ subdomain: string }> }): Promise<Metadata> {
   const { subdomain } = await params;
   const biz = await prisma.business.findFirst({
@@ -105,7 +107,13 @@ export default async function PublicLandingPage({ params, searchParams }: { para
     address: activeConfig.address || "",
     phone: rawBiz.phone,
     logoUrl: rawBiz.logoUrl,
+    bannerUrl: rawBiz.bannerUrl,
+    buttonStyle: activeConfig.buttonStyle,
+    backgroundType: activeConfig.backgroundType,
+    backgroundImageUrl: activeConfig.backgroundImageUrl,
     primaryColor: rawBiz.primaryColor,
+    secondaryColor: rawBiz.secondaryColor,
+    fontFamily: rawBiz.fontFamily,
     employees: rawBiz.employees,
     layoutConfig: {
        sections: activeConfig.sections || [],

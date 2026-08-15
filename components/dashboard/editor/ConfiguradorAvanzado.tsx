@@ -15,6 +15,7 @@ export function ConfiguradorAvanzado({
   activeTab: string;
 }) {
   const [uploadingIdx, setUploadingIdx] = useState<number | null>(null);
+  const [dragHandleActive, setDragHandleActive] = useState<{ cat: string; idx: number } | null>(null);
   const [selectedCategoryIdx, setSelectedCategoryIdx] = useState<number | null>(null);
   const dragFromRef = useRef<{ cat: string; idx: number } | null>(null);
 
@@ -103,7 +104,7 @@ export function ConfiguradorAvanzado({
       {items.map((item: any, i: number) => (
         <div
           key={item.id || i}
-          draggable
+          draggable={dragHandleActive?.cat === cat && dragHandleActive?.idx === i}
           onDragStart={(e) => {
             e.dataTransfer.effectAllowed = "move";
             e.dataTransfer.setData("text/plain", i.toString());
@@ -125,7 +126,11 @@ export function ConfiguradorAvanzado({
           {/* Header del item */}
           <div className="flex items-center gap-3 px-4 py-3">
             {/* Drag handle */}
-            <span className="cursor-grab text-slate-600">
+            <span 
+              className="cursor-grab text-slate-600"
+              onMouseEnter={() => setDragHandleActive({ cat, idx: i })}
+              onMouseLeave={() => setDragHandleActive(null)}
+            >
               <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                 <path strokeLinecap="round" d="M4 8h16M4 16h16"/>
               </svg>

@@ -6,6 +6,7 @@ import { Ico } from "@/lib/constants";
 export default function ConfiguradorBarberia({ biz, setBiz }: { biz: any, setBiz: any }) {
   const [tab, setTab] = useState<"servicios" | "productos" | "reseñas" | "faqs">("servicios");
   const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
+  const [dragEnabledIdx, setDragEnabledIdx] = useState<{list: string, idx: number} | null>(null);
   const [uploadingImg, setUploadingImg] = useState<string | null>(null);
 
   const servicios = biz.layoutConfig?.barberiaServices || [];
@@ -80,7 +81,7 @@ export default function ConfiguradorBarberia({ biz, setBiz }: { biz: any, setBiz
         {tab === "servicios" && (
           <div className="space-y-3 animate-fadeIn">
             {servicios.map((s: any, idx: number) => (
-              <div key={s.id} draggable onDragStart={() => setDraggedIdx(idx)} onDragOver={(e) => e.preventDefault()} onDrop={() => handleDrop(idx, "servicios")}
+              <div key={s.id} draggable={dragEnabledIdx?.list === "servicios" && dragEnabledIdx?.idx === idx} onDragStart={() => setDraggedIdx(idx)} onDragOver={(e) => e.preventDefault()} onDrop={() => handleDrop(idx, "servicios")}
                 className="p-3 rounded-xl cursor-grab active:cursor-grabbing border transition-all"
                 style={{ background: draggedIdx === idx ? "rgba(255,255,255,0.01)" : "rgba(255,255,255,0.03)", borderColor: draggedIdx === idx ? "rgba(99,102,241,0.5)" : "rgba(255,255,255,0.07)", opacity: draggedIdx === idx ? 0.5 : 1 }}>
                 
@@ -114,7 +115,7 @@ export default function ConfiguradorBarberia({ biz, setBiz }: { biz: any, setBiz
                 </div>
                 
                 <div className="flex justify-between items-center mt-3 pt-2 border-t border-white/5">
-                  <div className="flex items-center gap-1 text-[9px] text-slate-600"><Ico n="drag" s={10} /> Arrastrar</div>
+                  <div onMouseEnter={() => setDragEnabledIdx({list:"servicios", idx})} onMouseLeave={() => setDragEnabledIdx(null)} className="flex items-center gap-1 text-[9px] text-slate-600 cursor-grab"><Ico n="drag" s={10} /> Arrastrar</div>
                   <button onClick={() => deleteServicio(s.id)} className="text-[10px] text-red-400 hover:text-red-300 transition-colors flex items-center gap-1">
                     <Ico n="trash" s={10} /> Quitar
                   </button>
@@ -129,7 +130,7 @@ export default function ConfiguradorBarberia({ biz, setBiz }: { biz: any, setBiz
         {tab === "productos" && (
           <div className="space-y-3 animate-fadeIn">
             {productos.map((p: any, idx: number) => (
-              <div key={p.id} draggable onDragStart={() => setDraggedIdx(idx)} onDragOver={(e) => e.preventDefault()} onDrop={() => handleDrop(idx, "productos")}
+              <div key={p.id} draggable={dragEnabledIdx?.list === "productos" && dragEnabledIdx?.idx === idx} onDragStart={() => setDraggedIdx(idx)} onDragOver={(e) => e.preventDefault()} onDrop={() => handleDrop(idx, "productos")}
                 className="p-3 rounded-xl cursor-grab active:cursor-grabbing border transition-all"
                 style={{ background: draggedIdx === idx ? "rgba(255,255,255,0.01)" : "rgba(255,255,255,0.03)", borderColor: draggedIdx === idx ? "rgba(99,102,241,0.5)" : "rgba(255,255,255,0.07)", opacity: draggedIdx === idx ? 0.5 : 1 }}>
                 
@@ -161,7 +162,7 @@ export default function ConfiguradorBarberia({ biz, setBiz }: { biz: any, setBiz
                 </div>
 
                 <div className="flex justify-between items-center mt-3 pt-2 border-t border-white/5">
-                  <div className="flex items-center gap-1 text-[9px] text-slate-600"><Ico n="drag" s={10} /> Arrastrar</div>
+                  <div onMouseEnter={() => setDragEnabledIdx({list:"productos", idx})} onMouseLeave={() => setDragEnabledIdx(null)} className="flex items-center gap-1 text-[9px] text-slate-600 cursor-grab"><Ico n="drag" s={10} /> Arrastrar</div>
                   <button onClick={() => deleteProducto(p.id)} className="text-[10px] text-red-400 hover:text-red-300 transition-colors flex items-center gap-1">
                     <Ico n="trash" s={10} /> Quitar
                   </button>
@@ -176,7 +177,7 @@ export default function ConfiguradorBarberia({ biz, setBiz }: { biz: any, setBiz
         {tab === "reseñas" && (
           <div className="space-y-3 animate-fadeIn">
             {testimonios.map((t: any, idx: number) => (
-              <div key={t.id} draggable onDragStart={() => setDraggedIdx(idx)} onDragOver={(e) => e.preventDefault()} onDrop={() => handleDrop(idx, "reseñas")}
+              <div key={t.id} draggable={dragEnabledIdx?.list === "reseñas" && dragEnabledIdx?.idx === idx} onDragStart={() => setDraggedIdx(idx)} onDragOver={(e) => e.preventDefault()} onDrop={() => handleDrop(idx, "reseñas")}
                 className="p-3 rounded-xl cursor-grab active:cursor-grabbing border transition-all"
                 style={{ background: draggedIdx === idx ? "rgba(255,255,255,0.01)" : "rgba(255,255,255,0.03)", borderColor: draggedIdx === idx ? "rgba(99,102,241,0.5)" : "rgba(255,255,255,0.07)", opacity: draggedIdx === idx ? 0.5 : 1 }}>
                 
@@ -200,7 +201,7 @@ export default function ConfiguradorBarberia({ biz, setBiz }: { biz: any, setBiz
                 </div>
                 
                 <div className="flex justify-between items-center mt-2 pt-2 border-t border-white/5">
-                  <div className="flex items-center gap-1 text-[9px] text-slate-600"><Ico n="drag" s={10} /> Arrastrar</div>
+                  <div onMouseEnter={() => setDragEnabledIdx({list:"reseñas", idx})} onMouseLeave={() => setDragEnabledIdx(null)} className="flex items-center gap-1 text-[9px] text-slate-600 cursor-grab"><Ico n="drag" s={10} /> Arrastrar</div>
                   <button onClick={() => deleteTestimonio(t.id)} className="text-[10px] text-red-400 hover:text-red-300 transition-colors flex items-center gap-1">
                     <Ico n="trash" s={10} /> Quitar
                   </button>
@@ -215,7 +216,7 @@ export default function ConfiguradorBarberia({ biz, setBiz }: { biz: any, setBiz
         {tab === "faqs" && (
           <div className="space-y-3 animate-fadeIn">
             {faqs.map((f: any, idx: number) => (
-              <div key={f.id} draggable onDragStart={() => setDraggedIdx(idx)} onDragOver={(e) => e.preventDefault()} onDrop={() => handleDrop(idx, "faqs")}
+              <div key={f.id} draggable={dragEnabledIdx?.list === "faqs" && dragEnabledIdx?.idx === idx} onDragStart={() => setDraggedIdx(idx)} onDragOver={(e) => e.preventDefault()} onDrop={() => handleDrop(idx, "faqs")}
                 className="p-3 rounded-xl cursor-grab active:cursor-grabbing border transition-all"
                 style={{ background: draggedIdx === idx ? "rgba(255,255,255,0.01)" : "rgba(255,255,255,0.03)", borderColor: draggedIdx === idx ? "rgba(99,102,241,0.5)" : "rgba(255,255,255,0.07)", opacity: draggedIdx === idx ? 0.5 : 1 }}>
                 
@@ -229,7 +230,7 @@ export default function ConfiguradorBarberia({ biz, setBiz }: { biz: any, setBiz
                 </div>
                 
                 <div className="flex justify-between items-center mt-2 pt-2 border-t border-white/5">
-                  <div className="flex items-center gap-1 text-[9px] text-slate-600"><Ico n="drag" s={10} /> Arrastrar</div>
+                  <div onMouseEnter={() => setDragEnabledIdx({list:"faqs", idx})} onMouseLeave={() => setDragEnabledIdx(null)} className="flex items-center gap-1 text-[9px] text-slate-600 cursor-grab"><Ico n="drag" s={10} /> Arrastrar</div>
                   <button onClick={() => deleteFaq(f.id)} className="text-[10px] text-red-400 hover:text-red-300 transition-colors flex items-center gap-1">
                     <Ico n="trash" s={10} /> Quitar
                   </button>

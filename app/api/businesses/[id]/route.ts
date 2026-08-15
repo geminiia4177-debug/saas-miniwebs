@@ -187,15 +187,18 @@ export async function PUT(
         ? cleanCustomDomain(data.customDomain)
         : undefined;
 
-    // Build layoutConfig: merge with social links from top-level fields
+    // Build layoutConfig: merge with social links and UI fields from top-level
     let newLayoutConfig: any = undefined;
-    if (data.layoutConfig !== undefined || data.instagram !== undefined || data.facebook !== undefined) {
+    if (data.layoutConfig !== undefined || data.instagram !== undefined || data.facebook !== undefined || data.buttonStyle !== undefined || data.backgroundType !== undefined || data.backgroundImageUrl !== undefined) {
       newLayoutConfig = {
         ...(data.layoutConfig || {}),
         ...(data.instagram !== undefined && { instagram: data.instagram }),
         ...(data.facebook !== undefined && { facebook: data.facebook }),
         ...(data.whatsapp !== undefined && { whatsapp: data.whatsapp }),
         ...(data.tiktok !== undefined && { tiktok: data.tiktok }),
+        ...(data.buttonStyle !== undefined && { buttonStyle: data.buttonStyle }),
+        ...(data.backgroundType !== undefined && { backgroundType: data.backgroundType }),
+        ...(data.backgroundImageUrl !== undefined && { backgroundImageUrl: data.backgroundImageUrl }),
       };
     }
 

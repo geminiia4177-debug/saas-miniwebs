@@ -85,17 +85,17 @@ const SectionConfigSchema = z.object({
     required: z.boolean().optional(),
     options: z.array(z.string().max(100)).optional(),
   })).max(20).optional(),
-  youtubeUrl: z.union([z.string().url().max(500), z.literal("")]).optional().nullable(),
+  youtubeUrl: z.union([z.string().max(500), z.literal("")]).optional().nullable(),
   autoplay: z.boolean().optional(),
   showMap: z.boolean().optional(),
-  mapUrl: z.union([z.string().url().max(500), z.literal("")]).optional().nullable(),
+  mapUrl: z.union([z.string().max(500), z.literal("")]).optional().nullable(),
   address: z.string().max(500).optional().nullable(),
   showSocial: z.boolean().optional(),
   showWhatsapp: z.boolean().optional(),
   // Extra display options
   showPrices: z.boolean().optional(),
   showEmployees: z.boolean().optional(),
-  backgroundUrl: z.union([z.string().url().max(500), z.literal("")]).optional().nullable(),
+  backgroundUrl: z.union([z.string().max(500), z.literal("")]).optional().nullable(),
 });
 
 const SectionSchema = z.object({
