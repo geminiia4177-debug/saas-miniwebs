@@ -159,6 +159,7 @@ export async function PUT(
     const parseResult = schema.safeParse(rawData);
 
     if (!parseResult.success) {
+      console.error("ZOD PARSE ERROR", JSON.stringify(parseResult.error.format(), null, 2));
       return NextResponse.json(
         { error: "Datos inválidos", details: parseResult.error.format() },
         { status: 400 }

@@ -211,7 +211,7 @@ export const ownerBusinessUpdateSchema = z.object({
   backgroundType: z.string().max(50).optional().nullable(),
   backgroundImageUrl: z.union([z.string().url().max(500), z.literal("")]).optional().nullable(),
   // P1-015: Strict layoutConfig — no catchall
-  layoutConfig: LayoutConfigSchema.optional(),
+  layoutConfig: LayoutConfigSchema.optional().nullable(),
   // P1-030: Validate customDomain hostname (no paths, no javascript:)
   customDomain: z.string()
     .max(253)
@@ -227,7 +227,7 @@ export const ownerBusinessUpdateSchema = z.object({
   callMeBotApiKey: z.string().max(200).optional().nullable(),
   bankDetails: z.string().max(500).optional().nullable(),
   // P1-016: Permitir guardar datos de pago desde el Onboarding
-  paymentData: PaymentDataSchema.optional(),
+  paymentData: PaymentDataSchema.optional().nullable(),
 });
 
 export const adminBusinessUpdateSchema = ownerBusinessUpdateSchema.extend({
