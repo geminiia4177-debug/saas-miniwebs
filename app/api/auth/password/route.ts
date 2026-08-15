@@ -34,7 +34,11 @@ export async function PUT(req: Request) {
 
     await prisma.user.update({
       where: { id: user.id },
-      data: { password: hashedPassword },
+      data: { 
+        password: hashedPassword,
+        mustChangePassword: false,
+        sessionVersion: { increment: 1 } 
+      },
     });
 
     return NextResponse.json({ message: "Contraseña actualizada exitosamente" });
