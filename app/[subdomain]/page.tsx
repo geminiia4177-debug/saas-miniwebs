@@ -116,6 +116,7 @@ export default async function PublicLandingPage({ params, searchParams }: { para
     fontFamily: rawBiz.fontFamily,
     employees: rawBiz.employees,
     layoutConfig: {
+       ...activeConfig, // Spread all properties including visual ones
        sections: activeConfig.sections || [],
        media: activeConfig.media || [],
        themeVariant: activeConfig.themeVariant || "classic",

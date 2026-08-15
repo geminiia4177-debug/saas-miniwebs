@@ -259,7 +259,7 @@ export default function ManagementTabs({
                 <Ico n="upload" s={28} c="text-indigo-400" />
               </div>
               <p className="text-sm font-bold text-white mb-1">Arrastrá fotos aquí o hacé click para subir</p>
-              <p className="text-xs text-slate-500">Podés subir varias fotos a la vez • PNG, JPG, WebP — máx. 5 MB c/u</p>
+              <p className="text-xs text-slate-500">Solo imágenes (PNG, JPG, WebP — máx. 5 MB).<br/>Para videos, usa el enlace de YouTube en el Editor Visual.</p>
             </div>
           </DropZone>
 
