@@ -258,12 +258,20 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const data = await req.json();
+    
+    const parsed = ownerBusinessUpdateSchema.safeParse(data);
+    if (!parsed.success) {
+      console.error("ZOD ERROR ON UPDATE:", JSON.stringify(parsed.error.format(), null, 2));
+      return NextResponse.json({ error: parsed.error.message }, { status: 400 });
+    }
+
+    const { id } = await params;
+
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
-
-    const { id } = await params;
 
     // Only ADMINs can archive a business via this endpoint
     if (session.user.role !== "ADMIN") {
