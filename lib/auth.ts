@@ -111,10 +111,11 @@ export const authOptions: NextAuthOptions = {
         }
       } else if (token.sub) {
         // SEC-P1-015 Fix: Verify session version to allow remote logout/password change invalidation
-        const dbUser = await prisma.user.findUnique({ where: { id: token.sub }, select: { sessionVersion: true } });
+        const dbUser = await prisma.user.findUnique({ where: { id: token.sub }, select: { sessionVersion: true, role: true } });
         if (!dbUser || dbUser.sessionVersion !== token.sessionVersion) {
           return {} as any; // Invalidate token if version mismatch (e.g. password changed)
         }
+        token.role = dbUser.role;
       }
       return token;
     },
