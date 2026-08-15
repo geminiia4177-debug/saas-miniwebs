@@ -11,9 +11,10 @@ interface OnboardingModalProps {
   showToast: (msg: string, type?: "success" | "error" | "info" | "warn") => void;
 }
 
-const uploadToImgBB = async (file: File): Promise<string> => {
+const uploadToImgBB = async (file: File, businessId: string): Promise<string> => {
   const formData = new FormData();
   formData.append("file", file);
+  formData.append("businessId", businessId);
   const res = await fetch(`/api/upload`, { method: "POST", body: formData });
   if (!res.ok) throw new Error("Upload failed");
   const data = await res.json();
@@ -61,7 +62,7 @@ export default function OnboardingModal({ biz, setBiz, saving, setSaving, showTo
                   if (!file) return;
                   showToast("Subiendo logo...", "info");
                   try {
-                    const url = await uploadToImgBB(file);
+                    const url = await uploadToImgBB(file, biz.id);
                     setBiz((prev: any) => prev ? { ...prev, logoUrl: url } : prev);
                     showToast("Logo subido con éxito", "success");
                   } catch {

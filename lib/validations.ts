@@ -112,6 +112,7 @@ export const LayoutConfigSchema = z.object({
   sections: z.array(SectionSchema).max(30).optional(),
   hours: BusinessHoursSchema.optional(),
   themeVariant: z.string().max(50).optional().nullable(),
+  onboarded: z.boolean().optional(),
   // Social links (URLs must be reasonable, no javascript: scheme)
   instagram: z.string().max(300).optional().nullable(),
   facebook: z.string().max(300).optional().nullable(),
@@ -211,6 +212,8 @@ export const ownerBusinessUpdateSchema = z.object({
   // Encrypted secrets — stored encrypted, never returned decrypted
   callMeBotApiKey: z.string().max(200).optional().nullable(),
   bankDetails: z.string().max(500).optional().nullable(),
+  // P1-016: Permitir guardar datos de pago desde el Onboarding
+  paymentData: PaymentDataSchema.optional(),
 });
 
 export const adminBusinessUpdateSchema = ownerBusinessUpdateSchema.extend({
