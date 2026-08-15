@@ -34,9 +34,9 @@ export async function POST(request: Request) {
 
     // P1-024: Rate limit per business
     const rateLimitKey = `wa:${businessId}:${session.user.id}`;
-    if (!checkRateLimit(rateLimitKey, WA_RATE_MAX, WA_RATE_WINDOW_MS)) {
+    if (!(await checkRateLimit(rateLimitKey, WA_RATE_MAX, WA_RATE_WINDOW_MS))) {
       const retryAfter = Math.ceil(
-        getRateLimitRetryAfterMs(rateLimitKey, WA_RATE_WINDOW_MS) / 1000
+        await getRateLimitRetryAfterMs(rateLimitKey, WA_RATE_WINDOW_MS) / 1000
       );
       return NextResponse.json(
         { error: "Demasiados mensajes en poco tiempo. Intenta más tarde." },

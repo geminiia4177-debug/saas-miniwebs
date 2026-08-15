@@ -20,15 +20,15 @@ export async function DELETE(
   try {
     let businessId: string;
     if (type === "sales") {
-      const entity = await (prisma as any).sale.findUnique({ where: { id } });
+      const entity = await prisma.sale.findUnique({ where: { id } });
       if (!entity) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
       businessId = entity.businessId;
     } else if (type === "employees") {
-      const entity = await (prisma as any).employee.findUnique({ where: { id } });
+      const entity = await prisma.employee.findUnique({ where: { id } });
       if (!entity) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
       businessId = entity.businessId;
     } else if (type === "suppliers") {
-      const entity = await (prisma as any).supplier.findUnique({ where: { id } });
+      const entity = await prisma.supplier.findUnique({ where: { id } });
       if (!entity) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
       businessId = entity.businessId;
     } else {
@@ -40,11 +40,11 @@ export async function DELETE(
     if (authError) return authError;
 
     if (type === "sales") {
-      await (prisma as any).sale.update({ where: { id }, data: { deletedAt: new Date() } });
+      await prisma.sale.update({ where: { id }, data: { deletedAt: new Date() } });
     } else if (type === "employees") {
-      await (prisma as any).employee.update({ where: { id }, data: { deletedAt: new Date() } });
+      await prisma.employee.update({ where: { id }, data: { deletedAt: new Date() } });
     } else if (type === "suppliers") {
-      await (prisma as any).supplier.update({ where: { id }, data: { deletedAt: new Date() } });
+      await prisma.supplier.update({ where: { id }, data: { deletedAt: new Date() } });
     }
     return NextResponse.json({ success: true });
   } catch (error) {

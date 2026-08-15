@@ -71,7 +71,7 @@ export async function GET(request: Request) {
       const sales = await prisma.sale.findMany({
         where: { businessId, deletedAt: null },
         orderBy: { date: "desc" },
-        take: limit,
+        take: 200,
         skip: offset,
       });
       return NextResponse.json(sales);
@@ -80,6 +80,7 @@ export async function GET(request: Request) {
     if (type === "employees") {
       const employees = await prisma.employee.findMany({
         where: { businessId, deletedAt: null },
+        take: 200,
       });
       return NextResponse.json(employees);
     }
@@ -87,6 +88,7 @@ export async function GET(request: Request) {
     if (type === "suppliers") {
       const suppliers = await prisma.supplier.findMany({
         where: { businessId, deletedAt: null },
+        take: 200,
       });
       return NextResponse.json(suppliers);
     }

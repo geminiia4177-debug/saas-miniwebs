@@ -19,8 +19,8 @@ export async function POST(req: Request) {
 
     // P1-004: Rate limit by user for AI generation
     const userKey = `ai:gen:${session.user.id}`;
-    if (!checkRateLimit(userKey, AI_RATE_MAX, AI_RATE_WINDOW_MS)) {
-      const retryAfter = Math.ceil(getRateLimitRetryAfterMs(userKey, AI_RATE_WINDOW_MS) / 1000);
+    if (!(await checkRateLimit(userKey, AI_RATE_MAX, AI_RATE_WINDOW_MS))) {
+      const retryAfter = Math.ceil(await getRateLimitRetryAfterMs(userKey, AI_RATE_WINDOW_MS) / 1000);
       return NextResponse.json(
         { error: "Límite de generación de inteligencia artificial excedido. Intenta más tarde." },
         { status: 429, headers: { "Retry-After": String(retryAfter) } }

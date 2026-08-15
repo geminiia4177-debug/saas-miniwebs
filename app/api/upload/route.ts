@@ -21,8 +21,8 @@ export async function POST(req: Request) {
     // 2. P1-001: Rate limit by IP
     const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
     const ipKey = `upload:ip:${ip}`;
-    if (!checkRateLimit(ipKey, MAX_UPLOADS_PER_WINDOW, WINDOW_MS)) {
-      const retryAfter = Math.ceil(getRateLimitRetryAfterMs(ipKey, WINDOW_MS) / 1000);
+    if (!(await checkRateLimit(ipKey, MAX_UPLOADS_PER_WINDOW, WINDOW_MS))) {
+      const retryAfter = Math.ceil(await getRateLimitRetryAfterMs(ipKey, WINDOW_MS) / 1000);
       return NextResponse.json(
         { error: "Demasiadas subidas desde esta IP. Intenta más tarde." },
         { status: 429, headers: { "Retry-After": String(retryAfter) } }
@@ -31,8 +31,8 @@ export async function POST(req: Request) {
 
     // 3. P1-001: Rate limit by user
     const userKey = `upload:user:${session.user.id}`;
-    if (!checkRateLimit(userKey, MAX_UPLOADS_PER_WINDOW, WINDOW_MS)) {
-      const retryAfter = Math.ceil(getRateLimitRetryAfterMs(userKey, WINDOW_MS) / 1000);
+    if (!(await checkRateLimit(userKey, MAX_UPLOADS_PER_WINDOW, WINDOW_MS))) {
+      const retryAfter = Math.ceil(await getRateLimitRetryAfterMs(userKey, WINDOW_MS) / 1000);
       return NextResponse.json(
         { error: "Límite de subidas alcanzado. Intenta en un minuto." },
         { status: 429, headers: { "Retry-After": String(retryAfter) } }

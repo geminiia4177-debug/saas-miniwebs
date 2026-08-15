@@ -1,3 +1,5 @@
+export {};
+
 /**
  * scripts/test-security.ts
  *

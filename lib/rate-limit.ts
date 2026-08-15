@@ -1,56 +1,68 @@
+import { prisma } from "@/lib/db";
+
 /**
  * lib/rate-limit.ts
- * P2-001: Centralized in-memory rate limiter.
+ * P1-002: Centralized Prisma-backed distributed rate limiter.
  *
- * This is suitable for single-process deployments (e.g. one Next.js server).
- * For multi-instance/distributed deployments, replace this with a Redis-backed
- * implementation (e.g. using Upstash or ioredis).
+ * This limits traffic globally across all deployment instances.
  */
 
-interface RateLimitRecord {
-  count: number;
-  timestamp: number;
-}
-
-const store = new Map<string, RateLimitRecord>();
-
-/**
- * Check and increment the rate limit counter for a given key.
- * @param key       Unique identifier (e.g. `${ip}-${businessId}`)
- * @param maxRequests Maximum allowed requests per window
- * @param windowMs  Time window in milliseconds
- * @returns true if request is allowed, false if rate limit exceeded
- */
-export function checkRateLimit(
+export async function checkRateLimit(
   key: string,
   maxRequests: number,
   windowMs: number
-): boolean {
-  const now = Date.now();
-  const record = store.get(key) ?? { count: 0, timestamp: now };
+): Promise<boolean> {
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + windowMs);
 
-  // Reset window if expired
-  if (now - record.timestamp > windowMs) {
-    record.count = 0;
-    record.timestamp = now;
+  try {
+    // 1. Clean up expired keys to keep table small
+    await prisma.rateLimit.deleteMany({
+      where: { expiresAt: { lt: now } },
+    });
+
+    // 2. Upsert the rate limit key
+    const record = await prisma.rateLimit.upsert({
+      where: { key },
+      create: {
+        key,
+        count: 1,
+        expiresAt,
+      },
+      update: {
+        count: {
+          increment: 1,
+        },
+      },
+    });
+
+    // 3. Evaluate limit
+    if (record.count > maxRequests) {
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.error("Rate limit check error:", error);
+    // Fallback: If DB fails, fail OPEN to not block critical operations,
+    // or fail CLOSED if strict security is preferred.
+    return true; // Fail open
   }
-
-  if (record.count >= maxRequests) {
-    store.set(key, record);
-    return false;
-  }
-
-  record.count++;
-  store.set(key, record);
-  return true;
 }
 
-/**
- * Returns the remaining TTL (ms) until the rate limit window resets for a key.
- */
-export function getRateLimitRetryAfterMs(key: string, windowMs: number): number {
-  const record = store.get(key);
-  if (!record) return 0;
-  const elapsed = Date.now() - record.timestamp;
-  return Math.max(0, windowMs - elapsed);
+export async function getRateLimitRetryAfterMs(
+  key: string,
+  windowMs: number
+): Promise<number> {
+  try {
+    const record = await prisma.rateLimit.findUnique({
+      where: { key },
+    });
+    if (!record) return 0;
+    
+    const now = new Date();
+    const remaining = record.expiresAt.getTime() - now.getTime();
+    return Math.max(0, remaining);
+  } catch {
+    return windowMs;
+  }
 }

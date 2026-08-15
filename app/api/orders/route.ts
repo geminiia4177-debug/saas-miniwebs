@@ -49,8 +49,8 @@ export async function POST(req: Request) {
 
     // P1-003 / Orders: Rate limit by IP
     const ipKey = `orders:ip:${ip}`;
-    if (!checkRateLimit(ipKey, ORDERS_RATE_MAX_IP, ORDERS_RATE_WINDOW_MS)) {
-      const retryAfter = Math.ceil(getRateLimitRetryAfterMs(ipKey, ORDERS_RATE_WINDOW_MS) / 1000);
+    if (!(await checkRateLimit(ipKey, ORDERS_RATE_MAX_IP, ORDERS_RATE_WINDOW_MS))) {
+      const retryAfter = Math.ceil(await getRateLimitRetryAfterMs(ipKey, ORDERS_RATE_WINDOW_MS) / 1000);
       return NextResponse.json(
         { error: "Demasiados pedidos desde esta IP. Intenta más tarde." },
         { status: 429, headers: { "Retry-After": String(retryAfter) } }
@@ -60,7 +60,7 @@ export async function POST(req: Request) {
     // Rate limit by business (to protect each business's notification system)
     if (businessId) {
       const bizKey = `orders:biz:${businessId}`;
-      if (!checkRateLimit(bizKey, ORDERS_RATE_MAX_BUSINESS, ORDERS_RATE_WINDOW_MS)) {
+      if (!(await checkRateLimit(bizKey, ORDERS_RATE_MAX_BUSINESS, ORDERS_RATE_WINDOW_MS))) {
         return NextResponse.json(
           { error: "Este negocio está recibiendo demasiados pedidos. Intenta en un momento." },
           { status: 429 }

@@ -218,7 +218,7 @@ model Appointment {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  business    Business @relation(fields: [businessId], references: [id], onDelete: Restrict)
   employee    Employee? @relation(fields: [employeeId], references: [id], onDelete: SetNull)
   sale        Sale?
 
@@ -239,7 +239,7 @@ model Sale {
   date        DateTime @default(now())
   deletedAt   DateTime?
 
-  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  business    Business @relation(fields: [businessId], references: [id], onDelete: Restrict)
   employee    Employee? @relation(fields: [employeeId], references: [id], onDelete: SetNull)
   appointment Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
 
@@ -312,7 +312,7 @@ model Order {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  business      Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  business      Business @relation(fields: [businessId], references: [id], onDelete: Restrict)
   table         Table?   @relation(fields: [tableId], references: [id], onDelete: SetNull)
 
   @@index([businessId, status, createdAt])
@@ -339,4 +339,14 @@ model Alert {
   type       String   @default("info") // info, warning, success
   isActive   Boolean  @default(true)
   createdAt  DateTime @default(now())
+}
+
+// 🌟 P1-002: DISTRIBUTED RATE LIMITING 🌟
+model RateLimit {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  count     Int      @default(1)
+  expiresAt DateTime
+
+  @@index([key, expiresAt])
 }

@@ -29,9 +29,9 @@ export async function GET(req: Request) {
   }
 
   const rateLimitKey = `slots:${ip}:${businessId}`;
-  if (!checkRateLimit(rateLimitKey, SLOTS_RATE_MAX, SLOTS_RATE_WINDOW_MS)) {
+  if (!(await checkRateLimit(rateLimitKey, SLOTS_RATE_MAX, SLOTS_RATE_WINDOW_MS))) {
     const retryAfter = Math.ceil(
-      getRateLimitRetryAfterMs(rateLimitKey, SLOTS_RATE_WINDOW_MS) / 1000
+      await getRateLimitRetryAfterMs(rateLimitKey, SLOTS_RATE_WINDOW_MS) / 1000
     );
     return NextResponse.json(
       { error: "Demasiadas consultas. Intenta más tarde." },

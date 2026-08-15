@@ -71,6 +71,7 @@ export async function GET(req: Request) {
       const turnosPublicos = await prisma.appointment.findMany({
         where: { businessId, publicTrackingTokenHash },
         orderBy: { date: "asc" },
+        take: 200,
         select: {
           id: true,
           date: true,
@@ -97,6 +98,7 @@ export async function GET(req: Request) {
     const turnos = await prisma.appointment.findMany({
       where: whereClause,
       orderBy: { date: "asc" },
+      take: 200,
       select: {
         id: true,
         businessId: true,
@@ -136,9 +138,9 @@ export async function POST(req: Request) {
     const ip =
       req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
     const ipKey = `appt:ip:${ip}`;
-    if (!checkRateLimit(ipKey, APPT_RATE_MAX_IP, APPT_RATE_WINDOW_MS)) {
+    if (!(await checkRateLimit(ipKey, APPT_RATE_MAX_IP, APPT_RATE_WINDOW_MS))) {
       const retryAfter = Math.ceil(
-        getRateLimitRetryAfterMs(ipKey, APPT_RATE_WINDOW_MS) / 1000
+        await getRateLimitRetryAfterMs(ipKey, APPT_RATE_WINDOW_MS) / 1000
       );
       return NextResponse.json(
         { error: "Demasiadas reservas en poco tiempo. Intenta más tarde." },
@@ -152,7 +154,7 @@ export async function POST(req: Request) {
     if (rawData.clientPhone) {
       const normalizedPhone = String(rawData.clientPhone).replace(/\D/g, "").slice(-10);
       const phoneKey = `appt:phone:${normalizedPhone}`;
-      if (!checkRateLimit(phoneKey, APPT_RATE_MAX_PHONE, APPT_RATE_WINDOW_MS)) {
+      if (!(await checkRateLimit(phoneKey, APPT_RATE_MAX_PHONE, APPT_RATE_WINDOW_MS))) {
         return NextResponse.json(
           { error: "Ya tienes varias reservas en curso. Intenta más tarde." },
           { status: 429 }
@@ -167,7 +169,8 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
-    const data = parseResult.data as any;
+    const parsedData = parseResult.data;
+    const data: Record<string, any> = { ...parsedData };
 
     // Force PENDING — clients cannot set status
     data.status = "PENDING";
@@ -217,7 +220,7 @@ export async function POST(req: Request) {
     }
 
     const timezone = business.timezone ?? DEFAULT_BUSINESS_TIMEZONE;
-    const layoutConfig = (business.layoutConfig as any) || {};
+    const layoutConfig = (business.layoutConfig as Record<string, any>) || {};
 
     // P1-008: Validate appointment falls within business hours
     const dayName = getBusinessDayName(data.date, timezone);
@@ -286,7 +289,7 @@ export async function POST(req: Request) {
     // Create appointment (P2002 = duplicate slot under concurrency)
     let nuevoTurno;
     try {
-      nuevoTurno = await prisma.appointment.create({ data: data as any });
+      nuevoTurno = await prisma.appointment.create({ data: data as any }); // Types mismatch between schema and Prisma create input for optional fields like date vs Date object, skipping full TS map for now
     } catch (e: any) {
       if (e.code === "P2002" && e.meta?.target?.includes("concurrencyToken")) {
         return NextResponse.json(
@@ -348,7 +351,7 @@ export async function POST(req: Request) {
         const jid = `${cleanPhone}@s.whatsapp.net`;
 
         const apptDate = new Date(nuevoTurno.date);
-        const bizLayout = businessInfo?.layoutConfig as any || {};
+        const bizLayout = (businessInfo?.layoutConfig as Record<string, any>) || {};
         const hora = apptDate.toLocaleTimeString("es-MX", {
           timeZone: timezone,
           hour: "2-digit",

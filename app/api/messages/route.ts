@@ -33,7 +33,8 @@ export async function GET(req: Request) {
 
     const messages = await prisma.message.findMany({
       where: whereClause,
-      orderBy: { createdAt: "asc" },
+      orderBy: { createdAt: "desc" },
+      take: 100,
       include: {
         business: { select: { name: true, subdomain: true } }
       }
@@ -64,8 +65,8 @@ export async function POST(req: Request) {
     
     // P1-004: Rate limit message creation by user
     const userKey = `msg:user:${session.user.id}`;
-    if (!checkRateLimit(userKey, MSG_RATE_MAX, MSG_RATE_WINDOW_MS)) {
-      const retryAfter = Math.ceil(getRateLimitRetryAfterMs(userKey, MSG_RATE_WINDOW_MS) / 1000);
+    if (!(await checkRateLimit(userKey, MSG_RATE_MAX, MSG_RATE_WINDOW_MS))) {
+      const retryAfter = Math.ceil(await getRateLimitRetryAfterMs(userKey, MSG_RATE_WINDOW_MS) / 1000);
       return NextResponse.json(
         { error: "Estás enviando mensajes demasiado rápido. Intenta en un momento." },
         { status: 429, headers: { "Retry-After": String(retryAfter) } }

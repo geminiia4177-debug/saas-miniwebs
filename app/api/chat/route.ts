@@ -62,9 +62,9 @@ export async function POST(req: Request) {
     // P1-004: Rate limiting per IP + business
     const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
     const rateLimitKey = `chat:${ip}:${businessId}`;
-    if (!checkRateLimit(rateLimitKey, CHAT_RATE_MAX, CHAT_RATE_WINDOW_MS)) {
+    if (!(await checkRateLimit(rateLimitKey, CHAT_RATE_MAX, CHAT_RATE_WINDOW_MS))) {
       const retryAfter = Math.ceil(
-        getRateLimitRetryAfterMs(rateLimitKey, CHAT_RATE_WINDOW_MS) / 1000
+        await getRateLimitRetryAfterMs(rateLimitKey, CHAT_RATE_WINDOW_MS) / 1000
       );
       return NextResponse.json(
         { error: "Demasiadas solicitudes. Intenta en un minuto." },
