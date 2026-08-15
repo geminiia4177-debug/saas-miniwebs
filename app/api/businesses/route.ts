@@ -148,10 +148,10 @@ export async function POST(req: Request) {
       where: { email: email }
     });
 
-    // Si no existe el usuario, lo creamos y le generamos una contraseña aleatoria
+    // Si no existe el usuario, lo creamos con la contraseña por defecto "admin"
     if (!clientUser) {
-      const randomPassword = crypto.randomBytes(8).toString('hex');
-      const hashedPassword = await bcrypt.hash(randomPassword, 10); 
+      // Como tiene mustChangePassword: true, el sistema lo forzará a cambiarla al entrar
+      const hashedPassword = await bcrypt.hash("admin", 10); 
       
       clientUser = await prisma.user.create({
         data: {
