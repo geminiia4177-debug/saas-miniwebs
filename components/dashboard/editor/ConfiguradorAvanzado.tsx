@@ -62,7 +62,7 @@ export function ConfiguradorAvanzado({
   const uploadItemImage = async (cat: string, idx: number, file: File) => {
     setUploadingIdx(idx);
     try {
-      const url = await uploadToImgBB(file);
+      const url = await uploadToImgBB(file, biz.id);
       updateItem(cat, idx, { imageUrl: url });
       showToast("Imagen actualizada ✓");
     } catch {
@@ -304,7 +304,7 @@ export function ConfiguradorAvanzado({
                        <DropZone onFiles={async (files) => {
                           setUploadingIdx(i);
                           try {
-                            const url = await uploadToImgBB(files[0]);
+                            const url = await uploadToImgBB(files[0], biz.id);
                             const newList = [...currentList];
                             newList[i] = { ...newList[i], imageUrl: url };
                             updateList(currentListKey, newList);
@@ -384,7 +384,7 @@ export function ConfiguradorAvanzado({
                        <DropZone onFiles={async (files) => {
                           setUploadingIdx(pIdx + 1000); // offset to avoid conflict
                           try {
-                            const url = await uploadToImgBB(files[0]);
+                            const url = await uploadToImgBB(files[0], biz.id);
                             const newList = [...currentList];
                             newList[selectedCategoryIdx].products[pIdx] = { ...prod, imageUrl: url };
                             updateList(currentListKey, newList);

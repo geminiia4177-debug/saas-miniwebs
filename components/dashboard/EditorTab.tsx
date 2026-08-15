@@ -158,7 +158,7 @@ export default function EditorTab({
   const handleBgUpload = async (files: File[]) => {
     setUploadingBg(true);
     try {
-      const url = await uploadToImgBB(files[0]);
+      const url = await uploadToImgBB(files[0], biz.id);
       setBiz((prev: any) => prev ? { ...prev, backgroundImageUrl: url, backgroundType: "image" } : prev);
       showToast("Fondo actualizado ✓");
     } catch {
@@ -201,7 +201,7 @@ export default function EditorTab({
     setUploadingServiceIdx(serviceIdx);
     showToast("Subiendo imagen del servicio...", "info");
     try {
-      const url = await uploadToImgBB(file);
+      const url = await uploadToImgBB(file, biz.id);
       const items = [...editingSection.config.items];
       items[serviceIdx] = { ...items[serviceIdx], imageUrl: url };
       setEditingSection({ ...editingSection, config: { ...editingSection.config, items } });
@@ -412,7 +412,7 @@ export default function EditorTab({
                 <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-2">Foto de Portada</p>
                 <DropZone onFiles={async (files) => {
                   try {
-                    const url = await uploadToImgBB(files[0]);
+                    const url = await uploadToImgBB(files[0], biz.id);
                     setBiz((prev: any) => prev ? { ...prev, bannerUrl: url } : prev);
                     showToast("Foto de portada actualizada");
                   } catch { showToast("Error al subir portada", "error"); }

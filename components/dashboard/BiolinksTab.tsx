@@ -146,7 +146,7 @@ export default function BiolinksTab({ biz, setBiz, saveAll, saving, showToast, c
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <span className="text-[9px] text-slate-400 block mb-1">Foto Perfil</span>
-                    <DropZone onFiles={async f => { const url = await uploadToImgBB(f[0]); updateBiolinks({ profileUrl: url }); }} multiple={false} compact>
+                    <DropZone onFiles={async f => { const url = await uploadToImgBB(f[0], biz.id); updateBiolinks({ profileUrl: url }); }} multiple={false} compact>
                       <div className="h-16 rounded-xl border border-dashed border-white/20 flex items-center justify-center relative overflow-hidden group">
                         {biolinks.profileUrl ? (
                           <img src={biolinks.profileUrl} className="w-full h-full object-cover" />
@@ -156,7 +156,7 @@ export default function BiolinksTab({ biz, setBiz, saveAll, saving, showToast, c
                   </div>
                   <div>
                     <span className="text-[9px] text-slate-400 block mb-1">Cover (Portada)</span>
-                    <DropZone onFiles={async f => { const url = await uploadToImgBB(f[0]); updateBiolinks({ coverUrl: url }); }} multiple={false} compact>
+                    <DropZone onFiles={async f => { const url = await uploadToImgBB(f[0], biz.id); updateBiolinks({ coverUrl: url }); }} multiple={false} compact>
                       <div className="h-16 rounded-xl border border-dashed border-white/20 flex items-center justify-center relative overflow-hidden group">
                         {biolinks.coverUrl ? (
                           <img src={biolinks.coverUrl} className="w-full h-full object-cover" />
@@ -201,7 +201,7 @@ export default function BiolinksTab({ biz, setBiz, saveAll, saving, showToast, c
                   </div>
                   {biolinks.backgroundType === "image" && (
                      <div className="mt-2">
-                       <DropZone onFiles={async f => { const url = await uploadToImgBB(f[0]); updateBiolinks({ backgroundImageUrl: url }); }} multiple={false} compact>
+                       <DropZone onFiles={async f => { const url = await uploadToImgBB(f[0], biz.id); updateBiolinks({ backgroundImageUrl: url }); }} multiple={false} compact>
                         <div className="h-10 rounded-xl border border-dashed border-white/20 flex items-center justify-center text-xs text-slate-400 hover:text-white transition-colors">
                           {biolinks.backgroundImageUrl ? "Cambiar Imagen de Fondo" : "Subir Imagen de Fondo"}
                         </div>
@@ -268,7 +268,7 @@ export default function BiolinksTab({ biz, setBiz, saveAll, saving, showToast, c
                   <div key={i} className="p-3.5 rounded-xl border border-white/10 relative group" style={{ background: "rgba(255,255,255,0.02)" }}>
                     <div className="flex gap-2">
                       {/* THUMBNAIL UPLOAD */}
-                      <DropZone onFiles={async f => { const url = await uploadToImgBB(f[0]); const items = [...biolinks.items]; items[i] = { ...items[i], thumbnail: url }; updateBiolinks({ items }); }} multiple={false} compact>
+                      <DropZone onFiles={async f => { const url = await uploadToImgBB(f[0], biz.id); const items = [...biolinks.items]; items[i] = { ...items[i], thumbnail: url }; updateBiolinks({ items }); }} multiple={false} compact>
                         <div className="w-10 h-10 rounded-lg border border-dashed border-white/20 flex flex-col items-center justify-center relative overflow-hidden group bg-black/20 hover:bg-black/40 transition-colors cursor-pointer" title="Subir miniatura">
                           {item.thumbnail ? (
                             <img src={item.thumbnail} className="w-full h-full object-cover" />
