@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import BookingModal from "../ui/BookingModal";
 import OpenNowBadge from "../ui/OpenNowBadge";
+import VideoSection from "../ui/VideoSection";
 
 export default function EsteticaTemplate(props: { negocio?: any; media?: any[]; businessId?: string; sections?: any[] }) {
   const { negocio, businessId, media = [] } = props;
@@ -332,6 +333,13 @@ export default function EsteticaTemplate(props: { negocio?: any; media?: any[]; 
             </div>
           </section>
         )}
+
+        {/* ── VIDEO ── */}
+        <VideoSection
+          videoUrl={layoutConfig.videoUrl || (props.sections?.find((s: any) => s.id === "video")?.config?.youtubeUrl)}
+          accentColor={accent}
+          theme="light"
+        />
 
         {/* ── FOOTER / CONTACTO ── */}
         <footer id="contacto" className="bg-[#1C1410] text-white py-20 px-6 md:px-12">

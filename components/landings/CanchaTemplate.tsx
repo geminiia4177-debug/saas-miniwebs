@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Business } from "@prisma/client";
 import BookingForm from "@/app/[subdomain]/BookingForm";
+import VideoSection from "@/components/ui/VideoSection";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface Court {
@@ -476,6 +477,14 @@ export default function CanchaTemplate(props: { negocio?: any; media?: any[]; bu
             Precios en MXN · Las reservas se confirman con seña del 50%
           </p>
         </main>
+
+        {/* ── VIDEO ── */}
+        <VideoSection
+          videoUrl={negocio?.layoutConfig?.videoUrl || (props.sections?.find((s: any) => s.id === "video")?.config?.youtubeUrl)}
+          accentColor={accent}
+          theme="dark"
+          className="pb-12"
+        />
 
         {/* ── REAL BOOKING SYSTEM ── */}
         <section id="booking-section" className="max-w-2xl mx-auto px-4 pb-24 relative z-10">

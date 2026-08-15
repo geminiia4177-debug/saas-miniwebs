@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import BookingForm from "@/app/[subdomain]/BookingForm";
 import { ChevronDown, MapPin, MessageCircle } from "lucide-react";
+import { extractYouTubeId } from "@/components/ui/VideoSection";
 
 export default function DefaultTemplate({ negocio, media, sections }: { negocio: any; media: any[]; sections: any[] }) {
   const [scrolled, setScrolled] = useState(false);
@@ -237,7 +238,7 @@ export default function DefaultTemplate({ negocio, media, sections }: { negocio:
           if (section.id === "video") {
             const currentVideoUrl = section.config?.youtubeUrl || negocio?.layoutConfig?.videoUrl;
             if (currentVideoUrl) {
-              const videoId = currentVideoUrl.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|shorts\/|watch\?v=|watch\?.+&v=))([^&?\s]+)/)?.[1];
+              const videoId = extractYouTubeId(currentVideoUrl);
               if (videoId) {
                 return (
                   <section key="video" className="px-6 py-24 max-w-5xl mx-auto">
@@ -246,7 +247,7 @@ export default function DefaultTemplate({ negocio, media, sections }: { negocio:
                       <div className="w-24 h-1 mx-auto rounded-full" style={{ backgroundColor: primary }}></div>
                     </div>
                     <div className="aspect-video rounded-3xl overflow-hidden shadow-2xl bg-slate-900 border border-slate-200">
-                      <iframe src={`https://www.youtube.com/embed/${videoId}`} className="w-full h-full border-none" allowFullScreen loading="lazy" />
+                      <iframe src={`https://www.youtube.com/embed/${videoId}?rel=0`} className="w-full h-full border-none" allowFullScreen loading="lazy" />
                     </div>
                   </section>
                 );

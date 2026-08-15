@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import BookingForm from "@/app/[subdomain]/BookingForm";
 import OpenNowBadge from "../ui/OpenNowBadge";
+import VideoSection from "../ui/VideoSection";
 
 // ─── TYPES ───
 interface MenuProduct {
@@ -698,7 +699,12 @@ export default function MenuTemplate(props: { negocio: any; businessId?: string 
               </div>
             )}
 
-
+            {/* ── VIDEO ── */}
+            <VideoSection
+              videoUrl={negocio?.layoutConfig?.videoUrl}
+              accentColor={accent}
+              theme="light"
+            />
 
           </main>
 

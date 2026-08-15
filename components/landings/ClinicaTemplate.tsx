@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import BookingModal from "../ui/BookingModal";
 import OpenNowBadge from "../ui/OpenNowBadge";
+import VideoSection from "../ui/VideoSection";
 
 export default function ClinicaTemplate(props: { negocio?: any; media?: any[]; businessId?: string; sections?: any[] }) {
   const { negocio, businessId, media = [] } = props;
@@ -346,6 +347,13 @@ export default function ClinicaTemplate(props: { negocio?: any; media?: any[]; b
             </div>
           </div>
         </section>
+
+        {/* ── VIDEO ── */}
+        <VideoSection
+          videoUrl={layoutConfig.videoUrl || (props.sections?.find((s: any) => s.id === "video")?.config?.youtubeUrl)}
+          accentColor={accent}
+          theme="light"
+        />
 
         {/* ── HORARIOS Y CONTACTO (Footer Oscuro) ── */}
         <section id="contacto" className="bg-[#0F1923] text-white py-20 px-6 md:px-12">

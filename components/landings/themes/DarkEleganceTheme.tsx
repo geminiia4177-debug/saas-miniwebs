@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import BookingForm from "@/app/[subdomain]/BookingForm";
+import VideoSection from "@/components/ui/VideoSection";
 
 const Ico = ({ n, s = 24, c = "currentColor", stroke = 2 }: any) => {
   return (
@@ -20,7 +21,7 @@ const Ico = ({ n, s = 24, c = "currentColor", stroke = 2 }: any) => {
 };
 
 export default function DarkEleganceTheme(props: { negocio: any; media?: any[]; businessId?: string; sections?: any[] }) {
-  const { negocio, media = [], businessId } = props;
+  const { negocio, media = [], businessId, sections = [] } = props;
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -197,6 +198,13 @@ export default function DarkEleganceTheme(props: { negocio: any; media?: any[]; 
           </div>
         </div>
       </section>
+
+      {/* ─── VIDEO ─── */}
+      <VideoSection
+        videoUrl={config.videoUrl || (sections.find((s: any) => s.id === "video")?.config?.youtubeUrl)}
+        accentColor={primary}
+        theme="dark"
+      />
 
       {/* ─── GALERIA ─── */}
       {gallery.length > 0 && (

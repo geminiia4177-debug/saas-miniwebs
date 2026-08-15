@@ -2,6 +2,7 @@ import React, { useState, useRef } from "react";
 import { Ico } from "@/lib/constants";
 import { DropZone } from "./DropZone";
 import { uploadToImgBB } from "@/lib/utils/upload";
+import { extractYouTubeId } from "@/components/ui/VideoSection";
 
 
 export function ConfiguradorAvanzado({
@@ -432,20 +433,26 @@ export function ConfiguradorAvanzado({
             </div>
 
             {videoUrl && (
-              <div className="rounded-xl overflow-hidden" style={{ border: "1px solid rgba(99,102,241,0.3)" }}>
-                <div style={{ paddingTop: "56.25%", position: "relative", background: "#000" }}>
-                  {/* Preview mínimo */}
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
-                    <div className="w-12 h-12 rounded-full bg-red-600 flex items-center justify-center">
-                      <svg width="20" height="20" fill="white" viewBox="0 0 24 24">
-                        <path d="M8 5v14l11-7z"/>
-                      </svg>
+              (() => {
+                const vidId = extractYouTubeId(videoUrl);
+                return vidId ? (
+                  <div className="rounded-xl overflow-hidden border border-indigo-500/30 bg-black shadow-lg">
+                    <div style={{ paddingTop: "56.25%", position: "relative" }}>
+                      <iframe
+                        src={`https://www.youtube.com/embed/${vidId}?rel=0`}
+                        className="absolute inset-0 w-full h-full border-none"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                        title="Video preview"
+                      />
                     </div>
-                    <p className="text-white/50 text-xs">Video cargado. Se verá en la página.</p>
-                    <p className="text-slate-500 text-[10px] max-w-[200px] text-center truncate">{videoUrl}</p>
                   </div>
-                </div>
-              </div>
+                ) : (
+                  <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs">
+                    ⚠️ La URL ingresada no parece ser un enlace válido de YouTube.
+                  </div>
+                );
+              })()
             )}
 
             {videoUrl && (

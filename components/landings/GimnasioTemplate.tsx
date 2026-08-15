@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import BookingModal from "../ui/BookingModal";
 import OpenNowBadge from "../ui/OpenNowBadge";
+import VideoSection from "../ui/VideoSection";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface Business {
@@ -477,6 +478,13 @@ export default function GimnasioTemplate(props: { negocio?: any; media?: any[]; 
             </div>
           </div>
         </section>
+
+        {/* ── VIDEO ── */}
+        <VideoSection
+          videoUrl={layoutConfig.videoUrl || (props.sections?.find((s: any) => s.id === "video")?.config?.youtubeUrl)}
+          accentColor={accent}
+          theme="dark"
+        />
 
         {/* ── FOOTER / CONTACTO ── */}
         <footer className="bg-[#09090B] py-20 px-6 md:px-12 border-t border-[var(--accent)] relative overflow-hidden">

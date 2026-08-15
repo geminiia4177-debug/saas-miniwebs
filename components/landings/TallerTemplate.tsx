@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import OpenNowBadge from "../ui/OpenNowBadge";
 import WhatsAppFAB from "../ui/WhatsAppFAB";
+import VideoSection from "../ui/VideoSection";
 import styles from "./TallerTemplate.module.css";
 
 // ─── HELPER COMPONENTS ───
@@ -621,6 +622,13 @@ export default function TallerTemplate(props: { negocio: any; media?: any[]; bus
             </div>
           </section>
         )}
+
+        {/* ─── VIDEO ─── */}
+        <VideoSection
+          videoUrl={negocio?.layoutConfig?.videoUrl || (props.sections?.find((s: any) => s.id === "video")?.config?.youtubeUrl)}
+          accentColor={accent}
+          theme="dark"
+        />
 
         {/* FOOTER */}
         <footer className="bg-[#0D0D0D] border-t border-white/10 pt-16 pb-8 px-4 sm:px-6 md:px-12">

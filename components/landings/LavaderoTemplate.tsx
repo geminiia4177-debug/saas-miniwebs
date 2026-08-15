@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import BookingForm from "@/app/[subdomain]/BookingForm";
 import styles from "./LavaderoTemplate.module.css";
+import { extractYouTubeId } from "@/components/ui/VideoSection";
 
 export default function LavaderoTemplate(props: { negocio: any; media?: any[]; businessId?: string; sections?: any[] }) {
   const { negocio, media = [], businessId } = props;
@@ -129,13 +130,6 @@ export default function LavaderoTemplate(props: { negocio: any; media?: any[]; b
     ["--scale-hero" as any]: (negocio?.layoutConfig?.fontSizeHero || 100) / 100,
     ["--scale-titles" as any]: (negocio?.layoutConfig?.fontSizeTitles || 100) / 100,
     ["--scale-body" as any]: (negocio?.layoutConfig?.fontSizeBody || 100) / 100,
-  };
-
-  // Extraer ID de video YouTube
-  const extractYouTubeId = (url: string) => {
-    if (!url) return "";
-    const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|shorts\/|watch\?v=|watch\?.+&v=))([^&?\s]+)/);
-    return match ? match[1] : "";
   };
 
   const handleReservarClick = () => {

@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import BookingForm from "@/app/[subdomain]/BookingForm";
+import VideoSection from "@/components/ui/VideoSection";
 
 const Ico = ({ n, s = 24, c = "currentColor", stroke = 2 }: any) => {
   return (
@@ -20,7 +21,7 @@ const Ico = ({ n, s = 24, c = "currentColor", stroke = 2 }: any) => {
 };
 
 export default function ListTheme(props: { negocio: any; media?: any[]; businessId?: string; sections?: any[] }) {
-  const { negocio, media = [], businessId } = props;
+  const { negocio, media = [], businessId, sections = [] } = props;
   const config = negocio?.layoutConfig || {};
   const primary = negocio?.primaryColor || "#ec4899";
   const secondary = negocio?.secondaryColor || "#db2777";
@@ -159,6 +160,14 @@ export default function ListTheme(props: { negocio: any; media?: any[]; business
             primaryColor={primary}
           />
         </div>
+
+        {/* ─── VIDEO ─── */}
+        <VideoSection
+          videoUrl={config.videoUrl || (sections.find((s: any) => s.id === "video")?.config?.youtubeUrl)}
+          accentColor={primary}
+          theme="light"
+          className="p-0 mb-10"
+        />
 
         {/* ─── GALERIA RAPIDA (MINI) ─── */}
         {gallery.length > 0 && (

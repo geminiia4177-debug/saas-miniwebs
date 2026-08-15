@@ -5,6 +5,7 @@ import BookingModal from "../ui/BookingModal";
 import OpenNowBadge from "../ui/OpenNowBadge";
 import SectionHeader from "../ui/SectionHeader";
 import StatsRow from "../ui/StatsRow";
+import VideoSection from "../ui/VideoSection";
 
 export default function GeneralTemplate(props: { negocio?: any; media?: any[]; businessId?: string; sections?: any[] }) {
   const { negocio, businessId, media = [] } = props;
@@ -264,6 +265,13 @@ export default function GeneralTemplate(props: { negocio?: any; media?: any[]; b
 
           </div>
         </section>
+
+        {/* ── VIDEO ── */}
+        <VideoSection
+          videoUrl={layoutConfig.videoUrl || (props.sections?.find((s: any) => s.id === "video")?.config?.youtubeUrl)}
+          accentColor={accent}
+          theme="light"
+        />
 
         {/* ── GALERÍA ── */}
         {galleryImages.length > 0 && (
