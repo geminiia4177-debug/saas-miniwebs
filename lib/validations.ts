@@ -153,8 +153,8 @@ export const LayoutConfigSchema = z.object({
   // Chatbot
   chatbotName: z.string().max(100).optional().nullable(),
   // P1-035: Biolinks and Stats configuration
-  biolinks: z.record(z.any()).optional().nullable(),
-  stats: z.record(z.any()).optional().nullable(),
+  biolinks: z.record(z.string(), z.any()).optional().nullable(),
+  stats: z.record(z.string(), z.any()).optional().nullable(),
 });
 
 // ─── P1-016: Strict paymentData schema ────────────────────────────────────────
