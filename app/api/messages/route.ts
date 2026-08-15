@@ -232,7 +232,7 @@ ${todayAppointments.length > 0 ? todayAppointments.map(a => `  • ${a.date.toLo
             contents: fullPrompt,
             config: {
               temperature: 0.2,
-              maxOutputTokens: 350,
+              maxOutputTokens: 1000,
             }
           });
 

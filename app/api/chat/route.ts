@@ -269,22 +269,38 @@ Para crear una reserva confirmada:
       config: {
         systemInstruction: systemPrompt,
         temperature: 0.2,
-        maxOutputTokens: 350,
+        maxOutputTokens: 1000,
       },
     });
 
     let responseText =
       aiResponse.text || "Lo siento, tuve un error. ¿Me puedes repetir eso?";
 
-    // P1-011: Process structured JSON commands
-    const commandMatches = responseText.match(/\|\|\|JSON_CMD:(.*?)\|\|\|/g);
-    if (commandMatches) {
-      // Remove all command tokens from displayed text
-      responseText = responseText.replace(/\|\|\|JSON_CMD:.*?\|\|\|/g, "").trim();
+    // P1-011: Extract all structured JSON commands (both complete and edge-case unclosed)
+    const completeMatches = Array.from(responseText.matchAll(/\|\|\|JSON_CMD:([\s\S]*?)\|\|\|/g));
+    const commandStrings: string[] = completeMatches.map(m => m[1].trim());
 
-      for (const cmdToken of commandMatches) {
-        const jsonStr = cmdToken.replace(/^\|\|\|JSON_CMD:/, "").replace(/\|\|\|$/, "");
+    // If there's an unclosed command at the end, attempt to recover valid JSON
+    if (commandStrings.length === 0 && responseText.includes("|||JSON_CMD:")) {
+      const parts = responseText.split("|||JSON_CMD:");
+      if (parts.length > 1) {
+        const rawJson = parts[1].trim();
+        const lastBrace = rawJson.lastIndexOf("}");
+        if (lastBrace !== -1) {
+          commandStrings.push(rawJson.substring(0, lastBrace + 1));
+        }
+      }
+    }
 
+    // ALWAYS strip all command markers so raw tokens are NEVER displayed to the client
+    responseText = responseText
+      .replace(/\|\|\|JSON_CMD:[\s\S]*?\|\|\|/g, "")
+      .replace(/\|\|\|JSON_CMD:[\s\S]*/g, "")
+      .replace(/\|\|\|/g, "")
+      .trim();
+
+    if (commandStrings.length > 0) {
+      for (const jsonStr of commandStrings) {
         let cmdObj: unknown;
         try {
           cmdObj = JSON.parse(jsonStr);
@@ -303,7 +319,6 @@ Para crear una reserva confirmada:
         const cmd: ChatCommand = cmdParsed.data;
 
         // P1-012: Override businessId from the validated session context, not from AI-generated data
-        // This prevents the AI from sending commands to other businesses
         if (cmd.businessId !== businessId) {
           console.error("Chat: Command businessId mismatch — ignoring");
           continue;
