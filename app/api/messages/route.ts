@@ -226,7 +226,7 @@ ${todayAppointments.length > 0 ? todayAppointments.map(a => `  • ${a.date.toLo
 
           const fullPrompt = systemPrompt + "\n\n## CONVERSACIÓN (más reciente al final):\n" + conversationHistory + "\n\n[AI_MSG]";
 
-          const modelName = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+          const modelName = process.env.GEMINI_MODEL || "gemini-3.5-flash";
           const aiResponse = await ai.models.generateContent({
             model: modelName,
             contents: fullPrompt,
