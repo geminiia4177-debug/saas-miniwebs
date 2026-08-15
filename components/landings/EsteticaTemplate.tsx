@@ -8,7 +8,7 @@ export default function EsteticaTemplate(props: { negocio?: any; media?: any[]; 
   const { negocio, businessId, media = [] } = props;
   const layoutConfig = negocio?.layoutConfig || {};
   
-  const accent = negocio?.primaryColor ?? "#C8956C"; // Terracota suave
+  const accent = negocio?.accentColor || negocio?.primaryColor || "#C8956C"; // Terracota suave
   
   const [isScrolled, setIsScrolled] = useState(false);
   const [bookingOpen, setBookingOpen] = useState(false);

@@ -113,6 +113,7 @@ export default async function PublicLandingPage({ params, searchParams }: { para
     backgroundImageUrl: activeConfig.backgroundImageUrl,
     primaryColor: rawBiz.primaryColor,
     secondaryColor: rawBiz.secondaryColor,
+    accentColor: rawBiz.accentColor,
     fontFamily: rawBiz.fontFamily,
     employees: rawBiz.employees,
     layoutConfig: {
@@ -180,13 +181,19 @@ export default async function PublicLandingPage({ params, searchParams }: { para
   const TemplateComponent = renderTemplate();
   const theme = getTheme(biz.type);
 
-  // SEC-031 Fix: Sanitize primaryColor to prevent CSS injection
+  // SEC-031 Fix: Sanitize color values to prevent CSS injection
   const safeColor = (color: string | null | undefined) => {
     if (!color) return null;
     return /^[a-zA-Z0-9#\-\(\)\.,% ]+$/.test(color) ? color : null;
   };
   
-  const accentColor = safeColor(biz.primaryColor) || theme.accent;
+  const customAccent = safeColor(biz.accentColor);
+  const customPrimary = safeColor(biz.primaryColor);
+  const customSecondary = safeColor(biz.secondaryColor);
+
+  const accentColor = customAccent || customPrimary || theme.accent;
+  const primaryColor = customPrimary || theme.accent;
+  const secondaryColor = customSecondary || theme.border;
 
   // Generamos el bloque de CSS dinámico para este negocio
   const themeStyles = `
@@ -194,9 +201,14 @@ export default async function PublicLandingPage({ params, searchParams }: { para
       --biz-bg: ${theme.bg};
       --biz-surface: ${theme.surface};
       --biz-accent: ${accentColor};
+      --biz-primary: ${primaryColor};
+      --biz-secondary: ${secondaryColor};
       --biz-text: ${theme.textPrimary};
       --biz-text-sec: ${theme.textSecondary};
       --biz-border: ${theme.border};
+      --accent: ${accentColor};
+      --primary: ${primaryColor};
+      --secondary: ${secondaryColor};
     }
     body {
       background-color: var(--biz-bg);

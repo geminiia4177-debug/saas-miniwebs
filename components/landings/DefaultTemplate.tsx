@@ -24,8 +24,9 @@ export default function DefaultTemplate({ negocio, media, sections }: { negocio:
   };
 
   const currentFont = fonts[negocio.fontFamily || "sans"];
-  const primary = negocio.primaryColor || "#4f46e5";
+  const primary = negocio.accentColor || negocio.primaryColor || "#4f46e5";
   const secondary = negocio.secondaryColor || "#a855f7";
+  const accent = negocio.accentColor || primary;
   const heroImage = negocio.bannerUrl || (galleryImages.length > 0 ? galleryImages[0].url : null);
 
   const [menuOpen, setMenuOpen] = useState(false);

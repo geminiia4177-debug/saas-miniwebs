@@ -10,7 +10,7 @@ export default function GeneralTemplate(props: { negocio?: any; media?: any[]; b
   const { negocio, businessId, media = [] } = props;
   const layoutConfig = negocio?.layoutConfig || {};
   
-  const accent = negocio?.primaryColor ?? "#3B82F6"; // Azul moderno
+  const accent = negocio?.accentColor || negocio?.primaryColor || "#3B82F6"; // Azul moderno
   
   const [isScrolled, setIsScrolled] = useState(false);
   const [bookingOpen, setBookingOpen] = useState(false);

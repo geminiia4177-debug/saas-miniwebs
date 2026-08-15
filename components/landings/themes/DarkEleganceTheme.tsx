@@ -32,6 +32,8 @@ export default function DarkEleganceTheme(props: { negocio: any; media?: any[]; 
 
   const config = negocio?.layoutConfig || {};
   const primary = negocio?.primaryColor || "#d4af37"; // default gold
+  const secondary = negocio?.secondaryColor || "#db2777";
+  const accent = negocio?.accentColor || primary;
   const fontFamily = negocio?.fontFamily || "sans";
   const scaleHero = (config.fontSizeHero || 100) / 100;
   const scaleTitles = (config.fontSizeTitles || 100) / 100;
@@ -50,20 +52,19 @@ export default function DarkEleganceTheme(props: { negocio: any; media?: any[]; 
   const gallery = media.filter((m: any) => m.type === "image") || [];
 
   const bgType = negocio?.backgroundType || "color";
-  const secondary = negocio?.secondaryColor || "#db2777";
 
   const getBackground = () => {
     if (bgType === "image" && negocio.backgroundImageUrl) {
       return { backgroundImage: `url(${negocio.backgroundImageUrl})`, backgroundSize: "cover", backgroundPosition: "center", backgroundAttachment: "fixed" as const };
     }
     if (bgType === "gradient") {
-      return { background: `linear-gradient(135deg, ${primary}10, ${secondary}30)`, backgroundColor: negocio.accentColor || "#0a0a0a" };
+      return { background: `linear-gradient(135deg, ${primary}15, ${secondary}25)`, backgroundColor: "#0a0a0a" };
     }
-    return { backgroundColor: negocio.accentColor || "#0a0a0a" };
+    return { backgroundColor: "#0a0a0a" };
   };
 
   return (
-    <div className="min-h-screen text-[#ededed]" style={{ fontFamily, ...getBackground() }}>
+    <div className="min-h-screen text-[#ededed]" style={{ fontFamily, ...getBackground(), ["--primary" as any]: primary, ["--accent" as any]: accent, ["--secondary" as any]: secondary }}>
       
       {/* ─── NAVBAR ─── */}
       <nav className={`fixed top-0 w-full z-50 transition-all duration-500 border-b ${scrolled ? "bg-black/90 backdrop-blur-md py-4 border-white/10" : "bg-transparent py-6 border-transparent"}`}>

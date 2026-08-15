@@ -8,7 +8,7 @@ export default function ClinicaTemplate(props: { negocio?: any; media?: any[]; b
   const { negocio, businessId, media = [] } = props;
   const layoutConfig = negocio?.layoutConfig || {};
   
-  const accent = negocio?.primaryColor ?? "#1B6CA8"; // Azul institucional
+  const accent = negocio?.accentColor || negocio?.primaryColor || "#1B6CA8"; // Azul institucional
   
   const [isScrolled, setIsScrolled] = useState(false);
   const [bookingOpen, setBookingOpen] = useState(false);

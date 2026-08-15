@@ -28,7 +28,7 @@ export default function LavaderoTemplate(props: { negocio: any; media?: any[]; b
   const [preselectedService, setPreselectedService] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
   
-  const accent = negocio?.accentColor || "#38bdf8"; // Light blue glow default for dark theme
+  const accent = negocio?.accentColor || negocio?.primaryColor || "#38bdf8"; // Light blue glow default for dark theme
   const primary = negocio?.primaryColor || "#09090b"; // zinc-950
   const secondary = negocio?.secondaryColor || "#18181b"; // zinc-900
 

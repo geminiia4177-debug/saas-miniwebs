@@ -406,7 +406,7 @@ function BeforeAfterSlider({ before, after, titulo }: { before: string, after: s
 
 export default function TallerTemplate(props: { negocio: any; media?: any[]; businessId?: string; sections?: any[] }) {
   const { negocio, media = [], businessId } = props;
-  const accent = negocio?.accentColor || "#F59E0B";
+  const accent = negocio?.accentColor || negocio?.primaryColor || "#F59E0B";
 
   const servicios = negocio?.layoutConfig?.tallerServices || negocio?.layoutConfig?.barberiaServices || [];
   const categorias = Array.from(new Set(servicios.map((s: any) => s.categoria).filter(Boolean)));

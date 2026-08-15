@@ -403,7 +403,7 @@ export default function CanchaTemplate(props: { negocio?: any; media?: any[]; bu
   const { negocio, businessId } = props;
   const courtsConfig = negocio?.layoutConfig?.canchas || [];
   const COURTS: Court[] = courtsConfig.length > 0 ? courtsConfig : DEMO_COURTS;
-  const accent = negocio?.primaryColor || "#00E676"; // Usamos el color de la base de datos
+  const accent = negocio?.accentColor || negocio?.primaryColor || "#00E676"; // Usamos el color de la base de datos
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [activeBooking, setActiveBooking] = useState<BookingInfo | null>(null);
   const [preselectedService, setPreselectedService] = useState("");

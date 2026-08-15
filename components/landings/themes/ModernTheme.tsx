@@ -33,6 +33,8 @@ export default function ModernTheme(props: { negocio: any; media?: any[]; busine
 
   const config = negocio?.layoutConfig || {};
   const primary = negocio?.primaryColor || "#3b82f6";
+  const secondary = negocio?.secondaryColor || "#db2777";
+  const accent = negocio?.accentColor || primary;
   const fontFamily = negocio?.fontFamily || "sans";
   const scaleHero = (config.fontSizeHero || 100) / 100;
   const scaleTitles = (config.fontSizeTitles || 100) / 100;
@@ -51,20 +53,19 @@ export default function ModernTheme(props: { negocio: any; media?: any[]; busine
   const gallery = media.filter((m: any) => m.type === "image") || [];
 
   const bgType = negocio?.backgroundType || "color";
-  const secondary = negocio?.secondaryColor || "#db2777";
 
   const getBackground = () => {
     if (bgType === "image" && negocio.backgroundImageUrl) {
       return { backgroundImage: `url(${negocio.backgroundImageUrl})`, backgroundSize: "cover", backgroundPosition: "center", backgroundAttachment: "fixed" as const };
     }
     if (bgType === "gradient") {
-      return { background: `linear-gradient(135deg, ${primary}10, ${secondary}30)`, backgroundColor: negocio.accentColor || "#f8fafc" };
+      return { background: `linear-gradient(135deg, ${primary}15, ${secondary}25)`, backgroundColor: "#f8fafc" };
     }
-    return { backgroundColor: negocio.accentColor || "#f8fafc" };
+    return { backgroundColor: "#f8fafc" };
   };
 
   return (
-    <div className="min-h-screen text-slate-900" style={{ fontFamily, ...getBackground() }}>
+    <div className="min-h-screen text-slate-900" style={{ fontFamily, ...getBackground(), ["--primary" as any]: primary, ["--accent" as any]: accent, ["--secondary" as any]: secondary }}>
       
       {/* ─── NAVBAR ─── */}
       <nav className={`fixed top-0 w-full z-50 transition-all duration-300 ${scrolled ? "bg-white/80 backdrop-blur-md shadow-sm py-3" : "bg-transparent py-5"}`}>

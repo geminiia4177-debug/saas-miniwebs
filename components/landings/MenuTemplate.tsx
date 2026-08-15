@@ -154,7 +154,7 @@ export default function MenuTemplate(props: { negocio: any; businessId?: string 
   const { negocio, businessId } = props;
   
   // Theme
-  const accent = negocio?.accentColor || "#E85D04";
+  const accent = negocio?.accentColor || negocio?.primaryColor || "#E85D04";
   const name = negocio?.name || "Tu Restaurante";
   const tagline = negocio?.tagline || "Sabores que enamoran";
   const hours = negocio?.layoutConfig?.hours;

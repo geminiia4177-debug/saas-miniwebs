@@ -159,7 +159,7 @@ export default function GimnasioTemplate(props: { negocio?: any; media?: any[]; 
   const { negocio, businessId, media = [] } = props;
   const layoutConfig = negocio?.layoutConfig || {};
   
-  const accent = negocio?.primaryColor ?? "#E1FF01"; // Amarillo neón
+  const accent = negocio?.accentColor || negocio?.primaryColor || "#E1FF01"; // Amarillo neón
   
   const defaultNegocio: Business = { name: negocio?.name || "Iron Gym", phone: negocio?.phone || "5491100000000", primaryColor: accent };
   

@@ -24,6 +24,7 @@ export default function ListTheme(props: { negocio: any; media?: any[]; business
   const config = negocio?.layoutConfig || {};
   const primary = negocio?.primaryColor || "#ec4899";
   const secondary = negocio?.secondaryColor || "#db2777";
+  const accent = negocio?.accentColor || primary;
   const fontFamily = negocio?.fontFamily || "sans";
   const bgType = negocio?.backgroundType || "color";
   const scaleHero = (config.fontSizeHero || 100) / 100;
@@ -49,13 +50,13 @@ export default function ListTheme(props: { negocio: any; media?: any[]; business
       return { backgroundImage: `url(${negocio.backgroundImageUrl})`, backgroundSize: "cover", backgroundPosition: "center", backgroundAttachment: "fixed" as const };
     }
     if (bgType === "gradient") {
-      return { background: `linear-gradient(135deg, ${primary}10, ${secondary}30)`, backgroundColor: negocio.accentColor || "#f8fafc" };
+      return { background: `linear-gradient(135deg, ${primary}15, ${secondary}25)`, backgroundColor: "#f8fafc" };
     }
-    return { backgroundColor: negocio.accentColor || "#f8fafc" };
+    return { backgroundColor: "#f8fafc" };
   };
 
   return (
-    <div className="min-h-screen text-slate-800 pb-20" style={{ fontFamily, ...getBackground() }}>
+    <div className="min-h-screen text-slate-800 pb-20" style={{ fontFamily, ...getBackground(), ["--primary" as any]: primary, ["--accent" as any]: accent, ["--secondary" as any]: secondary }}>
       
       {/* ─── CENTRADO TIPO LINKTREE ─── */}
       <div className="max-w-xl mx-auto px-4 pt-16 flex flex-col items-center">

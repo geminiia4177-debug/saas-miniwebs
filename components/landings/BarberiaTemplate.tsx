@@ -28,7 +28,7 @@ export default function BarberiaTemplate(props: { negocio: any; media?: any[]; b
   const [loadVideo, setLoadVideo] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   
-  const accent = negocio?.accentColor || "#C8A96E";
+  const accent = negocio?.accentColor || negocio?.primaryColor || "#C8A96E";
   const primary = negocio?.primaryColor || "#0a0a0a";
   const secondary = negocio?.secondaryColor || "#1a1a1a";
 

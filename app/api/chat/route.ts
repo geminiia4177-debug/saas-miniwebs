@@ -230,8 +230,9 @@ Ejemplo:
       parts: [{ text: String(msg.content || "").substring(0, 500) }],
     }));
 
+    const modelName = process.env.GEMINI_MODEL || "gemini-3.5-flash";
     const aiResponse = await ai.models.generateContent({
-      model: "gemini-1.5-flash",
+      model: modelName,
       contents: formattedMessages,
       config: {
         systemInstruction: systemPrompt,
