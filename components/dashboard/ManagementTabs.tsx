@@ -8,9 +8,10 @@ import IntelligenceTab from "./IntelligenceTab";
 // ─────────────────────────────────────────────
 // IMGBB UPLOAD (Aislado para el panel de gestión)
 // ─────────────────────────────────────────────
-const uploadToImgBB = async (file: File): Promise<string> => {
+const uploadToImgBB = async (file: File, businessId: string): Promise<string> => {
   const formData = new FormData();
   formData.append("file", file);
+  formData.append("businessId", businessId);
   const res = await fetch(
     `/api/upload`,
     { method: "POST", body: formData }
@@ -216,7 +217,7 @@ export default function ManagementTabs({
     if (!file || !biz) return;
     showToast("Subiendo logo...", "info");
     try {
-      const url = await uploadToImgBB(file);
+      const url = await uploadToImgBB(file, biz.id);
       setBiz((prev: any) => prev ? { ...prev, logoUrl: url } : prev);
       showToast("Logo actualizado ✓");
     } catch {

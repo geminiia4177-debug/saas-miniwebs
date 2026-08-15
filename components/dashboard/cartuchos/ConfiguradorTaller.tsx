@@ -4,9 +4,10 @@ import React, { useState, useRef } from "react";
 
 // DropZone is needed, but we don't export it from EditorTab.tsx. We can quickly redefine it or assume uploadToImgBB is available globally or passed.
 // To keep it simple, we use a basic file input or redefine DropZone.
-const uploadToImgBB = async (file: File): Promise<string> => {
+const uploadToImgBB = async (file: File, businessId: string): Promise<string> => {
   const formData = new FormData();
   formData.append("file", file);
+  formData.append("businessId", businessId);
   const res = await fetch(`/api/upload`, { method: "POST", body: formData });
   if (!res.ok) throw new Error("Upload failed");
   const data = await res.json();

@@ -22,6 +22,7 @@ export default function ConfiguradorBarberia({ biz, setBiz }: { biz: any, setBiz
     setUploadingImg(id);
     const formData = new FormData();
     formData.append("file", file);
+    formData.append("businessId", biz.id);
     try {
       const res = await fetch(`/api/upload`, { method: "POST", body: formData });
       const data = await res.json();
