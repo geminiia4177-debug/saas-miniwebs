@@ -107,12 +107,17 @@ const SectionSchema = z.object({
   config: SectionConfigSchema.optional(),
 });
 
-// P1-015: Strict layoutConfig without catchall
+// P1-015: LayoutConfig schema with support for all visual customizations
 export const LayoutConfigSchema = z.object({
-  sections: z.array(SectionSchema).max(30).optional(),
+  sections: z.array(SectionSchema).max(50).optional(),
   hours: BusinessHoursSchema.optional(),
   themeVariant: z.string().max(50).optional().nullable(),
   onboarded: z.boolean().optional(),
+  // Video and Links
+  videoUrl: z.string().max(500).optional().nullable(),
+  bookingUrl: z.string().max(500).optional().nullable(),
+  heroText: z.string().max(2000).optional().nullable(),
+  mapUrl: z.string().max(1000).optional().nullable(),
   // Social links (URLs must be reasonable, no javascript: scheme)
   instagram: z.string().max(300).optional().nullable(),
   facebook: z.string().max(300).optional().nullable(),
@@ -133,6 +138,9 @@ export const LayoutConfigSchema = z.object({
   footerBgColor: z.union([z.string().regex(/^#[0-9a-fA-F]{3,8}$/).max(9), z.literal("")]).optional().nullable(),
   footerTextColor: z.union([z.string().regex(/^#[0-9a-fA-F]{3,8}$/).max(9), z.literal("")]).optional().nullable(),
   bookingBgColor: z.union([z.string().regex(/^#[0-9a-fA-F]{3,8}$/).max(9), z.literal("")]).optional().nullable(),
+  buttonStyle: z.string().max(50).optional().nullable(),
+  backgroundType: z.string().max(50).optional().nullable(),
+  backgroundImageUrl: z.string().max(500).optional().nullable(),
   reservaMesaActiva: z.boolean().optional(),
   // Menu
   menuCategorias: z.array(MenuCategoriaSchema).max(50).optional(),
@@ -144,9 +152,18 @@ export const LayoutConfigSchema = z.object({
   })).max(50).optional(),
   // Service lists per business type
   barberiaServices: z.array(ServiceItemSchema).max(100).optional(),
+  barberiaProducts: z.array(z.any()).max(100).optional(),
   clinicaServices: z.array(ServiceItemSchema).max(100).optional(),
   tallerServices: z.array(ServiceItemSchema).max(100).optional(),
   canchaTarifas: z.array(ServiceItemSchema).max(100).optional(),
+  vehiculos: z.array(z.any()).max(50).optional(),
+  lavaderoVehiculos: z.array(z.any()).max(50).optional(),
+  canchas: z.array(z.any()).max(50).optional(),
+  especialidades: z.array(z.any()).max(50).optional(),
+  profesionalesConfig: z.array(z.any()).max(50).optional(),
+  esteticaServices: z.array(z.any()).max(50).optional(),
+  products: z.array(z.any()).max(100).optional(),
+  items: z.array(z.any()).max(100).optional(),
   // Delivery
   deliveryRadio: z.number().min(0).max(1000).optional(),
   modosDisponibles: z.array(z.string().max(50)).max(10).optional(),
@@ -154,16 +171,21 @@ export const LayoutConfigSchema = z.object({
   address: z.string().max(500).optional().nullable(),
   // Media
   media: z.array(z.object({
+    id: z.string().optional(),
     url: z.string().url().max(500),
+    name: z.string().max(200).optional(),
     caption: z.string().max(200).optional(),
-    type: z.enum(["image", "video"]).optional(),
-  })).max(50).optional(),
+    size: z.number().optional(),
+    uploadedAt: z.string().optional(),
+    type: z.string().optional(),
+  })).max(100).optional(),
   // Chatbot
   chatbotName: z.string().max(100).optional().nullable(),
+  chatbotEnabled: z.boolean().optional(),
   // P1-035: Biolinks and Stats configuration
   biolinks: z.record(z.string(), z.any()).optional().nullable(),
   stats: z.record(z.string(), z.any()).optional().nullable(),
-});
+}).passthrough();
 
 // ─── P1-016: Strict paymentData schema ────────────────────────────────────────
 export const PaymentDataSchema = z.object({

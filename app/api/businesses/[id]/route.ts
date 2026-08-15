@@ -80,34 +80,14 @@ export async function GET(
         session.user.id === business.userId);
 
     if (!isOwnerOrAdmin && business.layoutConfig) {
-      // P0-001: Public users get a filtered layoutConfig (no internal keys)
+      // P0-001: Public users get a filtered layoutConfig (no internal secrets)
       const original =
         typeof business.layoutConfig === "object" && business.layoutConfig !== null
           ? (business.layoutConfig as any)
           : {};
 
-      // Whitelist of fields safe for public consumption
-      business.layoutConfig = {
-        hours: original.hours,
-        menuCategorias: original.menuCategorias,
-        menuPromos: original.menuPromos,
-        barberiaServices: original.barberiaServices,
-        clinicaServices: original.clinicaServices,
-        tallerServices: original.tallerServices,
-        canchaTarifas: original.canchaTarifas,
-        instagram: original.instagram,
-        facebook: original.facebook,
-        whatsapp: original.whatsapp,
-        tiktok: original.tiktok,
-        modosDisponibles: original.modosDisponibles,
-        deliveryRadio: original.deliveryRadio,
-        reservaMesaActiva: original.reservaMesaActiva,
-        bannerOpacity: original.bannerOpacity,
-        sections: original.sections,
-        themeVariant: original.themeVariant,
-        media: original.media,
-        address: original.address,
-      };
+      const { callMeBotApiKey, bankDetails, stripeKey, ...safeConfig } = original;
+      business.layoutConfig = safeConfig;
     }
 
     // P0-001: toSafeBusinessDTO strips callMeBotApiKey & bankDetails,
@@ -150,9 +130,9 @@ export async function PUT(
       return NextResponse.json({ error: "JSON inválido." }, { status: 400 });
     }
 
-    // P1-021: Limit layoutConfig specifically to 10KB
-    if (rawData.layoutConfig && JSON.stringify(rawData.layoutConfig).length > 10_240) {
-      return NextResponse.json({ error: "La configuración visual excede el límite permitido (10KB)." }, { status: 413 });
+    // P1-021: Limit layoutConfig specifically to 500KB
+    if (rawData.layoutConfig && JSON.stringify(rawData.layoutConfig).length > 500_000) {
+      return NextResponse.json({ error: "La configuración visual excede el límite permitido (500KB)." }, { status: 413 });
     }
 
     const schema = isAdmin ? adminBusinessUpdateSchema : ownerBusinessUpdateSchema;

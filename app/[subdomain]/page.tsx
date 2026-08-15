@@ -96,7 +96,16 @@ export default async function PublicLandingPage({ params, searchParams }: { para
     return notFound();
   }
 
-  const activeConfig = (rawBiz as any).publishedConfig || (rawBiz as any).layoutConfig || {};
+  const layoutConf = (rawBiz as any).layoutConfig || {};
+  const pubConf = (rawBiz as any).publishedConfig || {};
+  // Merge publishedConfig over layoutConfig, falling back to layoutConfig for unset properties
+  const activeConfig = {
+    ...layoutConf,
+    ...pubConf,
+    videoUrl: pubConf.videoUrl || layoutConf.videoUrl || "",
+    bookingUrl: pubConf.bookingUrl || layoutConf.bookingUrl || "",
+    heroText: pubConf.heroText || layoutConf.heroText || "",
+  };
 
   // SEC-033 Fix: Create a strict PublicBusinessDTO to avoid data leakage
   const biz = {
