@@ -568,9 +568,11 @@ export default function BarberiaTemplate(props: { negocio: any; media?: any[]; b
           </section>
         )}
 </React.Fragment>;
-            case 'video': return <React.Fragment key={s.id}>
+            case 'video': {
+              const currentVideoUrl = s.config?.youtubeUrl || videoUrl;
+              return <React.Fragment key={s.id}>
 {/* ─── VIDEO ─── */}
-        {videoUrl && extractYouTubeId(videoUrl) && (
+        {currentVideoUrl && extractYouTubeId(currentVideoUrl) && (
           <section className="relative py-16 sm:py-24 px-4 sm:px-6 md:px-12 max-w-5xl mx-auto z-10">
             <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 mb-10 sm:mb-16">
               <div className="h-px gold-line opacity-20"></div>
@@ -582,7 +584,7 @@ export default function BarberiaTemplate(props: { negocio: any; media?: any[]; b
             <div className="aspect-video rounded-2xl overflow-hidden border-2 border-[var(--accent)]/20 shadow-2xl shadow-black/50 animate-on-scroll relative group cursor-pointer" onClick={() => setLoadVideo(true)}>
               {!loadVideo ? (
                 <>
-                  <img src={`https://img.youtube.com/vi/${extractYouTubeId(videoUrl)}/maxresdefault.jpg`} alt="Video Thumbnail" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" loading="lazy" />
+                  <img src={`https://img.youtube.com/vi/${extractYouTubeId(currentVideoUrl)}/maxresdefault.jpg`} alt="Video Thumbnail" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" loading="lazy" />
                   <div className="absolute inset-0 bg-black/40 flex items-center justify-center group-hover:bg-black/20 transition-colors">
                     <div className="w-16 h-16 sm:w-20 sm:h-20 bg-[var(--accent)] text-black rounded-full flex items-center justify-center pl-1 shadow-[0_0_40px_rgba(0,0,0,0.5)]">
                       <svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
@@ -591,7 +593,7 @@ export default function BarberiaTemplate(props: { negocio: any; media?: any[]; b
                 </>
               ) : (
                 <iframe
-                  src={`https://www.youtube.com/embed/${extractYouTubeId(videoUrl)}?autoplay=1`}
+                  src={`https://www.youtube.com/embed/${extractYouTubeId(currentVideoUrl)}?autoplay=1`}
                   className="w-full h-full border-none"
                   allowFullScreen
                   title="Video del negocio"
@@ -601,6 +603,7 @@ export default function BarberiaTemplate(props: { negocio: any; media?: any[]; b
           </section>
         )}
 </React.Fragment>;
+            }
             case 'booking': return <React.Fragment key={s.id}>
 {/* ─── BOOKING ─── */}
         <section id="booking" className="relative py-16 sm:py-24 px-4 sm:px-6 md:px-12 max-w-7xl mx-auto z-10">

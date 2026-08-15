@@ -118,6 +118,9 @@ export default function OnboardingModal({ biz, setBiz, saving, setSaving, showTo
                     });
                     setBiz((prev: any) => ({ ...prev, phone: onboardingData.phone, paymentData, layoutConfig: { ...prev.layoutConfig, onboarded: true } }));
                     showToast("¡Configuración completada! 🎉", "success");
+                    setTimeout(() => {
+                      window.location.reload();
+                    }, 1000);
                   } catch {
                     showToast("Error guardando datos", "error");
                   }

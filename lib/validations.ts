@@ -174,6 +174,9 @@ export const PaymentDataSchema = z.object({
   amount: z.number().optional(),
   currency: z.string().max(10).optional(),
   notes: z.string().max(500).optional(),
+  cbu: z.string().max(100).optional().nullable(),
+  alias: z.string().max(100).optional().nullable(),
+  titular: z.string().max(200).optional().nullable(),
 });
 
 // ─── BUSINESS SCHEMAS ─────────────────────────────────────────────────────────

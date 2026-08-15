@@ -154,7 +154,7 @@ Eres amable, claro y resolutivo.
           const fullPrompt = systemPrompt + "\n\n## CONVERSACIÓN (más reciente al final):\n" + conversationHistory + "\n\n[AI_MSG]";
 
           const aiResponse = await ai.models.generateContent({
-            model: "gemini-3.5-flash-lite",
+            model: "gemini-1.5-flash",
             contents: fullPrompt,
           });
 

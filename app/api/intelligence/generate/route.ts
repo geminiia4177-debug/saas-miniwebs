@@ -76,7 +76,7 @@ Escribe un mensaje agradeciéndole por su fidelidad y regalándole un upgrade en
     }
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash-lite",
+      model: "gemini-1.5-flash",
       contents: prompt,
     });
 

@@ -411,14 +411,16 @@ export default function LavaderoTemplate(props: { negocio: any; media?: any[]; b
         )}
         </React.Fragment>;
 
-            case 'video': return <React.Fragment key={s.id}>
+            case 'video': {
+              const currentVideoUrl = s.config?.youtubeUrl || videoUrl;
+              return <React.Fragment key={s.id}>
         {/* ─── VIDEO ─── */}
-        {videoUrl && extractYouTubeId(videoUrl) && (
+        {currentVideoUrl && extractYouTubeId(currentVideoUrl) && (
           <section className="relative py-24 px-4 sm:px-6 md:px-12 max-w-6xl mx-auto z-10 border-t border-white/5">
             <div className={`aspect-video rounded-3xl overflow-hidden border border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.8)] relative ${styles.animateOnScroll} group bg-black`}>
               <div className="absolute inset-0 bg-[var(--accent)] opacity-20 blur-[100px] -z-10 mix-blend-screen"></div>
               <iframe
-                src={`https://www.youtube.com/embed/${extractYouTubeId(videoUrl)}?controls=1&rel=0`}
+                src={`https://www.youtube.com/embed/${extractYouTubeId(currentVideoUrl)}?controls=1&rel=0`}
                 className="w-full h-full border-none relative z-10"
                 allowFullScreen
                 title="Video del negocio"
@@ -428,6 +430,7 @@ export default function LavaderoTemplate(props: { negocio: any; media?: any[]; b
           </section>
         )}
         </React.Fragment>;
+            }
 
             case 'booking': return <React.Fragment key={s.id}>
         {/* ─── BOOKING ─── */}
