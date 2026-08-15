@@ -207,6 +207,9 @@ export const ownerBusinessUpdateSchema = z.object({
   fontFamily: z.enum(["sans", "serif", "mono", "display"]).optional().nullable(),
   logoUrl: z.string().url().max(500).optional().nullable(),
   bannerUrl: z.string().url().max(500).optional().nullable(),
+  buttonStyle: z.string().max(50).optional().nullable(),
+  backgroundType: z.string().max(50).optional().nullable(),
+  backgroundImageUrl: z.string().url().max(500).optional().nullable(),
   // P1-015: Strict layoutConfig — no catchall
   layoutConfig: LayoutConfigSchema.optional(),
   // P1-030: Validate customDomain hostname (no paths, no javascript:)
