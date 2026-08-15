@@ -207,7 +207,7 @@ export default function Dashboard() {
         let errMsg = "Error en el servidor";
         try {
           const errData = await res.json();
-          errMsg = errData.error || JSON.stringify(errData.details) || "Error en el servidor";
+          errMsg = errData.error + " - " + JSON.stringify(errData.details);
           console.error("BACKEND REJECTED:", errData);
         } catch(e) {}
         if (!isAutoSave) pushToast("Fallo: " + errMsg, "error");
