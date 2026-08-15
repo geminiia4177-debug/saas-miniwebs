@@ -139,7 +139,7 @@ export default function CrmTab({ biz, setBiz, saveAll, showToast }: { biz: any; 
   const handleAddSale = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newSale.amount) return;
-    const ok = await addRecord("sales", newSale);
+    const ok = await addRecord("sales", { ...newSale, amount: parseFloat(newSale.amount) });
     if (ok) setNewSale({ amount: "", description: "", saleType: "SERVICE", employeeId: "" });
   };
 

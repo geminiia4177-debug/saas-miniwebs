@@ -273,7 +273,7 @@ export default function Dashboard() {
   const pending = appointments.filter(a => a.status === "PENDING");
 
   return (
-    <div className="min-h-[100dvh] flex flex-col md:flex-row" style={{ background: "#070b12", fontFamily: "'Plus Jakarta Sans',system-ui,sans-serif", "--primary-color": biz?.primaryColor || "#6366f1", "--secondary-color": biz?.secondaryColor || "#a855f7" } as React.CSSProperties}>
+    <div className="min-h-screen flex flex-col md:flex-row" style={{ background: "#070b12", fontFamily: "'Plus Jakarta Sans',system-ui,sans-serif", "--primary-color": biz?.primaryColor || "#6366f1", "--secondary-color": biz?.secondaryColor || "#a855f7" } as React.CSSProperties}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&display=swap');
         * { box-sizing: border-box; }
@@ -360,7 +360,7 @@ export default function Dashboard() {
         unreadSupport={0}
       />
 
-      <main className="flex-1 flex flex-col min-w-0 h-[100dvh] overflow-hidden custom-scrollbar bg-[#080a10]">
+      <main className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden custom-scrollbar bg-[#080a10]">
 
         {/* ALERT BANNER GLOBAL */}
         {globalAlert && (
