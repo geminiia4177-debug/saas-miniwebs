@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { requireBusinessOwner } from "@/lib/auth-helpers";
+import { resolveServiceFromLayout } from "@/lib/appointment-service";
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -67,15 +68,13 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     // SEC-039 & SEC-040 Fix: Auto-create Sale atomically and idempotently if completed
     if (status === "COMPLETED" && existingAppointment.status !== "COMPLETED") {
       try {
-        const business = await prisma.business.findUnique({ where: { id: existingAppointment.businessId } });
-        const layoutConfig = business?.layoutConfig as any;
-        const allServices = [
-          ...(layoutConfig?.barberiaServices || []),
-          ...(layoutConfig?.clinicaServices || []),
-          ...(layoutConfig?.sections?.find((s: any) => s.type === "services")?.items || [])
-        ];
-        const servicio = allServices.find((s: any) => (s.name || s.title) === existingAppointment.serviceName);
-        const amount = servicio ? Number(servicio.price || servicio.precio || 0) : 0;
+        const business = await prisma.business.findUnique({
+          where: { id: existingAppointment.businessId },
+          select: { layoutConfig: true, publishedConfig: true },
+        });
+        const configSource = (business?.publishedConfig || business?.layoutConfig || {}) as Record<string, unknown>;
+        const servicio = resolveServiceFromLayout(configSource, existingAppointment.serviceId || existingAppointment.serviceName);
+        const amount = servicio?.price || 0;
 
         const [, updatedAppointment] = await prisma.$transaction([
           prisma.sale.upsert({

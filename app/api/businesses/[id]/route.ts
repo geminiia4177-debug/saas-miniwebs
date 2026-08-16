@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { Prisma } from "@prisma/client";
+import { z } from "zod";
 import { toSafeBusinessDTO } from "@/lib/dtos";
 import { ownerBusinessUpdateSchema, adminBusinessUpdateSchema } from "@/lib/validations";
 import { requireBusinessOwner } from "@/lib/auth-helpers";
@@ -158,7 +160,7 @@ export async function PUT(
         { status: 400 }
       );
     }
-    const data = parseResult.data as any;
+    const data = parseResult.data;
 
     // P1-030: Banned subdomains
     if (data.subdomain) {
@@ -174,17 +176,17 @@ export async function PUT(
       }
     }
 
-    // P1-030: Clean and validate customDomain
+    // P1-003: Clean and validate customDomain
     const resolvedCustomDomain =
       data.customDomain !== undefined
         ? cleanCustomDomain(data.customDomain)
         : undefined;
 
     // Build layoutConfig: merge with social links and UI fields from top-level
-    let newLayoutConfig: any = undefined;
+    let newLayoutConfig: Record<string, unknown> | undefined = undefined;
     if (data.layoutConfig !== undefined || data.instagram !== undefined || data.facebook !== undefined || data.buttonStyle !== undefined || data.backgroundType !== undefined || data.backgroundImageUrl !== undefined) {
       newLayoutConfig = {
-        ...(data.layoutConfig || {}),
+        ...((data.layoutConfig as Record<string, unknown>) || {}),
         ...(data.instagram !== undefined && { instagram: data.instagram }),
         ...(data.facebook !== undefined && { facebook: data.facebook }),
         ...(data.whatsapp !== undefined && { whatsapp: data.whatsapp }),
@@ -196,10 +198,15 @@ export async function PUT(
     }
 
     // Build update payload — only include fields that were explicitly provided
-    const updateData: any = {};
+    const updateData: Prisma.BusinessUpdateInput = {};
     if (data.name !== undefined) updateData.name = data.name;
     if (data.subdomain !== undefined) updateData.subdomain = data.subdomain;
-    if (resolvedCustomDomain !== undefined) updateData.customDomain = resolvedCustomDomain;
+    if (resolvedCustomDomain !== undefined) {
+      updateData.customDomain = resolvedCustomDomain;
+      if (!isAdmin && resolvedCustomDomain !== existingBusiness.customDomain) {
+        updateData.domainVerifiedAt = null; // Invalidate verification on change
+      }
+    }
     if (data.email !== undefined) updateData.email = data.email;
     if (data.phone !== undefined) updateData.phone = data.phone;
     if (data.description !== undefined) updateData.description = data.description;
@@ -210,16 +217,17 @@ export async function PUT(
     if (data.primaryColor !== undefined) updateData.primaryColor = data.primaryColor;
     if (data.secondaryColor !== undefined) updateData.secondaryColor = data.secondaryColor;
     if (data.fontFamily !== undefined) updateData.fontFamily = data.fontFamily;
-    if (newLayoutConfig !== undefined) updateData.layoutConfig = newLayoutConfig;
+    if (newLayoutConfig !== undefined) updateData.layoutConfig = newLayoutConfig as object;
 
     // Admin-only fields
     if (isAdmin) {
-      if (data.status !== undefined) updateData.status = data.status;
-      if (data.paymentAmount !== undefined) updateData.paymentAmount = Number(data.paymentAmount) || 0;
-      if (data.paymentStatus !== undefined) updateData.paymentStatus = data.paymentStatus;
-      if (data.demoExpiresAt !== undefined) updateData.demoExpiresAt = parseDate(data.demoExpiresAt);
-      if (data.nextPayment !== undefined) updateData.nextPayment = parseDate(data.nextPayment);
-      if (data.paymentData !== undefined) updateData.paymentData = data.paymentData;
+      const adminData = data as z.infer<typeof adminBusinessUpdateSchema>;
+      if (adminData.status !== undefined) updateData.status = adminData.status;
+      if (adminData.paymentAmount !== undefined) updateData.paymentAmount = Number(adminData.paymentAmount) || 0;
+      if (adminData.paymentStatus !== undefined) updateData.paymentStatus = adminData.paymentStatus;
+      if (adminData.demoExpiresAt !== undefined) updateData.demoExpiresAt = parseDate(adminData.demoExpiresAt);
+      if (adminData.nextPayment !== undefined) updateData.nextPayment = parseDate(adminData.nextPayment);
+      if (adminData.paymentData !== undefined) updateData.paymentData = adminData.paymentData as object;
     }
 
     // Encrypted secrets — encrypt before storing, never return decrypted
@@ -232,7 +240,7 @@ export async function PUT(
 
     // Publish config if requested
     if (rawData.publish === true && newLayoutConfig) {
-      updateData.publishedConfig = newLayoutConfig;
+      updateData.publishedConfig = newLayoutConfig as object;
     }
 
     const updatedBusiness = await prisma.business.update({

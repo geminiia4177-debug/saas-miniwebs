@@ -7,6 +7,7 @@ import {
   parseTimeToMinutes,
   DEFAULT_BUSINESS_TIMEZONE,
 } from "@/lib/date-helpers";
+import { Prisma, Appointment } from "@prisma/client";
 
 export interface CreateAppointmentInput {
   businessId: string;
@@ -30,23 +31,63 @@ export interface ServiceCatalogItem {
   duration: number; // in minutes
 }
 
+export interface PublicAppointmentDTO {
+  appointmentId: string;
+  trackingToken: string;
+  date: Date;
+  status: string;
+  serviceName: string | null;
+  clientName: string;
+  paymentMethod: string | null;
+  paymentReference: string | null;
+}
+
+interface RawLayoutItem {
+  id?: string | number;
+  nombre?: string;
+  name?: string;
+  title?: string;
+  precio?: string | number;
+  price?: string | number;
+  duracion?: number;
+  duration?: number;
+}
+
+interface RawLayoutSection {
+  type?: string;
+  items?: RawLayoutItem[];
+}
+
+interface RawLayoutConfig {
+  barberiaServices?: RawLayoutItem[];
+  clinicaServices?: RawLayoutItem[];
+  tallerServices?: RawLayoutItem[];
+  canchaTarifas?: RawLayoutItem[];
+  sections?: RawLayoutSection[];
+  hours?: Record<string, { open?: boolean; from?: string; to?: string }>;
+  callMeBotPhone?: string;
+  waTemplateConfirmed?: string;
+  waTemplateTransfer?: string;
+}
+
 /**
  * Resolves the service from all configured catalogs in the business layoutConfig.
  */
 export function resolveServiceFromLayout(
-  layoutConfig: any,
+  layoutConfig: Record<string, unknown> | null | undefined,
   serviceIdOrName: string | null | undefined
 ): ServiceCatalogItem | null {
   if (!serviceIdOrName) return null;
 
+  const rawConfig = (layoutConfig || {}) as RawLayoutConfig;
   const query = serviceIdOrName.trim().toLowerCase();
   const allServices: ServiceCatalogItem[] = [];
 
   // 1. Barberia
-  if (Array.isArray(layoutConfig?.barberiaServices)) {
-    layoutConfig.barberiaServices.forEach((s: any) => {
+  if (Array.isArray(rawConfig.barberiaServices)) {
+    rawConfig.barberiaServices.forEach((s) => {
       allServices.push({
-        id: String(s.id || s.name),
+        id: String(s.id || s.name || s.nombre),
         name: s.nombre || s.name || s.title || "Servicio",
         price: Number(s.precio || s.price || 0),
         duration: Number(s.duration || s.duracion || 30),
@@ -55,10 +96,10 @@ export function resolveServiceFromLayout(
   }
 
   // 2. Clinica
-  if (Array.isArray(layoutConfig?.clinicaServices)) {
-    layoutConfig.clinicaServices.forEach((s: any) => {
+  if (Array.isArray(rawConfig.clinicaServices)) {
+    rawConfig.clinicaServices.forEach((s) => {
       allServices.push({
-        id: String(s.id || s.name),
+        id: String(s.id || s.name || s.nombre),
         name: s.nombre || s.name || s.title || "Consulta",
         price: Number(s.precio || s.price || 0),
         duration: Number(s.duration || s.duracion || 30),
@@ -67,10 +108,10 @@ export function resolveServiceFromLayout(
   }
 
   // 3. Taller
-  if (Array.isArray(layoutConfig?.tallerServices)) {
-    layoutConfig.tallerServices.forEach((s: any) => {
+  if (Array.isArray(rawConfig.tallerServices)) {
+    rawConfig.tallerServices.forEach((s) => {
       allServices.push({
-        id: String(s.id || s.name),
+        id: String(s.id || s.name || s.nombre),
         name: s.nombre || s.name || s.title || "Servicio Taller",
         price: Number(s.precio || s.price || 0),
         duration: Number(s.duration || s.duracion || 45),
@@ -79,10 +120,10 @@ export function resolveServiceFromLayout(
   }
 
   // 4. Canchas
-  if (Array.isArray(layoutConfig?.canchaTarifas)) {
-    layoutConfig.canchaTarifas.forEach((s: any) => {
+  if (Array.isArray(rawConfig.canchaTarifas)) {
+    rawConfig.canchaTarifas.forEach((s) => {
       allServices.push({
-        id: String(s.id || s.name),
+        id: String(s.id || s.name || s.nombre),
         name: s.nombre || s.name || s.title || "Turno Cancha",
         price: Number(s.precio || s.price || 0),
         duration: Number(s.duration || s.duracion || 60),
@@ -91,12 +132,12 @@ export function resolveServiceFromLayout(
   }
 
   // 5. Sections -> services
-  const sections = Array.isArray(layoutConfig?.sections) ? layoutConfig.sections : [];
-  const srvSection = sections.find((s: any) => s.type === "services");
+  const sections = Array.isArray(rawConfig.sections) ? rawConfig.sections : [];
+  const srvSection = sections.find((s) => s.type === "services");
   if (Array.isArray(srvSection?.items)) {
-    srvSection.items.forEach((s: any) => {
+    srvSection.items.forEach((s) => {
       allServices.push({
-        id: String(s.id || s.name || s.title),
+        id: String(s.id || s.name || s.title || s.nombre),
         name: s.nombre || s.name || s.title || "Servicio",
         price: Number(s.precio || s.price || 0),
         duration: Number(s.duration || s.duracion || 30),
@@ -126,7 +167,7 @@ export class AppointmentService {
   ): Promise<{ slots: string[]; duration: number; error?: string }> {
     const biz = await prisma.business.findUnique({
       where: { id: businessId },
-      select: { layoutConfig: true, status: true, timezone: true },
+      select: { layoutConfig: true, publishedConfig: true, status: true, timezone: true },
     });
 
     if (!biz || biz.status === "BLOCKED" || biz.status === "ARCHIVED") {
@@ -134,9 +175,10 @@ export class AppointmentService {
     }
 
     const timezone = biz.timezone ?? DEFAULT_BUSINESS_TIMEZONE;
-    const layoutConfig = (biz.layoutConfig as any) || {};
+    const configSource = (biz.publishedConfig || biz.layoutConfig || {}) as Record<string, unknown>;
+    const rawConfig = configSource as RawLayoutConfig;
 
-    const service = resolveServiceFromLayout(layoutConfig, serviceIdOrName);
+    const service = resolveServiceFromLayout(configSource, serviceIdOrName);
     const duration = service?.duration || 30;
 
     const [year, month, day] = dateStr.split("-").map(Number);
@@ -147,7 +189,7 @@ export class AppointmentService {
     // Determine day config in local business timezone
     const noonUTC = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
     const dayName = getBusinessDayName(noonUTC, timezone);
-    const hours = layoutConfig.hours || {};
+    const hours = rawConfig.hours || {};
     const dayConfig = hours[dayName];
 
     if (!dayConfig || !dayConfig.open) {
@@ -175,7 +217,7 @@ export class AppointmentService {
 
     for (const app of existingAppointments) {
       const appMin = getBusinessMinutesSinceMidnight(app.date, timezone);
-      const appSrv = resolveServiceFromLayout(layoutConfig, app.serviceId || app.serviceName);
+      const appSrv = resolveServiceFromLayout(configSource, app.serviceId || app.serviceName);
       const appDuration = appSrv?.duration || 30;
       bookedRanges.push({ start: appMin, end: appMin + appDuration });
     }
@@ -198,16 +240,22 @@ export class AppointmentService {
 
   /**
    * Unified, server-authoritative appointment creation with:
-   * - Business status validation
+   * - Business status validation (reject BLOCKED/ARCHIVED)
    * - Server-side service duration and price resolution
-   * - Strict date validations (no past dates, max 365 days future)
+   * - Strict date validations (reject NaN, past dates, max 365 days future)
+   * - Slot interval alignment validation (reject non-grid minutes)
    * - Business hours validation
-   * - Atomic overlapping duration check in transaction
+   * - Atomic overlapping duration check with Serializable isolation & retry
    * - Concurrency token and slot protection
    * - Tracking token generation
    * - WhatsApp confirmation enqueued with unique idempotencyKey
    */
-  static async createAppointment(input: CreateAppointmentInput) {
+  static async createAppointment(input: CreateAppointmentInput): Promise<{
+    success?: boolean;
+    appointment?: PublicAppointmentDTO;
+    error?: string;
+    status?: number;
+  }> {
     const {
       businessId,
       clientName,
@@ -248,6 +296,7 @@ export class AppointmentService {
         status: true,
         timezone: true,
         layoutConfig: true,
+        publishedConfig: true,
         callMeBotApiKey: true,
         bankDetails: true,
       },
@@ -266,10 +315,11 @@ export class AppointmentService {
     }
 
     const timezone = business.timezone ?? DEFAULT_BUSINESS_TIMEZONE;
-    const layoutConfig = (business.layoutConfig as any) || {};
+    const configSource = (business.publishedConfig || business.layoutConfig || {}) as Record<string, unknown>;
+    const rawConfig = configSource as RawLayoutConfig;
 
     // 5. Resolve service catalog item server-side
-    const resolvedService = resolveServiceFromLayout(layoutConfig, serviceId || serviceName);
+    const resolvedService = resolveServiceFromLayout(configSource, serviceId || serviceName);
     const finalServiceName = resolvedService?.name || serviceName || "Turno General";
     const finalDuration = resolvedService?.duration || 30;
 
@@ -284,16 +334,26 @@ export class AppointmentService {
       }
     }
 
-    // 7. Validate business hours
+    // 7. Validate slot step and business hours
+    const appointmentMinutes = getBusinessMinutesSinceMidnight(date, timezone);
+    const step = finalDuration >= 60 ? 60 : 30;
+
+    // P1-008: Reject non-grid appointment start times (e.g. 10:17)
+    if (appointmentMinutes % step !== 0 && appointmentMinutes % 30 !== 0) {
+      return {
+        error: `El horario debe comenzar en un intervalo válido (cada ${step} minutos).`,
+        status: 400,
+      };
+    }
+
     const dayName = getBusinessDayName(date, timezone);
-    const hours = layoutConfig.hours;
+    const hours = rawConfig.hours;
     if (hours) {
       const dayConfig = hours[dayName];
       if (!dayConfig || !dayConfig.open) {
         return { error: "El negocio no atiende en ese día.", status: 400 };
       }
 
-      const appointmentMinutes = getBusinessMinutesSinceMidnight(date, timezone);
       const openMin = parseTimeToMinutes(dayConfig.from || "09:00");
       const closeMin = parseTimeToMinutes(dayConfig.to || "18:00");
 
@@ -319,76 +379,112 @@ export class AppointmentService {
         ? "TRX-" + crypto.randomUUID().substring(0, 8).toUpperCase()
         : null;
 
-    // 9. Atomic Transaction: Check duration overlap + create appointment
-    let nuevoTurno: any;
-    try {
-      nuevoTurno = await prisma.$transaction(async (tx) => {
-        // Query potential overlapping appointments in surrounding window (+/- 24h)
-        const windowStart = new Date(startMs - 24 * 60 * 60 * 1000);
-        const windowEnd = new Date(endMs + 24 * 60 * 60 * 1000);
+    // 9. Atomic Transaction with Serializable Isolation and Retry Loop
+    const MAX_RETRIES = 3;
+    let nuevoTurno: Appointment | null = null;
+    let lastError: unknown = null;
 
-        const existingOverlaps = await tx.appointment.findMany({
-          where: {
-            businessId,
-            date: { gte: windowStart, lte: windowEnd },
-            status: { not: "CANCELLED" },
-            ...(employeeId ? { employeeId } : {}),
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        nuevoTurno = await prisma.$transaction(
+          async (tx) => {
+            // Check overlapping appointments in surrounding window (+/- 24h)
+            const windowStart = new Date(startMs - 24 * 60 * 60 * 1000);
+            const windowEnd = new Date(endMs + 24 * 60 * 60 * 1000);
+
+            const existingOverlaps = await tx.appointment.findMany({
+              where: {
+                businessId,
+                date: { gte: windowStart, lte: windowEnd },
+                status: { not: "CANCELLED" },
+                ...(employeeId ? { employeeId } : {}),
+              },
+              select: { id: true, date: true, serviceId: true, serviceName: true },
+            });
+
+            for (const existing of existingOverlaps) {
+              const exStart = existing.date.getTime();
+              const exSrv = resolveServiceFromLayout(configSource, existing.serviceId || existing.serviceName);
+              const exDuration = exSrv?.duration || 30;
+              const exEnd = exStart + exDuration * 60 * 1000;
+
+              // Check if [startMs, endMs) overlaps with [exStart, exEnd)
+              if (startMs < exEnd && endMs > exStart) {
+                throw new Error("OVERLAPPING_SLOT");
+              }
+            }
+
+            return await tx.appointment.create({
+              data: {
+                businessId,
+                clientName: clientName.trim().substring(0, 100),
+                clientPhone: clientPhone.trim().substring(0, 30),
+                clientEmail: clientEmail?.trim() || null,
+                date,
+                status: "PENDING",
+                serviceName: finalServiceName,
+                serviceId: resolvedService?.id || serviceId || null,
+                notes: notes?.substring(0, 1000) || null,
+                patente: patente?.substring(0, 20) || null,
+                employeeId: employeeId || null,
+                source: source || "WEB",
+                publicTrackingTokenHash,
+                concurrencyToken,
+                paymentMethod: paymentMethod || "LOCAL",
+                paymentReference,
+              },
+            });
           },
-          select: { id: true, date: true, serviceId: true, serviceName: true },
-        });
-
-        for (const existing of existingOverlaps) {
-          const exStart = existing.date.getTime();
-          const exSrv = resolveServiceFromLayout(layoutConfig, existing.serviceId || existing.serviceName);
-          const exDuration = exSrv?.duration || 30;
-          const exEnd = exStart + exDuration * 60 * 1000;
-
-          // Check if [startMs, endMs) overlaps with [exStart, exEnd)
-          if (startMs < exEnd && endMs > exStart) {
-            throw new Error("OVERLAPPING_SLOT");
+          {
+            isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+            timeout: 5000,
           }
+        );
+        // Successful creation — break retry loop
+        break;
+      } catch (err: unknown) {
+        lastError = err;
+        const errObj = err as { code?: string; message?: string; meta?: { target?: string[] } };
+
+        if (errObj.message === "OVERLAPPING_SLOT") {
+          return {
+            error: "El horario seleccionado se solapa con otro turno reservado. Por favor elige otro horario.",
+            status: 409,
+          };
         }
 
-        return await tx.appointment.create({
-          data: {
-            businessId,
-            clientName: clientName.trim().substring(0, 100),
-            clientPhone: clientPhone.trim().substring(0, 30),
-            clientEmail: clientEmail?.trim() || null,
-            date,
-            status: "PENDING",
-            serviceName: finalServiceName,
-            serviceId: resolvedService?.id || serviceId || null,
-            notes: notes?.substring(0, 1000) || null,
-            patente: patente?.substring(0, 20) || null,
-            employeeId: employeeId || null,
-            source: source || "WEB",
-            publicTrackingTokenHash,
-            concurrencyToken,
-            paymentMethod: paymentMethod || "LOCAL",
-            paymentReference,
-          },
-        });
-      });
-    } catch (e: any) {
-      if (e.message === "OVERLAPPING_SLOT") {
+        if (errObj.code === "P2002" && errObj.meta?.target?.includes("concurrencyToken")) {
+          return {
+            error: "El horario seleccionado acaba de ser reservado. Por favor elige otro.",
+            status: 409,
+          };
+        }
+
+        // Serialization failure (Prisma P2034) -> retry
+        if (errObj.code === "P2034" && attempt < MAX_RETRIES) {
+          await new Promise((r) => setTimeout(r, 50 * attempt));
+          continue;
+        }
+
+        break;
+      }
+    }
+
+    if (!nuevoTurno) {
+      const errObj = lastError as { message?: string; code?: string };
+      if (errObj?.message === "OVERLAPPING_SLOT" || errObj?.code === "P2034" || errObj?.code === "P2002") {
         return {
-          error: "El horario seleccionado se solapa con otro turno reservado. Por favor elige otro horario.",
+          error: "El horario seleccionado ya no está disponible. Por favor elige otro horario.",
           status: 409,
         };
       }
-      if (e.code === "P2002" && e.meta?.target?.includes("concurrencyToken")) {
-        return {
-          error: "El horario seleccionado acaba de ser reservado. Por favor elige otro.",
-          status: 409,
-        };
-      }
-      throw e;
+      console.error("Error persistiendo turno en AppointmentService:", lastError);
+      return { error: "Error al guardar el turno", status: 500 };
     }
 
     // 10. CallMeBot Integration (Server-side notification)
     try {
-      const phone = layoutConfig.callMeBotPhone;
+      const phone = rawConfig.callMeBotPhone;
       const apiKey = decryptSecret(business.callMeBotApiKey);
 
       if (phone && apiKey) {
@@ -438,10 +534,10 @@ export class AppointmentService {
         });
 
         const templateConfirmed =
-          layoutConfig.waTemplateConfirmed ||
+          rawConfig.waTemplateConfirmed ||
           `¡Hola! {{cliente}} tu turno en {{negocio}} quedó confirmado para {{fecha}} a las {{hora}} hs. ¡Te esperamos!`;
         const templateTransfer =
-          layoutConfig.waTemplateTransfer ||
+          rawConfig.waTemplateTransfer ||
           `¡Hola! {{cliente}} para confirmar tu turno, transfiere a {{datos_bancarios}} y pon el código {{referencia}} en el concepto.`;
 
         const templateToUse =
@@ -470,8 +566,9 @@ export class AppointmentService {
                 idempotencyKey: `appointment:${nuevoTurno.id}:confirmation`,
               },
             });
-          } catch (e: any) {
-            if (e.code !== "P2002") throw e;
+          } catch (e: unknown) {
+            const err = e as { code?: string };
+            if (err.code !== "P2002") throw e;
           }
         }
       } catch (waError) {

@@ -295,6 +295,8 @@ model Table {
 
   business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
   orders      Order[]
+
+  @@unique([businessId, number])
 }
 
 model Order {

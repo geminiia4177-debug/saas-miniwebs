@@ -134,11 +134,11 @@ export async function GET(req: Request) {
 // ─── POST: Create appointment ─────────────────────────────────────────────────
 export async function POST(req: Request) {
   try {
-    // P1-003: Rate limit by IP
+    // P1-001: Rate limit by IP with failClosed
     const ip =
       req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
     const ipKey = `appt:ip:${ip}`;
-    if (!(await checkRateLimit(ipKey, APPT_RATE_MAX_IP, APPT_RATE_WINDOW_MS))) {
+    if (!(await checkRateLimit(ipKey, APPT_RATE_MAX_IP, APPT_RATE_WINDOW_MS, { failClosed: true }))) {
       const retryAfter = Math.ceil(
         await getRateLimitRetryAfterMs(ipKey, APPT_RATE_WINDOW_MS) / 1000
       );
@@ -150,11 +150,11 @@ export async function POST(req: Request) {
 
     const rawData = await req.json();
 
-    // P1-003: Rate limit by phone number
+    // P1-001: Rate limit by phone number with failClosed
     if (rawData.clientPhone) {
       const normalizedPhone = String(rawData.clientPhone).replace(/\D/g, "").slice(-10);
       const phoneKey = `appt:phone:${normalizedPhone}`;
-      if (!(await checkRateLimit(phoneKey, APPT_RATE_MAX_PHONE, APPT_RATE_WINDOW_MS))) {
+      if (!(await checkRateLimit(phoneKey, APPT_RATE_MAX_PHONE, APPT_RATE_WINDOW_MS, { failClosed: true }))) {
         return NextResponse.json(
           { error: "Ya tienes varias reservas en curso. Intenta más tarde." },
           { status: 429 }

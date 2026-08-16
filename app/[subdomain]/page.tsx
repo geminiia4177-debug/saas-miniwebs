@@ -109,16 +109,17 @@ export default async function PublicLandingPage({ params, searchParams }: { para
     return notFound();
   }
 
-  // P0-005: Preview authorization check (requires owner/admin session)
+  // P0-001: Preview authorization check (requires authenticated owner/admin session). Anonymous preview is DENIED.
   let isPreviewAuthorized = false;
   if (sp.preview === "true") {
     const session = await getServerSession(authOptions);
-    if (session?.user && (session.user.role === "ADMIN" || session.user.id === rawBiz.userId)) {
-      isPreviewAuthorized = true;
+    if (!session?.user || (session.user.role !== "ADMIN" && session.user.id !== rawBiz.userId)) {
+      return notFound();
     }
+    isPreviewAuthorized = true;
   }
 
-  // P0-005: Public visitors ONLY see publishedConfig. LayoutConfig (draft) is only visible in authorized preview.
+  // P0-001: Public visitors ONLY see publishedConfig. If null, fallback to defaultPublicConfig. NEVER fallback to draft layoutConfig.
   const defaultPublicConfig = {
     sections: [
       { id: "hero", label: "Hero / Portada", icon: "image", visible: true, config: { title: `Bienvenido a ${rawBiz.name}`, subtitle: "Tu negocio", ctaText: "Reservar Turno" } },
@@ -129,7 +130,7 @@ export default async function PublicLandingPage({ params, searchParams }: { para
 
   const activeConfig = isPreviewAuthorized
     ? ((rawBiz.layoutConfig as any) || (rawBiz.publishedConfig as any) || defaultPublicConfig)
-    : ((rawBiz.publishedConfig as any) || (rawBiz.layoutConfig as any) || defaultPublicConfig);
+    : ((rawBiz.publishedConfig as any) || defaultPublicConfig);
 
   // SEC-033 Fix: Create a strict PublicBusinessDTO to avoid data leakage
   const biz = {

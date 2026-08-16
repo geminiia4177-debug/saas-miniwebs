@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { BusinessStatus, PaymentStatus, BusinessType } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { requireAdmin } from "@/lib/auth-helpers";
@@ -194,10 +195,10 @@ export async function POST(req: Request) {
         email: email,
         phone: data.phone || null,
         description: data.description || null,
-        type: typeKey,
-        status: (data.status || "TRIAL") as any,
+        type: typeKey as BusinessType,
+        status: (data.status || "TRIAL") as BusinessStatus,
         paymentAmount: Number(data.paymentAmount) || 0,
-        paymentStatus: (data.paymentStatus || "pending") as any,
+        paymentStatus: (data.paymentStatus || "pending") as PaymentStatus,
         primaryColor: themeProfile.accent,
         secondaryColor: themeProfile.bg,
         fontFamily: themeProfile.fontDisplay.includes("sans") ? "sans" : "serif",

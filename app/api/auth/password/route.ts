@@ -3,12 +3,25 @@ import { prisma } from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import bcrypt from "bcryptjs";
+import { checkRateLimit } from "@/lib/rate-limit";
+
+const PWD_RATE_WINDOW_MS = 15 * 60 * 1000; // 15 mins
+const PWD_MAX_ATTEMPTS = 5;
 
 export async function PUT(req: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
+    // P1-001: Rate limit password change attempts
+    const rateLimitKey = `pwd_change:user:${session.user.id}`;
+    if (!(await checkRateLimit(rateLimitKey, PWD_MAX_ATTEMPTS, PWD_RATE_WINDOW_MS, { failClosed: true }))) {
+      return NextResponse.json(
+        { error: "Demasiados intentos de cambio de contraseña. Por favor intenta en 15 minutos." },
+        { status: 429 }
+      );
     }
 
     const { currentPassword, newPassword } = await req.json();
@@ -40,20 +53,21 @@ export async function PUT(req: Request) {
       return NextResponse.json({ error: "La contraseña actual es incorrecta." }, { status: 400 });
     }
 
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
 
     await prisma.user.update({
       where: { id: user.id },
       data: { 
         password: hashedPassword,
         mustChangePassword: false,
+        passwordChangedAt: new Date(),
         sessionVersion: { increment: 1 } 
       },
     });
 
     return NextResponse.json({ message: "Contraseña actualizada exitosamente" });
   } catch (error) {
-    console.error("Error cambiando contraseña:", error);
+    console.error("Error cambiando contraseña:", error instanceof Error ? error.message : "unknown");
     return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
   }
 }

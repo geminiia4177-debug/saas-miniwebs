@@ -11,8 +11,20 @@ import { checkRateLimit } from "@/lib/rate-limit";
 const LOGIN_RATE_WINDOW_MS = 15 * 60 * 1000;
 const LOGIN_MAX_ATTEMPTS = 5;
 
+import type { Adapter } from "next-auth/adapters";
+
+interface ExtendedAuthUser {
+  id: string;
+  name?: string | null;
+  email?: string | null;
+  role: string;
+  mustChangePassword?: boolean;
+  forcePasswordChange?: boolean;
+  sessionVersion?: number;
+}
+
 export const authOptions: NextAuthOptions = {
-  adapter: PrismaAdapter(prisma) as any,
+  adapter: PrismaAdapter(prisma) as unknown as Adapter,
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID as string,
@@ -65,15 +77,20 @@ export const authOptions: NextAuthOptions = {
           data: { lastLoginAt: new Date(), failedLoginCount: 0 }
         });
         
-        if ((user as any).mustChangePassword) {
-          (user as any).forcePasswordChange = true;
-        }
+        const authUser: ExtendedAuthUser = {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          mustChangePassword: user.mustChangePassword,
+          forcePasswordChange: user.mustChangePassword,
+          sessionVersion: user.sessionVersion,
+        };
 
-        return user as any;
+        return authUser;
       }
     })
   ],
-  // 👇 ESTA ES LA LÍNEA QUE FALTABA
   pages: {
     signIn: '/login', 
   },
@@ -83,9 +100,10 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.role = user.role;
-        token.sessionVersion = (user as any).sessionVersion || 1;
-        if ((user as any).forcePasswordChange) {
+        const u = user as ExtendedAuthUser;
+        token.role = u.role;
+        token.sessionVersion = u.sessionVersion || 1;
+        if (u.forcePasswordChange) {
           token.forcePasswordChange = true;
         }
       } else if (token.sub) {
@@ -96,7 +114,9 @@ export const authOptions: NextAuthOptions = {
         const currentTokenVersion = token.sessionVersion || 1;
         
         if (!dbUser || dbUser.sessionVersion !== currentTokenVersion) {
-          return {} as any; // Invalidate token si no coinciden
+          token.sub = "";
+          token.role = "";
+          return token;
         }
         token.role = dbUser.role;
       }
@@ -104,8 +124,8 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       if (session.user) {
-        session.user.role = token.role;
-        session.user.id = token.sub;
+        session.user.role = token.role as string;
+        session.user.id = token.sub as string;
         if (token.forcePasswordChange) {
           session.user.forcePasswordChange = true;
         }

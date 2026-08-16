@@ -16,11 +16,18 @@ export async function generateMetadata({ params }: { params: Promise<{ subdomain
         { customDomain: resolvedParams.subdomain }
       ]
     },
+    select: {
+      name: true,
+      logoUrl: true,
+      customDomain: true,
+      status: true,
+      publishedConfig: true,
+    }
   });
 
-  if (!biz) return {};
+  if (!biz || biz.status === "BLOCKED" || biz.status === "ARCHIVED") return {};
 
-  const config = biz.layoutConfig as any;
+  const config = (biz.publishedConfig as any) || {};
   const linksConfig = config?.biolinks;
 
   if (!linksConfig || !linksConfig.active) return {};
@@ -67,13 +74,16 @@ export default async function BiolinksPage({ params }: { params: Promise<{ subdo
     },
   });
   
-  if (!bizData) return notFound();
+  if (!bizData || bizData.status === "BLOCKED" || bizData.status === "ARCHIVED") {
+    return notFound();
+  }
   
-  // Parse layoutConfig from JSON if needed (prisma returns it as JSON object or null)
-  const biz: any = { ...bizData, layoutConfig: typeof bizData.layoutConfig === "string" ? (JSON as any).parse(bizData.layoutConfig) : bizData.layoutConfig };
+  // Public biolinks page consumes publishedConfig
+  const published = (bizData.publishedConfig as any) || {};
+  const biz: any = { ...bizData, layoutConfig: published };
 
-  // If biolinks is not active, return 404 or redirect to main
-  const config = biz.layoutConfig?.biolinks;
+  // If biolinks is not active, return 404
+  const config = published?.biolinks;
   if (!config || !config.active) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-black text-white p-6">

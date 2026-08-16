@@ -60,10 +60,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Faltan parámetros" }, { status: 400 });
     }
 
-    // P1-004: Rate limiting per IP + business
+    // P1-001: Rate limiting per IP + business with failClosed
     const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
     const rateLimitKey = `chat:${ip}:${businessId}`;
-    if (!(await checkRateLimit(rateLimitKey, CHAT_RATE_MAX, CHAT_RATE_WINDOW_MS))) {
+    if (!(await checkRateLimit(rateLimitKey, CHAT_RATE_MAX, CHAT_RATE_WINDOW_MS, { failClosed: true }))) {
       const retryAfter = Math.ceil(
         await getRateLimitRetryAfterMs(rateLimitKey, CHAT_RATE_WINDOW_MS) / 1000
       );
@@ -91,6 +91,7 @@ export async function POST(req: Request) {
         status: true,
         timezone: true,
         layoutConfig: true,
+        publishedConfig: true,
         employees: {
           where: { isPublic: true },
           select: { name: true, role: true }
@@ -101,7 +102,7 @@ export async function POST(req: Request) {
     if (!biz) return NextResponse.json({ error: "Negocio no encontrado" }, { status: 404 });
 
     // Check if business is active
-    if (biz.status !== "ACTIVE" && biz.status !== "DEMO") {
+    if (biz.status !== "ACTIVE" && biz.status !== "DEMO" && biz.status !== "TRIAL") {
       return NextResponse.json(
         { error: "El asistente no está disponible para este negocio temporalmente." },
         { status: 403 }
@@ -111,8 +112,7 @@ export async function POST(req: Request) {
     const timezone = biz.timezone ?? DEFAULT_BUSINESS_TIMEZONE;
 
     // P1-012: Separate system instructions from business data
-    // Business data is injected as factual sections, not as rule-overriding content.
-    const layoutConfig = (biz.layoutConfig as any) || {};
+    const layoutConfig = (biz.publishedConfig || biz.layoutConfig || {}) as Record<string, any>;
     const botName = chatbotName || layoutConfig.chatbotName || "Asistente Virtual";
     const address = layoutConfig.address || "No especificada";
     const phone = biz.phone || layoutConfig.whatsapp || "No especificado";

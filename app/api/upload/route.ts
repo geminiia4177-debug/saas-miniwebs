@@ -18,10 +18,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
-    // 2. P1-001: Rate limit by IP
+    // 2. P1-001: Rate limit by IP with failClosed
     const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
     const ipKey = `upload:ip:${ip}`;
-    if (!(await checkRateLimit(ipKey, MAX_UPLOADS_PER_WINDOW, WINDOW_MS))) {
+    if (!(await checkRateLimit(ipKey, MAX_UPLOADS_PER_WINDOW, WINDOW_MS, { failClosed: true }))) {
       const retryAfter = Math.ceil(await getRateLimitRetryAfterMs(ipKey, WINDOW_MS) / 1000);
       return NextResponse.json(
         { error: "Demasiadas subidas desde esta IP. Intenta más tarde." },
@@ -29,9 +29,9 @@ export async function POST(req: Request) {
       );
     }
 
-    // 3. P1-001: Rate limit by user
+    // 3. P1-001: Rate limit by user with failClosed
     const userKey = `upload:user:${session.user.id}`;
-    if (!(await checkRateLimit(userKey, MAX_UPLOADS_PER_WINDOW, WINDOW_MS))) {
+    if (!(await checkRateLimit(userKey, MAX_UPLOADS_PER_WINDOW, WINDOW_MS, { failClosed: true }))) {
       const retryAfter = Math.ceil(await getRateLimitRetryAfterMs(userKey, WINDOW_MS) / 1000);
       return NextResponse.json(
         { error: "Límite de subidas alcanzado. Intenta en un minuto." },

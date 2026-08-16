@@ -32,9 +32,9 @@ export async function POST(request: Request) {
     const { error: authError } = await requireBusinessOwner(businessId);
     if (authError) return authError;
 
-    // P1-024: Rate limit per business
+    // P1-024: Rate limit per business with failClosed
     const rateLimitKey = `wa:${businessId}:${session.user.id}`;
-    if (!(await checkRateLimit(rateLimitKey, WA_RATE_MAX, WA_RATE_WINDOW_MS))) {
+    if (!(await checkRateLimit(rateLimitKey, WA_RATE_MAX, WA_RATE_WINDOW_MS, { failClosed: true }))) {
       const retryAfter = Math.ceil(
         await getRateLimitRetryAfterMs(rateLimitKey, WA_RATE_WINDOW_MS) / 1000
       );
@@ -73,8 +73,9 @@ export async function POST(request: Request) {
       });
 
       return NextResponse.json({ success: true, queuedMessageId: queuedMessage.id });
-    } catch (e: any) {
-      if (e.code === "P2002" && idempotencyKey) {
+    } catch (e: unknown) {
+      const err = e as { code?: string };
+      if (err.code === "P2002" && idempotencyKey) {
         // Unique constraint on idempotencyKey — return existing record
         const existing = await prisma.whatsappMessageQueue.findUnique({
           where: { idempotencyKey },
@@ -88,7 +89,7 @@ export async function POST(request: Request) {
       }
       throw e;
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error encolando mensaje WhatsApp:", error instanceof Error ? error.message : "unknown");
     return NextResponse.json({ error: "Error al enviar el mensaje" }, { status: 500 });
   }

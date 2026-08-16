@@ -1,15 +1,18 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireBusinessOwner } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/db";
+
+interface ClientStat {
+  name: string;
+  phone: string;
+  visits: number;
+  lastVisit: Date;
+  firstVisit: Date;
+  services: Map<string, number>;
+}
 
 export async function GET(req: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-    }
-
     const { searchParams } = new URL(req.url);
     const businessId = searchParams.get("businessId");
 
@@ -17,22 +20,10 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Falta businessId" }, { status: 400 });
     }
 
-    // Verificar permisos
-    const isAdmin = (session.user as any).role === "ADMIN";
-    const business = await prisma.business.findUnique({
-      where: { id: businessId },
-      select: { userId: true }
-    });
+    // Tenancy authorization check
+    const { error: authError } = await requireBusinessOwner(businessId);
+    if (authError) return authError;
 
-    if (!business) {
-      return NextResponse.json({ error: "Negocio no encontrado" }, { status: 404 });
-    }
-
-    if (business.userId !== session.user.id && !isAdmin) {
-      return NextResponse.json({ error: "Prohibido" }, { status: 403 });
-    }
-
-    // SEC-041 (P1-023): Limit historical fetch to prevent OOM errors
     // Limit to the last 6 months and a maximum of 5000 appointments
     const sixMonthsAgo = new Date();
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
@@ -48,7 +39,7 @@ export async function GET(req: Request) {
     });
 
     // 1. Client Analysis (Group by Phone)
-    const clientMap = new Map<string, any>();
+    const clientMap = new Map<string, ClientStat>();
     
     appointments.forEach(appt => {
       if (!appt.clientPhone) return;
@@ -59,15 +50,15 @@ export async function GET(req: Request) {
           name: appt.clientName,
           phone: phone,
           visits: 0,
-          lastVisit: appt.date, // since we ordered by date desc, the first one we see is the last visit
+          lastVisit: appt.date,
           firstVisit: appt.date,
           services: new Map<string, number>()
         });
       }
       
-      const client = clientMap.get(phone);
+      const client = clientMap.get(phone)!;
       client.visits += 1;
-      client.firstVisit = appt.date; // will be updated to the oldest date
+      client.firstVisit = appt.date;
       if (appt.serviceName) {
         client.services.set(appt.serviceName, (client.services.get(appt.serviceName) || 0) + 1);
       }

@@ -56,7 +56,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
     orders.forEach(order => {
       const orderDate = new Date(order.createdAt);
-      const totalNum = typeof order.total === 'number' ? order.total : (order.total as any).toNumber ? (order.total as any).toNumber() : Number(order.total);
+      const totalNum = Number(order.total) || 0;
       if (orderDate >= startDay) dayTotal += totalNum;
       if (orderDate >= startWeek) weekTotal += totalNum;
       if (orderDate >= startMonth) monthTotal += totalNum;

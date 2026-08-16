@@ -538,22 +538,64 @@ section("Static Code Hardening Audits (P0/P1)");
     !bizRoute.includes('bcrypt.hash("admin"')
   );
 
-  // P0-004: Subdomain landing page checks BLOCKED and ARCHIVED
-  const landingPage = fs.readFileSync("./app/[subdomain]/page.tsx", "utf-8");
+  // P0-001: Separation of draft and published configs
+  const landingPageContent = fs.readFileSync("./app/[subdomain]/page.tsx", "utf-8");
   assert(
-    "P0-004: app/[subdomain]/page.tsx rejects BLOCKED businesses",
-    landingPage.includes('status === "BLOCKED"')
+    "P0-001: app/[subdomain]/page.tsx does NOT use layoutConfig as public fallback",
+    !landingPageContent.includes("((rawBiz.publishedConfig as any) || (rawBiz.layoutConfig as any)")
   );
   assert(
-    "P0-004: app/[subdomain]/page.tsx rejects ARCHIVED businesses",
-    landingPage.includes('status === "ARCHIVED"')
+    "P0-001: app/[subdomain]/page.tsx denies unauthorized preview",
+    landingPageContent.includes("if (sp.preview === \"true\")") && landingPageContent.includes("notFound()")
+  );
+
+  // P0-002: Concurrency & Serializable isolation in AppointmentService
+  const apptServiceContent = fs.readFileSync("./lib/appointment-service.ts", "utf-8");
+  assert(
+    "P0-002: AppointmentService uses Serializable isolation level",
+    apptServiceContent.includes("Prisma.TransactionIsolationLevel.Serializable")
+  );
+  assert(
+    "P0-002: AppointmentService implements retry loop for concurrency conflicts",
+    apptServiceContent.includes("MAX_RETRIES") && apptServiceContent.includes("attempt <= MAX_RETRIES")
+  );
+
+  // P1-001: failClosed on critical routes
+  const apptRouteContent = fs.readFileSync("./app/api/appointments/route.ts", "utf-8");
+  assert(
+    "P1-001: appointments route enforces failClosed rate limiting",
+    apptRouteContent.includes("failClosed: true")
+  );
+
+  const chatRouteContent = fs.readFileSync("./app/api/chat/route.ts", "utf-8");
+  assert(
+    "P1-001: chat route enforces failClosed rate limiting",
+    chatRouteContent.includes("failClosed: true")
+  );
+
+  const uploadRouteContent = fs.readFileSync("./app/api/upload/route.ts", "utf-8");
+  assert(
+    "P1-001: upload route enforces failClosed rate limiting",
+    uploadRouteContent.includes("failClosed: true")
+  );
+
+  const biolinksClickContent = fs.readFileSync("./app/api/biolinks/click/route.ts", "utf-8");
+  assert(
+    "P1-002: biolinks click route uses transaction for atomic updates",
+    biolinksClickContent.includes("prisma.$transaction")
+  );
+
+  // P1-019: Table unique constraint in schema.prisma
+  const schemaContent = fs.readFileSync("./prisma/schema.prisma", "utf-8");
+  assert(
+    "P1-019: Table model has unique constraint @@unique([businessId, number])",
+    schemaContent.includes("@@unique([businessId, number])")
   );
 
   // P0-008: Chat route uses AppointmentService
-  const chatRoute = fs.readFileSync("./app/api/chat/route.ts", "utf-8");
   assert(
     "P0-008: app/api/chat/route.ts uses AppointmentService",
-    chatRoute.includes("AppointmentService.createAppointment")
+    chatRouteContent.includes("AppointmentService.createAppointment")
   );
 
   // P2-001: CSP header in next.config.ts

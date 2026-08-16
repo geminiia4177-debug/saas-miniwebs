@@ -75,25 +75,43 @@ export async function POST(req: Request) {
     }
 
     // Assign next available table number in a concurrency-safe loop/transaction
-    const newTable = await prisma.$transaction(async (tx) => {
-      const lastTable = await tx.table.findFirst({
-        where: { businessId: business.id },
-        orderBy: { number: "desc" },
-      });
+    let newTable = null;
+    let attempts = 0;
 
-      const newNumber = lastTable ? lastTable.number + 1 : 1;
-      const tableUrl = business.customDomain ? `https://${business.customDomain}/?mesa=${newNumber}` : `https://${business.subdomain}.saas-miniwebs.com/?mesa=${newNumber}`;
-      const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(tableUrl)}`;
+    while (!newTable && attempts < 3) {
+      attempts++;
+      try {
+        newTable = await prisma.$transaction(async (tx) => {
+          const lastTable = await tx.table.findFirst({
+            where: { businessId: business.id },
+            orderBy: { number: "desc" },
+          });
 
-      return await tx.table.create({
-        data: {
-          businessId: business.id,
-          number: newNumber,
-          status: "CLOSED",
-          qrCodeUrl,
-        },
-      });
-    });
+          const newNumber = lastTable ? lastTable.number + 1 : 1;
+          const tableUrl = business.customDomain ? `https://${business.customDomain}/?mesa=${newNumber}` : `https://${business.subdomain}.saas-miniwebs.com/?mesa=${newNumber}`;
+          const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(tableUrl)}`;
+
+          return await tx.table.create({
+            data: {
+              businessId: business.id,
+              number: newNumber,
+              status: "CLOSED",
+              qrCodeUrl,
+            },
+          });
+        });
+      } catch (err: unknown) {
+        const errObj = err as { code?: string };
+        if (errObj.code === "P2002" && attempts < 3) {
+          continue;
+        }
+        throw err;
+      }
+    }
+
+    if (!newTable) {
+      return NextResponse.json({ error: "Error de concurrencia al crear la mesa" }, { status: 409 });
+    }
 
     return NextResponse.json(newTable);
   } catch (error) {
