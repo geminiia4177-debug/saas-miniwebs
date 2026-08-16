@@ -280,11 +280,22 @@ export const PaymentDataSchema = z.object({
   titular: z.string().max(200).optional().nullable(),
 });
 
+export const RESERVED_SLUGS = [
+  "admin", "api", "login", "dashboard", "sitemap", "whatsapp", "register",
+  "_next", "favicon.ico", "robots.txt", "static", "public", "undefined", "null"
+];
+
 // ─── BUSINESS SCHEMAS ─────────────────────────────────────────────────────────
 
 export const businessSchema = z.object({
   name: z.string().min(2).max(200, "El nombre debe tener al menos 2 caracteres"),
-  subdomain: z.string().min(3).max(63).regex(/^[a-z0-9-]+$/, "Solo minúsculas, números y guiones"),
+  subdomain: z.string()
+    .min(3)
+    .max(63)
+    .regex(/^[a-z0-9-]+$/, "Solo minúsculas, números y guiones")
+    .refine((val) => !RESERVED_SLUGS.includes(val.toLowerCase()), {
+      message: "Este link es una ruta interna reservada del sistema",
+    }),
   email: z.string().email("Debe ser un email válido").optional().nullable(),
   customDomain: z.string().max(253).optional().nullable(),
   phone: z.string().max(30).optional().nullable(),
@@ -300,7 +311,14 @@ export const businessSchema = z.object({
 
 export const ownerBusinessUpdateSchema = z.object({
   name: z.string().min(2).max(200).optional(),
-  subdomain: z.string().min(3).max(63).regex(/^[a-z0-9-]+$/, "Solo minúsculas, números y guiones").optional(),
+  subdomain: z.string()
+    .min(3)
+    .max(63)
+    .regex(/^[a-z0-9-]+$/, "Solo minúsculas, números y guiones")
+    .refine((val) => !RESERVED_SLUGS.includes(val.toLowerCase()), {
+      message: "Este link es una ruta interna reservada del sistema",
+    })
+    .optional(),
   email: z.union([z.string().email().max(320), z.literal("")]).optional().nullable(),
   phone: z.string().max(30).optional().nullable(),
   description: z.string().max(2000).optional().nullable(),

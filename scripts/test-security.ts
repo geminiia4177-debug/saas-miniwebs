@@ -584,6 +584,47 @@ section("P0-002: Queue Lease Token & Recovery");
   assert("Worker B with valid lease completes job", workerBFinished === true);
 }
 
+// P1-001 & P1-002: Reserved Slugs Protection (Path-based routing)
+section("P1-001/P1-002: Reserved Slugs Protection");
+{
+  const { businessSchema, RESERVED_SLUGS } = require("../lib/validations");
+
+  assert("RESERVED_SLUGS includes admin", RESERVED_SLUGS.includes("admin"));
+  assert("RESERVED_SLUGS includes api", RESERVED_SLUGS.includes("api"));
+  assert("RESERVED_SLUGS includes login", RESERVED_SLUGS.includes("login"));
+  assert("RESERVED_SLUGS includes dashboard", RESERVED_SLUGS.includes("dashboard"));
+  assert("RESERVED_SLUGS includes sitemap", RESERVED_SLUGS.includes("sitemap"));
+  assert("RESERVED_SLUGS includes whatsapp", RESERVED_SLUGS.includes("whatsapp"));
+
+  const validBiz = businessSchema.safeParse({
+    name: "Barberia La Esquina",
+    subdomain: "barberia-la-esquina",
+    email: "test@barberia.com",
+  });
+  assert("Valid businessSlug is accepted", validBiz.success === true);
+
+  const adminSlugBiz = businessSchema.safeParse({
+    name: "Fake Admin",
+    subdomain: "admin",
+    email: "fake@admin.com",
+  });
+  assert("Reserved slug 'admin' is rejected with error", adminSlugBiz.success === false);
+
+  const apiSlugBiz = businessSchema.safeParse({
+    name: "Fake Api",
+    subdomain: "api",
+    email: "fake@api.com",
+  });
+  assert("Reserved slug 'api' is rejected with error", apiSlugBiz.success === false);
+
+  const loginSlugBiz = businessSchema.safeParse({
+    name: "Fake Login",
+    subdomain: "login",
+    email: "fake@login.com",
+  });
+  assert("Reserved slug 'login' is rejected with error", loginSlugBiz.success === false);
+}
+
 // Static File Audits for P0 fixes
 section("Static Code Hardening Audits (P0/P1)");
 {

@@ -274,8 +274,9 @@ app.prepare().then(() => {
             }
             
             const sender = senderEntry.sock;
-            // P0-001: Declarar leaseToken fuera del try para que sea accesible en el catch
+            // P0-001: Declarar leaseToken y messageDispatched fuera del try para acceso en catch
             let leaseToken = null;
+            let messageDispatched = false;
 
             try {
               // P1-001: Usar crypto.randomUUID() para generar lease tokens criptográficamente seguros
@@ -299,7 +300,6 @@ app.prepare().then(() => {
                 continue;
               }
               
-              let messageDispatched = false;
               const [result] = await sender.onWhatsApp(jid);
               if (result && result.exists) {
                 await sender.sendMessage(result.jid, { text: msg.message });
