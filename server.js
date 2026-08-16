@@ -9,6 +9,7 @@ const cron = require('node-cron');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const crypto = require('crypto');
+const { normalizePhoneToE164, phoneToWhatsAppJid } = require('./lib/phone-core.js');
 const dev = process.env.NODE_ENV !== 'production';
 const hostname = 'localhost';
 const port = process.env.PORT || 3000;
@@ -170,11 +171,16 @@ app.prepare().then(() => {
             }
 
             const activeClient = businessClient.sock;
-
-            let cleanPhone = appt.clientPhone.replace(/\D/g, '');
-            if (cleanPhone.length === 10) cleanPhone = `52${cleanPhone}`;
-            const jid = `${cleanPhone}@s.whatsapp.net`;
+            const jid = phoneToWhatsAppJid(appt.clientPhone);
+            if (!jid) {
+              await prisma.appointment.update({
+                where: { id: appt.id },
+                data: { reminderSent: true, reminderClaimedAt: null }
+              });
+              continue;
+            }
             
+            let messageSent = false;
             try {
               const [result] = await activeClient.onWhatsApp(jid);
               if (!result || !result.exists) {
@@ -196,19 +202,27 @@ app.prepare().then(() => {
               const msg = `🔔 *Recordatorio*\n¡Hola ${appt.clientName}! Te recordamos que tu turno en ${appt.business?.name || "el local"} es mañana a las ${hora} hs. ¡Te esperamos!`;
 
               await activeClient.sendMessage(result.jid, { text: msg });
+              messageSent = true;
               
               await prisma.appointment.update({
                 where: { id: appt.id },
                 data: { reminderSent: true, reminderClaimedAt: null }
               });
-              console.log(`> [Reminder] Recordatorio enviado a ${appt.clientName} (${cleanPhone}) vía Business[${appt.businessId}]`);
+              console.log(`> [Reminder] Recordatorio enviado a ${appt.clientName} (${jid}) vía Business[${appt.businessId}]`);
             } catch (sendErr) {
               console.error(`> [Reminder] Error enviando recordatorio a ${appt.clientName}:`, sendErr);
-              // Liberar claim en caso de fallo transitorio
-              await prisma.appointment.update({
-                where: { id: appt.id },
-                data: { reminderClaimedAt: null }
-              });
+              // P0-002: Si falló antes de sendMessage, liberar claim. Si ya fue enviado, no liberar para evitar duplicados.
+              if (!messageSent) {
+                await prisma.appointment.update({
+                  where: { id: appt.id },
+                  data: { reminderClaimedAt: null }
+                });
+              } else {
+                await prisma.appointment.updateMany({
+                  where: { id: appt.id },
+                  data: { reminderSent: true, reminderClaimedAt: null }
+                });
+              }
             }
           }
         } catch (error) {
@@ -260,10 +274,12 @@ app.prepare().then(() => {
             }
             
             const sender = senderEntry.sock;
+            // P0-001: Declarar leaseToken fuera del try para que sea accesible en el catch
+            let leaseToken = null;
 
             try {
               // P1-001: Usar crypto.randomUUID() para generar lease tokens criptográficamente seguros
-              const leaseToken = crypto.randomUUID();
+              leaseToken = crypto.randomUUID();
               const claimResult = await prisma.whatsappMessageQueue.updateMany({
                 where: { id: msg.id, status: 'PENDING' },
                 data: { status: 'PROCESSING', lockedAt: new Date(), leaseToken: leaseToken }
@@ -274,9 +290,14 @@ app.prepare().then(() => {
                 continue;
               }
 
-              let cleanPhone = msg.toPhone.replace(/\D/g, '');
-              if (cleanPhone.length === 10) cleanPhone = `52${cleanPhone}`;
-              const jid = `${cleanPhone}@s.whatsapp.net`;
+              const jid = phoneToWhatsAppJid(msg.toPhone);
+              if (!jid) {
+                await prisma.whatsappMessageQueue.updateMany({
+                  where: { id: msg.id, leaseToken: leaseToken },
+                  data: { status: 'FAILED', lockedAt: null, leaseToken: null, errorMessage: 'Número telefónico inválido' }
+                });
+                continue;
+              }
               
               const [result] = await sender.onWhatsApp(jid);
               if (result && result.exists) {
@@ -287,7 +308,7 @@ app.prepare().then(() => {
                   data: { status: 'SENT', lockedAt: null, leaseToken: null }
                 });
                 if (updateRes.count > 0) {
-                  console.log(`> Mensaje encolado enviado a ${cleanPhone} vía Business[${msg.businessId}]`);
+                  console.log(`> Mensaje encolado enviado a ${jid} vía Business[${msg.businessId}]`);
                 } else {
                   console.warn(`> Lease expirado o revocado para mensaje ${msg.id}. No se sobreescribe estado.`);
                 }
@@ -299,17 +320,19 @@ app.prepare().then(() => {
               }
             } catch (error) {
               console.error(`Error enviando mensaje de la cola (ID: ${msg.id}):`, error);
-              const nextRetries = (msg.retries || 0) + 1;
-              await prisma.whatsappMessageQueue.updateMany({
-                where: { id: msg.id, leaseToken: leaseToken },
-                data: { 
-                  status: nextRetries >= 3 ? 'FAILED' : 'PENDING', 
-                  retries: nextRetries,
-                  lockedAt: null,
-                  leaseToken: null,
-                  errorMessage: error.message
-                }
-              });
+              if (leaseToken) {
+                const nextRetries = (msg.retries || 0) + 1;
+                await prisma.whatsappMessageQueue.updateMany({
+                  where: { id: msg.id, leaseToken: leaseToken },
+                  data: { 
+                    status: nextRetries >= 3 ? 'FAILED' : 'PENDING', 
+                    retries: nextRetries,
+                    lockedAt: null,
+                    leaseToken: null,
+                    errorMessage: error.message || 'Error desconocido'
+                  }
+                });
+              }
             }
           }
         } catch (error) {

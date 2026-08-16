@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db";
 import crypto from "crypto";
 import { decryptSecret } from "@/lib/encryption";
-import { normalizePhoneToE164, phoneToWhatsAppJid } from "@/lib/phone";
+import { normalizePhoneToE164 } from "@/lib/phone";
 import {
   getBusinessDayName,
   getBusinessMinutesSinceMidnight,

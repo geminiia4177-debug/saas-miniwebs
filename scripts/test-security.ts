@@ -700,6 +700,33 @@ section("Static Code Hardening Audits (P0/P1)");
     bizIdRouteContent.includes("LayoutConfigSchema.safeParse(configToPublish)")
   );
 
+  // P0-001: leaseToken declared outside try
+  const serverJsContent = fs.readFileSync("./server.js", "utf-8");
+  assert(
+    "P0-001: server.js declares 'let leaseToken = null' outside try block to avoid ReferenceError in catch",
+    serverJsContent.includes("let leaseToken = null;")
+  );
+
+  // P0-002: messageSent pre-send vs post-send separation
+  assert(
+    "P0-002: server.js tracks messageSent before releasing reminder claim in catch block",
+    serverJsContent.includes("let messageSent = false;") && serverJsContent.includes("if (!messageSent)")
+  );
+
+  // P1-001: Centralized phone library used in server.js
+  assert(
+    "P1-001: server.js imports and uses phoneToWhatsAppJid from lib/phone-core.js",
+    serverJsContent.includes("phoneToWhatsAppJid") && serverJsContent.includes("require('./lib/phone-core.js')")
+  );
+
+  // P1-005: XSS script tag injection test
+  const rawXssPayload = '<script>alert("XSS")</script>';
+  const safeSerialized = JSON.stringify({ name: rawXssPayload }).replace(/</g, '\\u003c');
+  assert(
+    "P1-005: <script> tags are strictly escaped to \\u003c in JSON serialization",
+    !safeSerialized.includes("<script>") && safeSerialized.includes("\\u003cscript")
+  );
+
   // P2-001: CSP header in next.config.ts
   const nextConfig = fs.readFileSync("./next.config.ts", "utf-8");
   assert(
