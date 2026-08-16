@@ -24,11 +24,16 @@ export async function GET(request: Request) {
       include: {
         appointments: {
           orderBy: { date: "desc" },
+          take: 5000,
         },
         orders: {
-          orderBy: { createdAt: "desc" }
+          orderBy: { createdAt: "desc" },
+          take: 5000,
         },
-        sales: true,
+        sales: {
+          orderBy: { date: "desc" },
+          take: 5000,
+        },
       },
     });
 

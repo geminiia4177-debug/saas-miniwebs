@@ -389,14 +389,22 @@ export async function POST(req: Request) {
 
         // Check business status before enqueuing
         if (business.status === "ACTIVE" || business.status === "DEMO" || business.status === "TRIAL") {
-          await prisma.whatsappMessageQueue.create({
-            data: {
-              businessId: data.businessId,
-              toPhone: jid,
-              message: mensajeCliente,
-              status: "PENDING",
-            },
-          });
+          try {
+            await prisma.whatsappMessageQueue.create({
+              data: {
+                businessId: data.businessId,
+                toPhone: jid,
+                message: mensajeCliente,
+                status: "PENDING",
+                idempotencyKey: `appointment:${nuevoTurno.id}:confirmation`,
+              },
+            });
+          } catch (e: any) {
+            if (e.code !== "P2002") {
+              throw e;
+            }
+            // If already enqueued (P2002), do nothing — duplicate prevented
+          }
         }
       } catch (waError) {
         console.error(

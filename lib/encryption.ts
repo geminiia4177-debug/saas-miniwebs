@@ -46,13 +46,17 @@ export function encryptSecret(text: string | null | undefined): string | null {
 export function decryptSecret(encryptedData: string | null | undefined): string | null {
   if (!encryptedData) return null;
   
-  // Si no está en el formato esperado (ej. migración pendiente), lo devolvemos tal cual.
-  // Esto permite que el sistema siga funcionando temporalmente si hay secretos en plaintext.
+  // Strict AES-256-GCM format check: iv (32 hex) : authTag (32 hex) : cipherHex
   const parts = encryptedData.split(':');
-  if (parts.length !== 3) return encryptedData;
+  if (parts.length !== 3) {
+    // If not in encrypted format, do not leak or treat as valid secret
+    return null;
+  }
 
   try {
     const [ivHex, authTagHex, encryptedHex] = parts;
+    if (!ivHex || !authTagHex || !encryptedHex) return null;
+
     const iv = Buffer.from(ivHex, 'hex');
     const authTag = Buffer.from(authTagHex, 'hex');
     
@@ -64,7 +68,7 @@ export function decryptSecret(encryptedData: string | null | undefined): string 
     
     return decrypted;
   } catch (error) {
-    console.error('Decryption failed:', error);
-    return null; // O throw error
+    console.error('Decryption failed');
+    return null;
   }
 }

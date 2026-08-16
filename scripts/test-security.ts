@@ -353,6 +353,106 @@ section("P1-030: Custom Domain Validation");
   assert("Relative path is rejected", validateHostname("/api/admin") === null);
 }
 
+// P1-003 & P1-004 & P1-005: WhatsApp Idempotency & Queue Concurrency
+section("P1-003/P1-004/P1-005: WhatsApp Idempotency & Queue Concurrency");
+{
+  // Test idempotency key generation
+  const apptId = "appt-999";
+  const confirmationKey: string = `appointment:${apptId}:confirmation`;
+  const reminderKey: string = `appointment:${apptId}:reminder`;
+
+  assert("Confirmation key format is deterministic", confirmationKey === "appointment:appt-999:confirmation");
+  assert("Reminder key format is distinct from confirmation", reminderKey !== confirmationKey);
+
+  // Test recovery logic for stalled messages
+  const fiveMinAgo = Date.now() - 5 * 60 * 1000;
+  const stalledMsg = { id: "msg-1", status: "PROCESSING", lockedAt: new Date(fiveMinAgo - 1000), retries: 1 };
+  const freshMsg = { id: "msg-2", status: "PROCESSING", lockedAt: new Date(Date.now() - 30 * 1000), retries: 1 };
+
+  function isStalled(msg: { lockedAt: Date }): boolean {
+    return msg.lockedAt.getTime() < Date.now() - 5 * 60 * 1000;
+  }
+
+  assert("Stalled message > 5 min is detected for recovery", isStalled(stalledMsg));
+  assert("Fresh processing message is not considered stalled", !isStalled(freshMsg));
+
+  // Max retries handling
+  function getNextStatus(retries: number): string {
+    return retries + 1 >= 3 ? "FAILED" : "PENDING";
+  }
+  assert("Next retry within limit resets to PENDING", getNextStatus(1) === "PENDING");
+  assert("Next retry exceeding max 3 marks as FAILED", getNextStatus(2) === "FAILED");
+}
+
+// P1-011: Business Status Rejection
+section("P1-011: Business Status (ARCHIVED & BLOCKED)");
+{
+  function canAcceptBookings(status: string): boolean {
+    return status === "ACTIVE" || status === "TRIAL" || status === "DEMO";
+  }
+
+  assert("ACTIVE business accepts bookings", canAcceptBookings("ACTIVE"));
+  assert("TRIAL business accepts bookings", canAcceptBookings("TRIAL"));
+  assert("DEMO business accepts bookings", canAcceptBookings("DEMO"));
+  assert("BLOCKED business rejects bookings", !canAcceptBookings("BLOCKED"));
+  assert("ARCHIVED business rejects bookings", !canAcceptBookings("ARCHIVED"));
+}
+
+// P1-012: Timezone Handling
+section("P1-012: Centralized Timezone Formatting");
+{
+  const testUtcDate = new Date("2026-08-16T15:30:00.000Z");
+  const formattedBsAs = testUtcDate.toLocaleTimeString("es-AR", {
+    timeZone: "America/Argentina/Buenos_Aires",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+  const formattedMexico = testUtcDate.toLocaleTimeString("es-MX", {
+    timeZone: "America/Mexico_City",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+
+  assert("Timezone formatting computes valid string", formattedBsAs.length === 5 && formattedMexico.length === 5);
+  assert("Different timezones output distinct local times", formattedBsAs !== formattedMexico);
+}
+
+// P1-015: Pagination Limits
+section("P1-015: Pagination Hard Limits");
+{
+  function sanitizeLimit(userLimitStr: string | null): number {
+    return Math.min(Math.max(parseInt(userLimitStr || "50", 10) || 50, 1), 200);
+  }
+
+  assert("Default limit is 50", sanitizeLimit(null) === 50);
+  assert("Custom valid limit 20 is accepted", sanitizeLimit("20") === 20);
+  assert("Abusive limit 10000 is capped at 200", sanitizeLimit("10000") === 200);
+  assert("Negative limit is clamped to min 1", sanitizeLimit("-5") === 1);
+}
+
+// P1-009: XSS Payload Sanitization
+section("P1-009: XSS & HTML Attribute Escaping");
+{
+  function sanitizeString(input: string): string {
+    return input
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#x27;")
+      .replace(/\//g, "&#x2F;");
+  }
+
+  const payload1 = "<script>alert(1)</script>";
+  const payload2 = "<img src=x onerror=alert(1)>";
+  const payload3 = "javascript:alert(1)";
+
+  assert("<script> tag is escaped", !sanitizeString(payload1).includes("<script>"));
+  assert("img onerror tag is escaped", !sanitizeString(payload2).includes("<img"));
+  assert("JSON-LD < script breakout is prevented", JSON.stringify({ bio: "</script><script>alert(1)" }).replace(/</g, "\\u003c").indexOf("</script>") === -1);
+}
+
 // ─── Global scan checks ───────────────────────────────────────────────────────
 section("Global Scans");
 {

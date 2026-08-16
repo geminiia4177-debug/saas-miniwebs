@@ -107,7 +107,80 @@ const SectionSchema = z.object({
   config: SectionConfigSchema.optional(),
 });
 
-// P1-015: LayoutConfig schema with support for all visual customizations
+const ProductItemSchema = z.object({
+  id: z.union([z.string(), z.number()]).optional(),
+  name: z.string().max(200).optional(),
+  nombre: z.string().max(200).optional(),
+  price: z.union([z.string().max(50), z.number()]).optional(),
+  precio: z.union([z.string().max(50), z.number()]).optional(),
+  description: z.string().max(1000).optional().nullable(),
+  descripcion: z.string().max(1000).optional().nullable(),
+  imageUrl: z.string().url().max(500).optional().nullable(),
+  active: z.boolean().optional(),
+  disponible: z.boolean().optional(),
+  category: z.string().max(100).optional().nullable(),
+  categoria: z.string().max(100).optional().nullable(),
+  stock: z.number().int().min(0).max(100000).optional().nullable(),
+});
+
+const VehicleItemSchema = z.object({
+  id: z.union([z.string(), z.number()]).optional(),
+  name: z.string().max(200).optional(),
+  nombre: z.string().max(200).optional(),
+  type: z.string().max(100).optional(),
+  tipo: z.string().max(100).optional(),
+  price: z.union([z.string().max(50), z.number()]).optional(),
+  precio: z.union([z.string().max(50), z.number()]).optional(),
+  description: z.string().max(1000).optional().nullable(),
+  active: z.boolean().optional(),
+  disponible: z.boolean().optional(),
+});
+
+const CourtItemSchema = z.object({
+  id: z.union([z.string(), z.number()]).optional(),
+  name: z.string().max(200).optional(),
+  nombre: z.string().max(200).optional(),
+  sport: z.string().max(100).optional(),
+  deporte: z.string().max(100).optional(),
+  price: z.union([z.string().max(50), z.number()]).optional(),
+  precio: z.union([z.string().max(50), z.number()]).optional(),
+  duration: z.number().int().min(1).max(480).optional(),
+  active: z.boolean().optional(),
+  disponible: z.boolean().optional(),
+});
+
+const SpecialityItemSchema = z.object({
+  id: z.union([z.string(), z.number()]).optional(),
+  name: z.string().max(200).optional(),
+  nombre: z.string().max(200).optional(),
+  description: z.string().max(1000).optional().nullable(),
+  active: z.boolean().optional(),
+  disponible: z.boolean().optional(),
+});
+
+const ProfessionalItemSchema = z.object({
+  id: z.union([z.string(), z.number()]).optional(),
+  name: z.string().max(200).optional(),
+  nombre: z.string().max(200).optional(),
+  role: z.string().max(100).optional(),
+  especialidad: z.string().max(100).optional(),
+  phone: z.string().max(30).optional().nullable(),
+  imageUrl: z.string().url().max(500).optional().nullable(),
+  active: z.boolean().optional(),
+});
+
+const BiolinkItemSchema = z.object({
+  id: z.string().max(100),
+  title: z.string().max(200).optional(),
+  titulo: z.string().max(200).optional(),
+  url: z.string().max(500),
+  icon: z.string().max(100).optional(),
+  clicks: z.number().int().min(0).optional(),
+  active: z.boolean().optional(),
+  order: z.number().int().optional(),
+});
+
+// P1-015 / P1-001: LayoutConfig schema with support for all visual customizations — strict schema
 export const LayoutConfigSchema = z.object({
   sections: z.array(SectionSchema).max(50).optional(),
   hours: BusinessHoursSchema.optional(),
@@ -150,20 +223,20 @@ export const LayoutConfigSchema = z.object({
     price: z.number().min(0),
     imageUrl: z.string().url().max(500).optional().nullable(),
   })).max(50).optional(),
-  // Service lists per business type
+  // Service lists per business type (strict schemas)
   barberiaServices: z.array(ServiceItemSchema).max(100).optional(),
-  barberiaProducts: z.array(z.any()).max(100).optional(),
+  barberiaProducts: z.array(ProductItemSchema).max(100).optional(),
   clinicaServices: z.array(ServiceItemSchema).max(100).optional(),
   tallerServices: z.array(ServiceItemSchema).max(100).optional(),
   canchaTarifas: z.array(ServiceItemSchema).max(100).optional(),
-  vehiculos: z.array(z.any()).max(50).optional(),
-  lavaderoVehiculos: z.array(z.any()).max(50).optional(),
-  canchas: z.array(z.any()).max(50).optional(),
-  especialidades: z.array(z.any()).max(50).optional(),
-  profesionalesConfig: z.array(z.any()).max(50).optional(),
-  esteticaServices: z.array(z.any()).max(50).optional(),
-  products: z.array(z.any()).max(100).optional(),
-  items: z.array(z.any()).max(100).optional(),
+  vehiculos: z.array(VehicleItemSchema).max(50).optional(),
+  lavaderoVehiculos: z.array(VehicleItemSchema).max(50).optional(),
+  canchas: z.array(CourtItemSchema).max(50).optional(),
+  especialidades: z.array(SpecialityItemSchema).max(50).optional(),
+  profesionalesConfig: z.array(ProfessionalItemSchema).max(50).optional(),
+  esteticaServices: z.array(ServiceItemSchema).max(50).optional(),
+  products: z.array(ProductItemSchema).max(100).optional(),
+  items: z.array(ServiceItemSchema).max(100).optional(),
   // Delivery
   deliveryRadio: z.number().min(0).max(1000).optional(),
   modosDisponibles: z.array(z.string().max(50)).max(10).optional(),
@@ -182,10 +255,16 @@ export const LayoutConfigSchema = z.object({
   // Chatbot
   chatbotName: z.string().max(100).optional().nullable(),
   chatbotEnabled: z.boolean().optional(),
-  // P1-035: Biolinks and Stats configuration
-  biolinks: z.record(z.string(), z.any()).optional().nullable(),
-  stats: z.record(z.string(), z.any()).optional().nullable(),
-}).passthrough();
+  // Biolinks and Stats configuration
+  biolinks: z.object({
+    title: z.string().max(200).optional().nullable(),
+    description: z.string().max(500).optional().nullable(),
+    avatarUrl: z.string().max(500).optional().nullable(),
+    theme: z.string().max(50).optional().nullable(),
+    links: z.array(BiolinkItemSchema).max(100).optional(),
+  }).optional().nullable(),
+  stats: z.record(z.string(), z.union([z.number(), z.string(), z.boolean()])).optional().nullable(),
+});
 
 // ─── P1-016: Strict paymentData schema ────────────────────────────────────────
 export const PaymentDataSchema = z.object({
@@ -257,13 +336,13 @@ export const ownerBusinessUpdateSchema = z.object({
 
 export const adminBusinessUpdateSchema = ownerBusinessUpdateSchema.extend({
   status: BusinessStatusEnum.optional(),
-  paymentAmount: z.union([z.string(), z.number(), z.any()])
+  paymentAmount: z.union([z.string(), z.number()])
     .optional().nullable()
     .transform((val) => (val !== undefined && val !== null ? Number(val) : undefined)),
   paymentStatus: PaymentStatusEnum.optional(),
-  demoExpiresAt: z.union([z.string().datetime({ offset: true }), z.date(), z.any()]).optional().nullable()
+  demoExpiresAt: z.union([z.string().datetime({ offset: true }), z.date(), z.string()]).optional().nullable()
     .transform((val) => (val ? new Date(val) : undefined)),
-  nextPayment: z.union([z.string().datetime({ offset: true }), z.date(), z.any()]).optional().nullable()
+  nextPayment: z.union([z.string().datetime({ offset: true }), z.date(), z.string()]).optional().nullable()
     .transform((val) => (val ? new Date(val) : undefined)),
   // P1-016: Strict paymentData
   paymentData: PaymentDataSchema.optional().nullable(),

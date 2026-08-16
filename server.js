@@ -166,9 +166,32 @@ app.prepare().then(() => {
         }
       });
 
-      // 🕒 TAREA PROGRAMADA 2: COLA DE MENSAJES (ASÍNCRONO) 🕒
+      // 🕒 TAREA PROGRAMADA 2: COLA DE MENSAJES (ASÍNCRONO CON CLAIM ATÓMICO Y RECUPERACIÓN) 🕒
       cron.schedule('* * * * *', async () => {
         try {
+          // P1-004: Recuperar mensajes en PROCESSING abandonados (> 5 minutos)
+          const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+          const stalledMessages = await prisma.whatsappMessageQueue.findMany({
+            where: {
+              status: 'PROCESSING',
+              lockedAt: { lt: fiveMinutesAgo }
+            },
+            take: 20
+          });
+
+          for (const stalled of stalledMessages) {
+            const nextRetries = (stalled.retries || 0) + 1;
+            await prisma.whatsappMessageQueue.update({
+              where: { id: stalled.id },
+              data: {
+                status: nextRetries >= 3 ? 'FAILED' : 'PENDING',
+                retries: nextRetries,
+                lockedAt: null,
+                errorMessage: 'Recuperado de timeout en PROCESSING'
+              }
+            });
+          }
+
           // Obtener hasta 50 mensajes pendientes
           const pendingMessages = await prisma.whatsappMessageQueue.findMany({
             where: { status: 'PENDING' },
@@ -188,11 +211,16 @@ app.prepare().then(() => {
             const sender = senderEntry.sock;
 
             try {
-              // Marcar como procesando
-              await prisma.whatsappMessageQueue.update({
-                where: { id: msg.id },
-                data: { status: 'PROCESSING' }
+              // P1-003: Claim atómico para evitar envíos duplicados por workers concurrentes
+              const claimResult = await prisma.whatsappMessageQueue.updateMany({
+                where: { id: msg.id, status: 'PENDING' },
+                data: { status: 'PROCESSING', lockedAt: new Date() }
               });
+
+              if (claimResult.count === 0) {
+                // Otro worker o hilo ya reclamó este mensaje
+                continue;
+              }
 
               let cleanPhone = msg.toPhone.replace(/\D/g, '');
               if (cleanPhone.length === 10) cleanPhone = `52${cleanPhone}`;
@@ -203,23 +231,24 @@ app.prepare().then(() => {
                 await sender.sendMessage(result.jid, { text: msg.message });
                 await prisma.whatsappMessageQueue.update({
                   where: { id: msg.id },
-                  data: { status: 'SENT' }
+                  data: { status: 'SENT', lockedAt: null }
                 });
                 console.log(`> Mensaje encolado enviado a ${cleanPhone} vía Business[${msg.businessId}]`);
               } else {
                  await prisma.whatsappMessageQueue.update({
                   where: { id: msg.id },
-                  data: { status: 'FAILED', errorMessage: 'Número no existe en WhatsApp' }
+                  data: { status: 'FAILED', lockedAt: null, errorMessage: 'Número no existe en WhatsApp' }
                 });
               }
             } catch (error) {
               console.error(`Error enviando mensaje de la cola (ID: ${msg.id}):`, error);
-              const nextRetries = msg.retries + 1;
+              const nextRetries = (msg.retries || 0) + 1;
               await prisma.whatsappMessageQueue.update({
                 where: { id: msg.id },
                 data: { 
                   status: nextRetries >= 3 ? 'FAILED' : 'PENDING', 
                   retries: nextRetries,
+                  lockedAt: null,
                   errorMessage: error.message
                 }
               });

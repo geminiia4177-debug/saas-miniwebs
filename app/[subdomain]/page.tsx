@@ -233,7 +233,7 @@ export default async function PublicLandingPage({ params, searchParams }: { para
     return (
       <div className={`${theme.fontDisplay}`}>
         <style dangerouslySetInnerHTML={{ __html: themeStyles }} />
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }} />
         {TemplateComponent}
         {biz.layoutConfig?.chatbotEnabled !== false && (
           <ChatbotWidget businessId={biz.id} bizName={biz.name} primaryColor={accentColor} chatbotName={biz.layoutConfig?.chatbotName || "Asistente Virtual"} />
@@ -254,6 +254,7 @@ export default async function PublicLandingPage({ params, searchParams }: { para
   return (
     <div className={`${theme.fontDisplay}`}>
       <style dangerouslySetInnerHTML={{ __html: themeStyles }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }} />
       <DefaultTemplate negocio={biz} media={media} sections={sections} />
       {layoutConfig.chatbotEnabled !== false && (
         <ChatbotWidget businessId={biz.id} bizName={biz.name} primaryColor={accentColor} chatbotName={layoutConfig.chatbotName || "Asistente Virtual"} />
