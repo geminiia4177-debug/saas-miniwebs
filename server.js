@@ -120,7 +120,7 @@ app.prepare().then(() => {
          }
       });
 
-      // 🕒 TAREA PROGRAMADA 1: RECORDATORIOS (24 HORAS ANTES) 🕒
+      // 🕒 TAREA PROGRAMADA 1: RECORDATORIOS (24 HORAS ANTES) — CLAIM ATÓMICO (P0-001) 🕒
       cron.schedule('* * * * *', async () => {
         const now = new Date();
         const targetStart = new Date(now.getTime() + 24 * 60 * 60 * 1000);
@@ -131,6 +131,7 @@ app.prepare().then(() => {
             where: {
               date: { gte: targetStart, lt: targetEnd },
               reminderSent: false,
+              reminderClaimedAt: null,
             },
             include: { business: true }
           });
@@ -138,8 +139,27 @@ app.prepare().then(() => {
           for (const appt of upcomingAppointments) {
             if (!appt.clientPhone) continue;
             
+            // P0-001: Claim atómico del recordatorio. Si otro worker ya lo tomó, count === 0
+            const claim = await prisma.appointment.updateMany({
+              where: {
+                id: appt.id,
+                reminderSent: false,
+                reminderClaimedAt: null
+              },
+              data: { reminderClaimedAt: new Date() }
+            });
+
+            if (claim.count === 0) continue; // Ya reclamado por otro worker concurrente
+
             const businessClient = global.waPool.get(appt.businessId);
-            if (!businessClient || businessClient.status !== 'AUTHENTICATED') continue;
+            if (!businessClient || businessClient.status !== 'AUTHENTICATED') {
+              // Liberar claim para que pueda reintentarse cuando haya conexión
+              await prisma.appointment.update({
+                where: { id: appt.id },
+                data: { reminderClaimedAt: null }
+              });
+              continue;
+            }
 
             const activeClient = businessClient.sock;
 
@@ -147,29 +167,45 @@ app.prepare().then(() => {
             if (cleanPhone.length === 10) cleanPhone = `52${cleanPhone}`;
             const jid = `${cleanPhone}@s.whatsapp.net`;
             
-            const [result] = await activeClient.onWhatsApp(jid);
-            if (!result || !result.exists) continue;
-            
-            const hora = new Date(appt.date).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
-            const msg = `🔔 *Recordatorio*\n¡Hola ${appt.clientName}! Te recordamos que tu turno en ${appt.business?.name || "el local"} es mañana a las ${hora} hs. ¡Te esperamos!`;
+            try {
+              const [result] = await activeClient.onWhatsApp(jid);
+              if (!result || !result.exists) {
+                // Número inválido en WA: marcar como procesado para no bloquear
+                await prisma.appointment.update({
+                  where: { id: appt.id },
+                  data: { reminderSent: true }
+                });
+                continue;
+              }
+              
+              const hora = new Date(appt.date).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+              const msg = `🔔 *Recordatorio*\n¡Hola ${appt.clientName}! Te recordamos que tu turno en ${appt.business?.name || "el local"} es mañana a las ${hora} hs. ¡Te esperamos!`;
 
-            await activeClient.sendMessage(result.jid, { text: msg });
-            
-            await prisma.appointment.update({
-              where: { id: appt.id },
-              data: { reminderSent: true }
-            });
-            console.log(`> Recordatorio enviado a ${appt.clientName} (${cleanPhone}) vía Business[${appt.businessId}]`);
+              await activeClient.sendMessage(result.jid, { text: msg });
+              
+              await prisma.appointment.update({
+                where: { id: appt.id },
+                data: { reminderSent: true }
+              });
+              console.log(`> [Reminder] Recordatorio enviado a ${appt.clientName} (${cleanPhone}) vía Business[${appt.businessId}]`);
+            } catch (sendErr) {
+              console.error(`> [Reminder] Error enviando recordatorio a ${appt.clientName}:`, sendErr);
+              // Liberar claim en caso de fallo transitorio
+              await prisma.appointment.update({
+                where: { id: appt.id },
+                data: { reminderClaimedAt: null }
+              });
+            }
           }
         } catch (error) {
           console.error("Error en cron job de recordatorios:", error);
         }
       });
 
-      // 🕒 TAREA PROGRAMADA 2: COLA DE MENSAJES (ASÍNCRONO CON CLAIM ATÓMICO Y RECUPERACIÓN) 🕒
+      // 🕒 TAREA PROGRAMADA 2: COLA DE MENSAJES (ASÍNCRONO CON CLAIM ATÓMICO Y LEASE TOKEN P0-002) 🕒
       cron.schedule('* * * * *', async () => {
         try {
-          // P1-004: Recuperar mensajes en PROCESSING abandonados (> 5 minutos)
+          // P0-002: Recuperar mensajes en PROCESSING abandonados (> 5 minutos) revocando leaseToken
           const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
           const stalledMessages = await prisma.whatsappMessageQueue.findMany({
             where: {
@@ -181,12 +217,13 @@ app.prepare().then(() => {
 
           for (const stalled of stalledMessages) {
             const nextRetries = (stalled.retries || 0) + 1;
-            await prisma.whatsappMessageQueue.update({
-              where: { id: stalled.id },
+            await prisma.whatsappMessageQueue.updateMany({
+              where: { id: stalled.id, status: 'PROCESSING', lockedAt: stalled.lockedAt },
               data: {
                 status: nextRetries >= 3 ? 'FAILED' : 'PENDING',
                 retries: nextRetries,
                 lockedAt: null,
+                leaseToken: null,
                 errorMessage: 'Recuperado de timeout en PROCESSING'
               }
             });
@@ -211,10 +248,11 @@ app.prepare().then(() => {
             const sender = senderEntry.sock;
 
             try {
-              // P1-003: Claim atómico para evitar envíos duplicados por workers concurrentes
+              // P0-002: Generar lease token único al reclamar
+              const leaseToken = Math.random().toString(36).substring(2) + Date.now().toString(36);
               const claimResult = await prisma.whatsappMessageQueue.updateMany({
                 where: { id: msg.id, status: 'PENDING' },
-                data: { status: 'PROCESSING', lockedAt: new Date() }
+                data: { status: 'PROCESSING', lockedAt: new Date(), leaseToken: leaseToken }
               });
 
               if (claimResult.count === 0) {
@@ -229,26 +267,32 @@ app.prepare().then(() => {
               const [result] = await sender.onWhatsApp(jid);
               if (result && result.exists) {
                 await sender.sendMessage(result.jid, { text: msg.message });
-                await prisma.whatsappMessageQueue.update({
-                  where: { id: msg.id },
-                  data: { status: 'SENT', lockedAt: null }
+                // P0-002: Solo marcar SENT si el leaseToken sigue siendo el nuestro
+                const updateRes = await prisma.whatsappMessageQueue.updateMany({
+                  where: { id: msg.id, leaseToken: leaseToken },
+                  data: { status: 'SENT', lockedAt: null, leaseToken: null }
                 });
-                console.log(`> Mensaje encolado enviado a ${cleanPhone} vía Business[${msg.businessId}]`);
+                if (updateRes.count > 0) {
+                  console.log(`> Mensaje encolado enviado a ${cleanPhone} vía Business[${msg.businessId}]`);
+                } else {
+                  console.warn(`> Lease expirado o revocado para mensaje ${msg.id}. No se sobreescribe estado.`);
+                }
               } else {
-                 await prisma.whatsappMessageQueue.update({
-                  where: { id: msg.id },
-                  data: { status: 'FAILED', lockedAt: null, errorMessage: 'Número no existe en WhatsApp' }
+                 await prisma.whatsappMessageQueue.updateMany({
+                  where: { id: msg.id, leaseToken: leaseToken },
+                  data: { status: 'FAILED', lockedAt: null, leaseToken: null, errorMessage: 'Número no existe en WhatsApp' }
                 });
               }
             } catch (error) {
               console.error(`Error enviando mensaje de la cola (ID: ${msg.id}):`, error);
               const nextRetries = (msg.retries || 0) + 1;
-              await prisma.whatsappMessageQueue.update({
-                where: { id: msg.id },
+              await prisma.whatsappMessageQueue.updateMany({
+                where: { id: msg.id, leaseToken: leaseToken },
                 data: { 
                   status: nextRetries >= 3 ? 'FAILED' : 'PENDING', 
                   retries: nextRetries,
                   lockedAt: null,
+                  leaseToken: null,
                   errorMessage: error.message
                 }
               });

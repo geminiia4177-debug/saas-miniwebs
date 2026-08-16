@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { Prisma } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { requireBusinessOwner } from "@/lib/auth-helpers";
@@ -18,7 +19,7 @@ export async function GET(req: Request) {
   const businessId = searchParams.get("businessId");
 
   try {
-    let whereClause: any = {};
+    let whereClause: Prisma.MessageWhereInput = {};
     if (session.user.role === "USER") {
       // User can only see messages for their businesses
       const biz = await prisma.business.findMany({ where: { userId: session.user.id }, select: { id: true } });

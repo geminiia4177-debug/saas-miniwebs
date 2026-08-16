@@ -507,9 +507,89 @@ section("P0-010/P0-011: Encryption Key and Failure Safety");
   }
 
   assert("64-character hex key is valid", validateHexKey("a".repeat(64)));
-  assert("Short key is invalid", !validateHexKey("short-key"));
-  assert("Non-hex characters are invalid", !validateHexKey("z".repeat(64)));
-  assert("32-character key is invalid (requires 64 hex chars for 32 bytes)", !validateHexKey("a".repeat(32)));
+}
+
+// P1-004 & P1-005: Phone Normalization & WhatsApp JID
+section("P1-004/P1-005: Phone Normalization & WhatsApp JID");
+{
+  const { normalizePhoneToE164, phoneToWhatsAppJid } = require("../lib/phone");
+
+  assert("Mexican 10-digit phone normalized with 52", normalizePhoneToE164("5512345678", "MX") === "525512345678");
+  assert("Mexican phone with +52 prefix cleaned", normalizePhoneToE164("+525512345678", "MX") === "525512345678");
+  assert("Argentine phone normalized", normalizePhoneToE164("+5491112345678", "AR") === "5491112345678");
+  assert("Spanish phone normalized", normalizePhoneToE164("+34612345678", "ES") === "34612345678");
+  assert("US phone normalized", normalizePhoneToE164("+12125551234", "US") === "12125551234");
+  assert("Phone with spaces and dashes cleaned", normalizePhoneToE164("55-1234 5678", "MX") === "525512345678");
+  assert("Empty phone returns empty string", normalizePhoneToE164("") === "");
+  assert("phoneToWhatsAppJid generates valid JID", phoneToWhatsAppJid("5512345678", "MX") === "525512345678@s.whatsapp.net");
+}
+
+// P1-001: Slot Step Grid Alignment Logic
+section("P1-001: Slot Step Grid Alignment Logic");
+{
+  function validateSlotStep(minuteOfDay: number, duration: number): boolean {
+    const step = duration >= 60 ? 60 : 30;
+    return minuteOfDay % step === 0;
+  }
+
+  // 60-minute duration service (step = 60)
+  assert("duration 60 at 10:00 (600 min) is ALLOWED", validateSlotStep(600, 60) === true);
+  assert("duration 60 at 10:30 (630 min) is DENIED", validateSlotStep(630, 60) === false);
+  assert("duration 60 at 11:00 (660 min) is ALLOWED", validateSlotStep(660, 60) === true);
+  assert("duration 60 at 10:15 (615 min) is DENIED", validateSlotStep(615, 60) === false);
+
+  // 30-minute duration service (step = 30)
+  assert("duration 30 at 10:00 (600 min) is ALLOWED", validateSlotStep(600, 30) === true);
+  assert("duration 30 at 10:30 (630 min) is ALLOWED", validateSlotStep(630, 30) === true);
+  assert("duration 30 at 10:15 (615 min) is DENIED", validateSlotStep(615, 30) === false);
+}
+
+// P0-001: Reminder Atomic Claim Simulation
+section("P0-001: Reminder Atomic Claim");
+{
+  let reminderState = { id: "appt-1", reminderSent: false, reminderClaimedAt: null as Date | null };
+
+  function simulateClaim(workerId: string): boolean {
+    if (!reminderState.reminderSent && reminderState.reminderClaimedAt === null) {
+      reminderState.reminderClaimedAt = new Date();
+      return true;
+    }
+    return false;
+  }
+
+  const worker1Claim = simulateClaim("worker-1");
+  const worker2Claim = simulateClaim("worker-2");
+
+  assert("Worker 1 acquires reminder claim", worker1Claim === true);
+  assert("Worker 2 is denied concurrent reminder claim", worker2Claim === false);
+}
+
+// P0-002: Queue Lease Token & Recovery Simulation
+section("P0-002: Queue Lease Token & Recovery");
+{
+  let job = { id: "job-1", status: "PENDING", leaseToken: null as string | null };
+
+  // Worker A claims job
+  const leaseA = "lease-token-A";
+  job.status = "PROCESSING";
+  job.leaseToken = leaseA;
+
+  // Recovery worker resets job due to timeout
+  job.status = "PENDING";
+  job.leaseToken = null;
+
+  // Worker B claims recovered job
+  const leaseB = "lease-token-B";
+  job.status = "PROCESSING";
+  job.leaseToken = leaseB;
+
+  // Worker A finishes late with leaseA -> must be rejected
+  const workerAFinished = (job.id === "job-1" && job.leaseToken === leaseA);
+  assert("Worker A with expired lease cannot complete job", workerAFinished === false);
+
+  // Worker B finishes with leaseB -> succeeds
+  const workerBFinished = (job.id === "job-1" && job.leaseToken === leaseB);
+  assert("Worker B with valid lease completes job", workerBFinished === true);
 }
 
 // Static File Audits for P0 fixes

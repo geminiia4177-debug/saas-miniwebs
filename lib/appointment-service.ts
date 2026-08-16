@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import crypto from "crypto";
 import { decryptSecret } from "@/lib/encryption";
+import { normalizePhoneToE164, phoneToWhatsAppJid } from "@/lib/phone";
 import {
   getBusinessDayName,
   getBusinessMinutesSinceMidnight,
@@ -345,9 +346,16 @@ export class AppointmentService {
       : (business.publishedConfig || defaultPublicConfig)) as Record<string, unknown>;
     const rawConfig = configSource as RawLayoutConfig;
 
-    // 5. Resolve service catalog item server-side
+    // 5. Resolve service catalog item server-side (P1-002: Reject nonexistent services)
     const resolvedService = resolveServiceFromLayout(configSource, serviceId || serviceName);
-    const finalServiceName = resolvedService?.name || serviceName || "Turno General";
+    if ((serviceId || serviceName) && !resolvedService) {
+      return {
+        error: `El servicio "${serviceName || serviceId}" no está disponible o no existe en el catálogo publicado.`,
+        status: 400,
+      };
+    }
+
+    const finalServiceName = resolvedService?.name || "Turno General";
     const finalDuration = resolvedService?.duration || 30;
 
     // 6. Validate employee belongs to this business
@@ -361,12 +369,11 @@ export class AppointmentService {
       }
     }
 
-    // 7. Validate slot step and business hours
+    // 7. Validate slot step and business hours (P1-001: Strict step grid validation)
     const appointmentMinutes = getBusinessMinutesSinceMidnight(date, timezone);
     const step = finalDuration >= 60 ? 60 : 30;
 
-    // P1-008: Reject non-grid appointment start times (e.g. 10:17)
-    if (appointmentMinutes % step !== 0 && appointmentMinutes % 30 !== 0) {
+    if (appointmentMinutes % step !== 0) {
       return {
         error: `El horario debe comenzar en un intervalo válido (cada ${step} minutos).`,
         status: 400,
@@ -541,10 +548,7 @@ export class AppointmentService {
     // 11. WhatsApp Confirmation Message (Enqueued with Idempotency Key)
     if (clientPhone) {
       try {
-        let cleanPhone = clientPhone.replace(/\D/g, "");
-        if (cleanPhone.length === 10) {
-          cleanPhone = `52${cleanPhone}`;
-        }
+        const cleanPhone = normalizePhoneToE164(clientPhone);
         const jid = `${cleanPhone}@s.whatsapp.net`;
 
         const apptDate = new Date(nuevoTurno.date);

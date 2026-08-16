@@ -181,6 +181,7 @@ model WhatsappMessageQueue {
   attempts     Int      @default(0)
   nextRetryAt  DateTime?
   lockedAt     DateTime?
+  leaseToken   String?
   idempotencyKey String? @unique
   senderId     String?
   errorMessage String?  @db.Text
@@ -212,6 +213,7 @@ model Appointment {
   paymentReference String? @unique
   whatsappSent Boolean @default(false)
   reminderSent Boolean @default(false)
+  reminderClaimedAt DateTime?
   cancelledAt  DateTime?
   cancelReason String?
   concurrencyToken String? @unique

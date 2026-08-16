@@ -10,6 +10,19 @@ import { checkRateLimit, getRateLimitRetryAfterMs } from "@/lib/rate-limit";
 const AI_RATE_WINDOW_MS = 60_000;
 const AI_RATE_MAX = 5;
 
+import { z } from "zod";
+
+const CampaignSchema = z.object({
+  businessId: z.string().min(1).max(100),
+  campaignType: z.enum(["INACTIVE_CLIENT", "WEAK_DAY", "VIP_CLIENT", "GENERAL_PROMO"]),
+  context: z.object({
+    days: z.union([z.number().int().min(1).max(365), z.string().regex(/^\d+$/).transform(Number)]).optional(),
+    service: z.string().max(100).optional(),
+    day: z.string().max(50).optional(),
+    visits: z.union([z.number().int().min(1).max(10000), z.string().regex(/^\d+$/).transform(Number)]).optional(),
+  }).optional().default({}),
+});
+
 export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);
@@ -30,18 +43,17 @@ export async function POST(req: Request) {
     if (!process.env.GEMINI_API_KEY) {
       return NextResponse.json({ error: "GEMINI_API_KEY no está configurada." }, { status: 500 });
     }
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-    const body = await req.json().catch(() => ({}));
-    const { businessId, campaignType, context, clientName } = body;
-
-    if (!businessId || !campaignType || typeof campaignType !== "string") {
-      return NextResponse.json({ error: "Faltan parámetros" }, { status: 400 });
+    const rawBody = await req.json().catch(() => ({}));
+    const parseResult = CampaignSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { error: "Parámetros inválidos para la generación de campaña", details: parseResult.error.format() },
+        { status: 400 }
+      );
     }
 
-    if (context && (typeof context !== "string" || context.length > 2000)) {
-      return NextResponse.json({ error: "El contexto es demasiado largo (máximo 2000 caracteres)" }, { status: 400 });
-    }
+    const { businessId, campaignType, context } = parseResult.data;
 
     // Verify ownership
     const isAdmin = session.user.role === "ADMIN";
@@ -67,17 +79,23 @@ La URL para reservar es: https://${business.customDomain || `${business.subdomai
 `;
 
     if (campaignType === "INACTIVE_CLIENT") {
-      prompt += `Contexto: El cliente no ha venido en más de ${context.days} días. Su servicio favorito era ${context.service}.
+      const days = context.days || 30;
+      const service = context.service ? `Su servicio anterior era ${context.service}.` : "";
+      prompt += `Contexto: El cliente no ha venido en más de ${days} días. ${service}
 Escribe un mensaje ofreciéndole un 15% de descuento si vuelve esta semana. Hazle saber que lo extrañan.`;
     } else if (campaignType === "WEAK_DAY") {
-      prompt += `Contexto: Queremos llenar la agenda del día ${context.day}, que viene con baja ocupación.
-Escribe un mensaje para ofrecer un beneficio especial (ej. 2x1 o 20% off) para quienes reserven este ${context.day}.`;
+      const day = context.day || "este día";
+      prompt += `Contexto: Queremos llenar la agenda del día ${day}, que viene con baja ocupación.
+Escribe un mensaje para ofrecer un beneficio especial (ej. 2x1 o 20% off) para quienes reserven este ${day}.`;
     } else if (campaignType === "VIP_CLIENT") {
-      prompt += `Contexto: El cliente es uno de los clientes VIP del negocio (ha venido ${context.visits} veces).
+      const visits = context.visits || 5;
+      prompt += `Contexto: El cliente es uno de los clientes VIP del negocio (ha venido ${visits} veces).
 Escribe un mensaje agradeciéndole por su fidelidad y regalándole un upgrade en su próximo servicio de forma gratuita.`;
     } else {
       prompt += `Contexto: Escribe una promoción atractiva para que el cliente reserve un turno esta semana.`;
     }
+
+    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
     const modelName = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
     const response = await ai.models.generateContent({

@@ -3,7 +3,7 @@ import { AppointmentService } from "../lib/appointment-service";
 
 async function runRealConcurrencyTest() {
   console.log("\n════════════════════════════════════════════════════════════");
-  console.log("REAL CONCURRENT APPOINTMENT INTEGRATION TEST (P0-002)");
+  console.log("REAL CONCURRENCY & INTEGRATION TEST (P0-001, P0-002, P1-001, P1-002)");
   console.log("════════════════════════════════════════════════════════════\n");
 
   const testSubdomain = `test-concurrency-${Date.now()}`;
@@ -30,6 +30,7 @@ async function runRealConcurrencyTest() {
           },
           barberiaServices: [
             { id: "srv-corte-vip", name: "Corte VIP", duration: 60, price: 500, active: true },
+            { id: "srv-barba", name: "Perfilado Barba", duration: 30, price: 250, active: true },
           ],
         },
       },
@@ -41,7 +42,7 @@ async function runRealConcurrencyTest() {
     const futureDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
     futureDate.setUTCHours(16, 0, 0, 0); // 10:00 AM Mexico City (UTC-6)
 
-    console.log(`2. Launching 2 simultaneous booking requests for ${futureDate.toISOString()} via Promise.all...`);
+    console.log(`2. P0-002: Launching 2 simultaneous booking requests for ${futureDate.toISOString()} via Promise.all...`);
 
     const requestA = AppointmentService.createAppointment({
       businessId: testBusiness.id,
@@ -71,11 +72,10 @@ async function runRealConcurrencyTest() {
     console.log("   Request A status:", resA.success ? "SUCCESS" : `ERROR ${resA.status}: ${resA.error}`);
     console.log("   Request B status:", resB.success ? "SUCCESS" : `ERROR ${resB.status}: ${resB.error}`);
 
-    // Assertions
+    // Assertions for P0-002
     const successCount = (resA.success ? 1 : 0) + (resB.success ? 1 : 0);
     const conflictCount = (resA.status === 409 ? 1 : 0) + (resB.status === 409 ? 1 : 0);
 
-    console.log("\n4. Verifying database state...");
     const dbAppointments = await prisma.appointment.findMany({
       where: { businessId: testBusiness.id },
     });
@@ -83,31 +83,96 @@ async function runRealConcurrencyTest() {
     console.log(`   Total appointments in DB for this business: ${dbAppointments.length}`);
 
     if (successCount === 1 && conflictCount === 1 && dbAppointments.length === 1) {
-      console.log("\n✅ PASS: Concurrency protection verified!");
-      console.log("   - Exactly 1 appointment succeeded");
-      console.log("   - Exactly 1 appointment received 409 conflict");
-      console.log("   - Exactly 1 appointment persisted in database");
+      console.log("   ✅ PASS (P0-002): Concurrent appointment race condition prevented! Exactly 1 created, 1 rejected with 409.");
     } else {
-      console.error("\n❌ FAIL: Concurrency anomaly detected!");
-      console.error(`   - Expected 1 success, got ${successCount}`);
-      console.error(`   - Expected 1 conflict (409), got ${conflictCount}`);
-      console.error(`   - Expected 1 DB record, got ${dbAppointments.length}`);
+      console.error("   ❌ FAIL (P0-002): Concurrency anomaly detected!");
       process.exit(1);
     }
+
+    // 4. P0-001: Concurrent Reminder Claim Test
+    console.log("\n4. P0-001: Testing concurrent atomic reminder claims...");
+    const existingAppt = dbAppointments[0];
+    const claim1Promise = prisma.appointment.updateMany({
+      where: { id: existingAppt.id, reminderSent: false, reminderClaimedAt: null },
+      data: { reminderClaimedAt: new Date() },
+    });
+    const claim2Promise = prisma.appointment.updateMany({
+      where: { id: existingAppt.id, reminderSent: false, reminderClaimedAt: null },
+      data: { reminderClaimedAt: new Date() },
+    });
+
+    const [claim1, claim2] = await Promise.all([claim1Promise, claim2Promise]);
+    console.log(`   Worker 1 claim count: ${claim1.count}, Worker 2 claim count: ${claim2.count}`);
+
+    if ((claim1.count === 1 && claim2.count === 0) || (claim1.count === 0 && claim2.count === 1)) {
+      console.log("   ✅ PASS (P0-001): Reminder atomic claim verified! Exactly 1 worker acquired the reminder.");
+    } else {
+      console.error("   ❌ FAIL (P0-001): Reminder double claim anomaly detected!");
+      process.exit(1);
+    }
+
+    // 5. P1-001: Step Grid Alignment Validation
+    console.log("\n5. P1-001: Testing step grid alignment for 60-min service at 10:30...");
+    const nonAlignedDate = new Date(Date.now() + 8 * 24 * 60 * 60 * 1000);
+    nonAlignedDate.setUTCHours(16, 30, 0, 0); // 10:30 AM (not aligned to 60-min grid)
+
+    const stepTestRes = await AppointmentService.createAppointment({
+      businessId: testBusiness.id,
+      clientName: "Cliente Step Test",
+      clientPhone: "5512345678",
+      serviceId: "srv-corte-vip", // 60 min
+      serviceName: "Corte VIP",
+      date: nonAlignedDate,
+      source: "WEB",
+    });
+
+    if (stepTestRes.status === 400) {
+      console.log("   ✅ PASS (P1-001): 60-min service at 10:30 correctly rejected with 400!");
+    } else {
+      console.error(`   ❌ FAIL (P1-001): Expected 400 for 10:30 slot on 60m service, got:`, stepTestRes);
+      process.exit(1);
+    }
+
+    // 6. P1-002: Nonexistent Service Rejection
+    console.log("\n6. P1-002: Testing nonexistent service rejection...");
+    const nonexistentDate = new Date(Date.now() + 9 * 24 * 60 * 60 * 1000);
+    nonexistentDate.setUTCHours(17, 0, 0, 0); // 11:00 AM
+
+    const nonexistentRes = await AppointmentService.createAppointment({
+      businessId: testBusiness.id,
+      clientName: "Cliente Inexistente Test",
+      clientPhone: "5512345678",
+      serviceId: "srv-fantasma-999",
+      serviceName: "Servicio Fantasma",
+      date: nonexistentDate,
+      source: "WEB",
+    });
+
+    if (nonexistentRes.status === 400) {
+      console.log("   ✅ PASS (P1-002): Nonexistent service correctly rejected with 400!");
+    } else {
+      console.error(`   ❌ FAIL (P1-002): Expected 400 for nonexistent service, got:`, nonexistentRes);
+      process.exit(1);
+    }
+
+    console.log("\n════════════════════════════════════════════════════════════");
+    console.log("ALL REAL DATABASE INTEGRATION TESTS PASSED SUCCESSFULLY! ✅");
+    console.log("════════════════════════════════════════════════════════════\n");
+
   } catch (err) {
     console.error("Test execution error:", err);
     process.exit(1);
   } finally {
     // Cleanup
     if (testBusiness) {
-      console.log("5. Cleaning up test data...");
+      console.log("Cleaning up test data...");
       try {
         await prisma.appointment.deleteMany({ where: { businessId: testBusiness.id } });
         await prisma.whatsappMessageQueue.deleteMany({ where: { businessId: testBusiness.id } });
         await prisma.business.delete({ where: { id: testBusiness.id } });
-        console.log("   Cleanup completed.");
+        console.log("Cleanup completed.");
       } catch (cleanErr) {
-        console.warn("   Cleanup warning:", cleanErr);
+        console.warn("Cleanup warning:", cleanErr);
       }
     }
     await prisma.$disconnect();
