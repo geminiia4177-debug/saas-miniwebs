@@ -300,13 +300,13 @@ export default function Dashboard() {
         .sidebar-slide-in { animation: slideIn 0.3s ease forwards; }
       `}</style>
 
-      {/* â”€â”€ MOBILE MENU OVERLAY â”€â”€ */}
+      {/* ── MOBILE MENU OVERLAY ── */}
       {mobileMenuOpen && (
-        <div className="md:hidden fixed inset-0 z-40" onClick={() => setMobileMenuOpen(false)}>
+        <div className="md:hidden fixed inset-0 z-50" onClick={() => setMobileMenuOpen(false)}>
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-          <div className="absolute left-0 top-0 bottom-0 w-64 sidebar-slide-in flex flex-col" style={{ background: "linear-gradient(180deg,#0b1020 0%,#090e1c 100%)" }} onClick={(e) => e.stopPropagation()}>
-            <div className="p-5 pb-4 border-b" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
-              <div className="flex items-center gap-3">
+          <div className="absolute left-0 top-0 bottom-0 w-64 sidebar-slide-in flex flex-col pt-[env(safe-area-inset-top,1rem)] pb-[env(safe-area-inset-bottom,1rem)]" style={{ background: "linear-gradient(180deg,#0b1020 0%,#090e1c 100%)" }} onClick={(e) => e.stopPropagation()}>
+            <div className="p-5 pb-4 border-b flex items-center justify-between" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
+              <div className="flex items-center gap-3 min-w-0">
                 {biz.logoUrl
                   ? <img src={biz.logoUrl} className="w-10 h-10 rounded-xl object-cover flex-shrink-0" alt="logo" />
                   : <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-black text-lg flex-shrink-0"
@@ -315,18 +315,21 @@ export default function Dashboard() {
                   <p className="text-white font-bold text-sm truncate">{biz.name}</p>
                   <div className="flex items-center gap-1.5 mt-0.5">
                     <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    <p className="text-[11px] text-emerald-400/80">En lÃ­nea</p>
+                    <p className="text-[11px] text-emerald-400/80">En línea</p>
                   </div>
                 </div>
               </div>
+              <button onClick={() => setMobileMenuOpen(false)} className="text-slate-400 hover:text-white p-1" aria-label="Cerrar menú">
+                <Ico n="x" s={18} />
+              </button>
             </div>
-            <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
+            <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto custom-scrollbar">
               <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-widest px-3 py-2">Principal</p>
               <NavItem icon="grid" label="Resumen" tab="home" active={tab} setActive={(t) => { setTab(t); setMobileMenuOpen(false); }} />
               
               <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-widest px-3 py-2 mt-3">Crear y editar</p>
               <NavItem icon="eye" label="Editor Visual" tab="editor" active={tab} setActive={(t) => { setTab(t); setMobileMenuOpen(false); }} />
-              <NavItem icon="image" label="GalerÃ­a" tab="gallery" active={tab} setActive={(t) => { setTab(t); setMobileMenuOpen(false); }} badge={media.length} />
+              <NavItem icon="image" label="Galería" tab="gallery" active={tab} setActive={(t) => { setTab(t); setMobileMenuOpen(false); }} badge={media.length} />
               
               <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-widest px-3 py-2 mt-3">Contenido</p>
               <NavItem icon="calendar" label="Turnos" tab="appointments" active={tab} setActive={(t) => { setTab(t); setMobileMenuOpen(false); }} badge={pending.length} />
@@ -339,13 +342,13 @@ export default function Dashboard() {
               <NavItem icon="link" label="BioLinks" tab="biolinks" active={tab} setActive={(t) => { setTab(t); setMobileMenuOpen(false); }} />
               <NavItem icon="list" label="CRM y Finanzas" tab="crm" active={tab} setActive={(t) => { setTab(t); setMobileMenuOpen(false); }} />
 
-              <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-widest px-3 py-2 mt-3">ConfiguraciÃ³n</p>
+              <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-widest px-3 py-2 mt-3">Configuración</p>
               <NavItem icon="settings" label="Ajustes Generales" tab="config" active={tab} setActive={(t: string) => { setTab(t); setMobileMenuOpen(false); }} />
             </nav>
             <div className="p-3 border-t" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
               <button onClick={() => signOut({ callbackUrl: "/login" })}
-                className="w-full flex items-center justify-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-bold text-red-500 hover:text-white hover:bg-red-500/20 bg-red-500/10 transition-colors border border-red-500/20">
-                <Ico n="logout" s={15} /> Cerrar SesiÃ³n
+                className="w-full flex items-center justify-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-bold text-red-500 hover:text-white hover:bg-red-500/20 bg-red-500/10 transition-colors border border-red-500/20 min-h-[44px]">
+                <Ico n="logout" s={15} /> Cerrar Sesión
               </button>
             </div>
           </div>

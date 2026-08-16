@@ -107,6 +107,45 @@
 body {
   background: var(--background);
   color: var(--foreground);
+  overflow-x: hidden;
+  max-width: 100vw;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+
+/* iOS & Android Mobile Input Auto-Zoom Prevention */
+@media screen and (max-width: 640px) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Touch targets and smooth scrolling */
+* {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Safe Area Insets for iPhone Notches and Home Bar */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.safe-area-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.safe-area-margin-bottom {
+  margin-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* PWA Standalone Mode adjustments */
+@media all and (display-mode: standalone) {
+  body {
+    user-select: none;
+  }
+  input, textarea {
+    user-select: text;
+  }
 }
 
 /* Accessibility */

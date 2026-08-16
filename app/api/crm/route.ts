@@ -21,7 +21,7 @@ const EmployeeCreateSchema = z.object({
   role: z.string().max(100).optional().default(""),
   salaryType: z.enum(["FIXED", "PERCENTAGE", "HOURLY"]).optional().default("FIXED"),
   salaryValue: z.number().min(0).optional().default(0),
-  imageUrl: z.string().url().max(500).optional().default(""),
+  imageUrl: z.string().max(500).optional().default(""),
   bio: z.string().max(500).optional().default(""),
   isPublic: z.boolean().optional().default(true),
 });

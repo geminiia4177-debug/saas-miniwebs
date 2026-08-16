@@ -27,33 +27,33 @@ export default function OnboardingModal({ biz, setBiz, saving, setSaving, showTo
   const logoRef = useRef<HTMLInputElement>(null);
 
   return (
-    <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-[#070b12]/95 backdrop-blur-xl p-4">
-      <div className="bg-[#111825] w-full max-w-xl rounded-3xl border border-indigo-500/20 shadow-2xl p-8 relative overflow-hidden animate-slideUp">
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-[#070b12]/95 backdrop-blur-xl p-3 sm:p-4 overflow-y-auto pb-[env(safe-area-inset-bottom)]">
+      <div className="bg-[#111825] w-full max-w-xl rounded-3xl border border-indigo-500/20 shadow-2xl p-5 sm:p-8 relative overflow-hidden animate-slideUp max-h-[calc(100vh-2rem)] overflow-y-auto custom-scrollbar my-auto">
         {/* Decors */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl -ml-20 -mb-20 pointer-events-none" />
 
         <div className="relative z-10">
-          <div className="flex justify-between items-center mb-8">
+          <div className="flex justify-between items-center mb-6 sm:mb-8">
             <div>
-              <h2 className="text-2xl font-black text-white">Configuración Inicial</h2>
-              <p className="text-indigo-300 text-sm mt-1">Paso {onboardingStep} de 2</p>
+              <h2 className="text-xl sm:text-2xl font-black text-white">Configuración Inicial</h2>
+              <p className="text-indigo-300 text-xs sm:text-sm mt-1">Paso {onboardingStep} de 2</p>
             </div>
-            <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center">
-              <Ico n={onboardingStep === 1 ? "image" : "check-circle"} s={24} c="text-indigo-400" />
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center">
+              <Ico n={onboardingStep === 1 ? "image" : "check-circle"} s={22} c="text-indigo-400" />
             </div>
           </div>
 
           {onboardingStep === 1 && (
             <div className="space-y-6">
-              <div className="text-center p-6 border border-white/10 rounded-2xl bg-white/5 border-dashed">
+              <div className="text-center p-5 sm:p-6 border border-white/10 rounded-2xl bg-white/5 border-dashed">
                 <p className="text-sm font-bold text-white mb-4">Sube el logo de tu negocio</p>
                 <div className="flex justify-center mb-4">
                   {biz.logoUrl ? (
-                    <img src={biz.logoUrl} className="w-24 h-24 rounded-2xl object-cover shadow-lg" alt="logo" />
+                    <img src={biz.logoUrl} className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover shadow-lg" alt="logo" />
                   ) : (
-                    <div className="w-24 h-24 rounded-2xl bg-white/10 flex items-center justify-center text-3xl font-black text-white shadow-lg">
-                      {biz.name.charAt(0)}
+                    <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-white/10 flex items-center justify-center text-2xl sm:text-3xl font-black text-white shadow-lg">
+                      {biz.name ? biz.name.charAt(0) : "M"}
                     </div>
                   )}
                 </div>
@@ -69,11 +69,11 @@ export default function OnboardingModal({ biz, setBiz, saving, setSaving, showTo
                     showToast("Error al subir", "error");
                   }
                 }} />
-                <button onClick={() => logoRef.current?.click()} className="px-5 py-2.5 rounded-xl text-white text-sm font-bold transition-colors" style={{ backgroundColor: "var(--primary-color)" }}>
+                <button onClick={() => logoRef.current?.click()} className="px-5 py-2.5 rounded-xl text-white text-sm font-bold transition-colors min-h-[44px]" style={{ backgroundColor: "var(--primary-color)" }}>
                   Elegir Imagen
                 </button>
               </div>
-              <button onClick={() => setOnboardingStep(2)} className="w-full py-3.5 rounded-xl bg-white text-black hover:bg-gray-100 font-bold transition-colors">
+              <button onClick={() => setOnboardingStep(2)} className="w-full py-3.5 rounded-xl bg-white text-black hover:bg-gray-100 font-bold transition-colors min-h-[48px]">
                 Continuar
               </button>
             </div>
@@ -84,22 +84,22 @@ export default function OnboardingModal({ biz, setBiz, saving, setSaving, showTo
               <div>
                 <label className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Teléfono / WhatsApp</label>
                 <input type="text" value={onboardingData.phone} onChange={e => setOnboardingData({ ...onboardingData, phone: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white focus:border-indigo-500 focus:outline-none" placeholder="Ej: 5512345678" />
+                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white focus:border-indigo-500 focus:outline-none text-[16px] sm:text-sm" placeholder="Ej: 5512345678" />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">CBU (Opcional)</label>
                   <input type="text" value={onboardingData.cbu} onChange={e => setOnboardingData({ ...onboardingData, cbu: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white focus:border-indigo-500 focus:outline-none" placeholder="00000..." />
+                    className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white focus:border-indigo-500 focus:outline-none text-[16px] sm:text-sm" placeholder="00000..." />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Alias (Opcional)</label>
                   <input type="text" value={onboardingData.alias} onChange={e => setOnboardingData({ ...onboardingData, alias: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white focus:border-indigo-500 focus:outline-none" placeholder="MI.ALIAS" />
+                    className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white focus:border-indigo-500 focus:outline-none text-[16px] sm:text-sm" placeholder="MI.ALIAS" />
                 </div>
               </div>
               <div className="flex gap-3 pt-2">
-                <button onClick={() => setOnboardingStep(1)} className="px-6 py-3.5 rounded-xl bg-white/5 hover:bg-white/10 text-white font-bold transition-colors">
+                <button onClick={() => setOnboardingStep(1)} className="px-5 sm:px-6 py-3.5 rounded-xl bg-white/5 hover:bg-white/10 text-white font-bold transition-colors min-h-[48px]">
                   Atrás
                 </button>
                 <button onClick={async () => {
@@ -125,7 +125,7 @@ export default function OnboardingModal({ biz, setBiz, saving, setSaving, showTo
                     showToast("Error guardando datos", "error");
                   }
                   setSaving(false);
-                }} disabled={saving} className="flex-1 py-3.5 rounded-xl text-white font-bold transition-colors shadow-lg" style={{ background: `linear-gradient(to right, var(--primary-color), var(--secondary-color))` }}>
+                }} disabled={saving} className="flex-1 py-3.5 rounded-xl text-white font-bold transition-colors shadow-lg min-h-[48px]" style={{ background: `linear-gradient(to right, var(--primary-color), var(--secondary-color))` }}>
                   {saving ? "Finalizando..." : "Finalizar y Entrar"}
                 </button>
               </div>

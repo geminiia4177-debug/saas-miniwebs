@@ -75,13 +75,16 @@ Escribe un mensaje agradeciéndole por su fidelidad y regalándole un upgrade en
       prompt += `Contexto: Escribe una promoción atractiva para que el cliente reserve un turno esta semana.`;
     }
 
-    const modelName = process.env.GEMINI_MODEL || "gemini-3.5-flash";
+    const modelName = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
     const response = await ai.models.generateContent({
       model: modelName,
       contents: prompt,
       config: {
         temperature: 0.7,
         maxOutputTokens: 300,
+        thinkingConfig: {
+          thinkingBudget: 0,
+        },
       }
     });
 

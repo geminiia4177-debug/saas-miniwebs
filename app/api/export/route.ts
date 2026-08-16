@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireSession, requireBusinessOwner } from "@/lib/auth-helpers";
+import { toSafeBusinessDTO } from "@/lib/dtos";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -35,16 +36,18 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Negocio no encontrado" }, { status: 404 });
     }
 
-    // Remover informacion extremadamente sensible
-    const exportData = {
-      ...business,
-      sessionVersion: undefined,
-      publicTrackingTokenHash: undefined,
-    };
+    // Sanitizar informacion sensible con el DTO seguro
+    const safeBiz = toSafeBusinessDTO(business);
+    const { sessionVersion, publicTrackingTokenHash, ...exportData } = safeBiz;
 
     return NextResponse.json({
       exportDate: new Date().toISOString(),
-      business: exportData,
+      business: {
+        ...exportData,
+        appointments: business.appointments,
+        orders: business.orders,
+        sales: business.sales,
+      },
     });
   } catch (error: any) {
     return NextResponse.json({ error: "Error al exportar datos" }, { status: 500 });

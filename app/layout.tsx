@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import { Inter, Fraunces } from "next/font/google";
+import PwaInstallPrompt from "@/components/ui/PwaInstallPrompt";
 import "./globals.css";
 
 const inter = Inter({
@@ -49,6 +50,7 @@ export default function RootLayout({
       {/* El atributo suppressHydrationWarning evita que las extensiones del navegador rompan la pantalla */}
       <body suppressHydrationWarning className={`${inter.variable} ${fraunces.variable} font-sans min-h-full flex flex-col antialiased`}>
         {children}
+        <PwaInstallPrompt />
         {/* Service Worker Registration */}
         <Script
           id="sw-register"

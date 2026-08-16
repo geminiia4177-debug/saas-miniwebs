@@ -120,47 +120,48 @@ export async function POST(req: Request) {
           const { GoogleGenAI } = await import("@google/genai");
           const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-          // Fetch business info and today's appointments for contextual support
-          const bizInfo = await prisma.business.findUnique({
-            where: { id: businessId },
-            select: {
-              name: true,
-              type: true,
-              subdomain: true,
-              customDomain: true,
-              status: true,
-              _count: {
-                select: {
-                  appointments: true,
-                  employees: true,
-                }
-              }
-            }
-          });
-
           const startOfDay = new Date();
           startOfDay.setHours(0, 0, 0, 0);
           const endOfDay = new Date();
           endOfDay.setHours(23, 59, 59, 999);
 
-          const todayAppointments = await prisma.appointment.findMany({
-            where: {
-              businessId,
-              date: {
-                gte: startOfDay,
-                lte: endOfDay
+          // Fetch business info and today's appointments in parallel for fast execution
+          const [bizInfo, todayAppointments] = await Promise.all([
+            prisma.business.findUnique({
+              where: { id: businessId },
+              select: {
+                name: true,
+                type: true,
+                subdomain: true,
+                customDomain: true,
+                status: true,
+                _count: {
+                  select: {
+                    appointments: true,
+                    employees: true,
+                  }
+                }
               }
-            },
-            select: {
-              clientName: true,
-              clientPhone: true,
-              serviceName: true,
-              date: true,
-              status: true
-            },
-            take: 10,
-            orderBy: { date: "asc" }
-          });
+            }),
+            prisma.appointment.findMany({
+              where: {
+                businessId,
+                date: {
+                  gte: startOfDay,
+                  lte: endOfDay
+                }
+              },
+              select: {
+                clientName: true,
+                clientPhone: true,
+                serviceName: true,
+                date: true,
+                status: true
+              },
+              take: 10,
+              orderBy: { date: "asc" }
+            })
+          ]);
           
           const systemPrompt = `
 Eres el Asistente Inteligente del Panel de Control de SaaS MiniWebs.
@@ -226,13 +227,16 @@ ${todayAppointments.length > 0 ? todayAppointments.map(a => `  • ${a.date.toLo
 
           const fullPrompt = systemPrompt + "\n\n## CONVERSACIÓN (más reciente al final):\n" + conversationHistory + "\n\n[AI_MSG]";
 
-          const modelName = process.env.GEMINI_MODEL || "gemini-3.5-flash";
+          const modelName = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
           const aiResponse = await ai.models.generateContent({
             model: modelName,
             contents: fullPrompt,
             config: {
               temperature: 0.2,
-              maxOutputTokens: 1000,
+              maxOutputTokens: 350,
+              thinkingConfig: {
+                thinkingBudget: 0,
+              },
             }
           });
 

@@ -73,24 +73,39 @@ export default function SupportWidget({ biz }: SupportWidgetProps) {
         body: JSON.stringify({ businessId: biz.id, content: msgText })
       });
       if (res.ok) {
-        await fetchSupportMsgs();
+        const data = await res.json();
+        if (data.aiMsg) {
+          setSupportMsgs(prev => {
+            const filtered = prev.filter(m => m.id !== "temp");
+            return [...filtered, data.userMsg || tempMsg, data.aiMsg];
+          });
+        } else if (data.id) {
+          setSupportMsgs(prev => {
+            const filtered = prev.filter(m => m.id !== "temp");
+            return [...filtered, data];
+          });
+        } else {
+          await fetchSupportMsgs();
+        }
+      } else {
+        setSupportMsgs(prev => [...prev.filter(m => m.id !== "temp"), { id: "err", content: "Error al enviar mensaje.", senderType: "AI", createdAt: new Date() }]);
       }
     } catch {
-      setSupportMsgs(prev => [...prev, { id: "err", content: "Error de conexión.", senderType: "AI", createdAt: new Date() }]);
+      setSupportMsgs(prev => [...prev.filter(m => m.id !== "temp"), { id: "err", content: "Error de conexión.", senderType: "AI", createdAt: new Date() }]);
     }
     setSupportLoading(false);
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-[9990] flex flex-col items-end">
+    <div className="fixed bottom-6 right-4 sm:right-6 z-[9990] flex flex-col items-end pb-[env(safe-area-inset-bottom)]">
       {supportOpen && (
-        <div className="mb-4 w-80 bg-[#131929] border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-slideUp" style={{ height: "400px" }}>
-          <div className="p-4 bg-[var(--accent)] text-black flex justify-between items-center" style={{ background: biz?.primaryColor || "#6366f1" }}>
+        <div className="mb-3 w-[calc(100vw-32px)] sm:w-80 max-w-sm bg-[#131929] border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-slideUp" style={{ height: "420px", maxHeight: "calc(100vh - 120px)" }}>
+          <div className="p-4 text-black flex justify-between items-center" style={{ background: biz?.primaryColor || "#6366f1" }}>
             <div className="flex items-center gap-2">
               <Ico n="message-circle" s={18} c="text-white" />
               <span className="font-bold text-white text-sm">Soporte Técnico</span>
             </div>
-            <button onClick={() => setSupportOpen(false)} className="text-white hover:text-black/50 transition-colors">
+            <button onClick={() => setSupportOpen(false)} className="text-white hover:text-black/50 transition-colors p-1" aria-label="Cerrar soporte">
               <Ico n="x" s={16} />
             </button>
           </div>
@@ -120,13 +135,14 @@ export default function SupportWidget({ biz }: SupportWidgetProps) {
               }}
               disabled={supportLoading}
               placeholder="Escribe tu consulta..."
-              className="flex-1 bg-[#050810] text-sm text-white px-3 py-2 rounded-lg border border-white/10 focus:border-indigo-500 focus:outline-none disabled:opacity-50"
+              className="flex-1 bg-[#050810] text-sm text-white px-3 py-2 rounded-lg border border-white/10 focus:border-indigo-500 focus:outline-none disabled:opacity-50 text-[16px] sm:text-sm"
             />
             <button
               onClick={handleSendSupport}
-              disabled={supportLoading}
-              className="w-10 h-10 rounded-lg flex items-center justify-center text-white transition-colors disabled:opacity-50"
-              style={{ backgroundColor: "var(--primary-color)" }}
+              disabled={supportLoading || !supportInput.trim()}
+              className="w-10 h-10 rounded-lg flex items-center justify-center text-white transition-colors disabled:opacity-50 min-w-[40px]"
+              style={{ backgroundColor: biz?.primaryColor || "var(--primary-color)" }}
+              aria-label="Enviar mensaje"
             >
               <Ico n="send" s={16} />
             </button>
@@ -136,7 +152,8 @@ export default function SupportWidget({ biz }: SupportWidgetProps) {
       <button
         onClick={() => setSupportOpen(!supportOpen)}
         className={`w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-transform hover:scale-110 relative ${supportOpen ? "bg-white/10" : ""}`}
-        style={!supportOpen ? { backgroundColor: "var(--primary-color)" } : {}}
+        style={!supportOpen ? { backgroundColor: biz?.primaryColor || "var(--primary-color)" } : {}}
+        aria-label={supportOpen ? "Cerrar chat de soporte" : "Abrir chat de soporte"}
       >
         <Ico n={supportOpen ? "x" : "message-circle"} s={24} c="text-white" />
         {!supportOpen && unreadSupport > 0 && (

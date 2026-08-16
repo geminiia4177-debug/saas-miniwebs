@@ -65,8 +65,9 @@ export default function ChatbotWidget({ businessId, bizName, primaryColor = "#63
       {/* Botón flotante */}
       <button 
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-6 right-6 z-[9999] w-14 h-14 rounded-full flex items-center justify-center text-white shadow-2xl transition-transform hover:scale-110"
+        className="fixed bottom-6 right-4 sm:right-6 z-[9999] w-14 h-14 rounded-full flex items-center justify-center text-white shadow-2xl transition-transform hover:scale-110 mb-[env(safe-area-inset-bottom)]"
         style={{ background: primaryColor }}
+        aria-label={isOpen ? "Cerrar chat" : "Abrir chat"}
       >
         {isOpen ? <Ico n="x" s={24} /> : <Bot size={28} />}
       </button>
@@ -74,8 +75,8 @@ export default function ChatbotWidget({ businessId, bizName, primaryColor = "#63
       {/* Ventana de Chat */}
       {isOpen && (
         <div 
-          className="fixed bottom-24 right-6 z-[9999] w-[350px] h-[500px] max-h-[80vh] max-w-[calc(100vw-48px)] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-slideUp"
-          style={{ border: "1px solid rgba(0,0,0,0.1)", animation: "slideUp 0.3s ease-out forwards" }}
+          className="fixed bottom-24 right-4 sm:right-6 z-[9999] w-[350px] h-[500px] max-h-[calc(80vh-env(safe-area-inset-bottom))] max-w-[calc(100vw-32px)] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-slideUp mb-[env(safe-area-inset-bottom)]"
+          style={{ border: "1px solid rgba(0,0,0,0.1)" }}
         >
           {/* Header */}
           <div className="p-4 text-white flex justify-between items-center" style={{ background: primaryColor }}>
@@ -88,7 +89,7 @@ export default function ChatbotWidget({ businessId, bizName, primaryColor = "#63
                 <p className="text-[10px] text-white/80">Respondemos al instante ⚡</p>
               </div>
             </div>
-            <button onClick={() => setIsOpen(false)} className="text-white/80 hover:text-white transition-colors">
+            <button onClick={() => setIsOpen(false)} className="text-white/80 hover:text-white transition-colors p-1" aria-label="Cerrar chat">
               <Ico n="x" s={18} />
             </button>
           </div>
@@ -124,13 +125,14 @@ export default function ChatbotWidget({ businessId, bizName, primaryColor = "#63
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Escribe tu pregunta..."
-              className="flex-1 bg-slate-100 text-slate-800 text-sm px-4 py-2.5 rounded-full border border-transparent focus:border-slate-300 focus:outline-none focus:bg-white transition-colors"
+              className="flex-1 bg-slate-100 text-slate-800 text-[16px] sm:text-sm px-4 py-2.5 rounded-full border border-transparent focus:border-slate-300 focus:outline-none focus:bg-white transition-colors"
             />
             <button 
               type="submit"
               disabled={isLoading || !input.trim()}
-              className="w-10 h-10 rounded-full flex items-center justify-center text-white transition-colors disabled:opacity-50"
+              className="w-10 h-10 rounded-full flex items-center justify-center text-white transition-colors disabled:opacity-50 min-w-[40px]"
               style={{ background: primaryColor }}
+              aria-label="Enviar mensaje"
             >
               <Ico n="send" s={16} />
             </button>

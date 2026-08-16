@@ -262,14 +262,17 @@ Para crear una reserva confirmada:
       parts: [{ text: String(msg.content || "").substring(0, 500) }],
     }));
 
-    const modelName = process.env.GEMINI_MODEL || "gemini-3.5-flash";
+    const modelName = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
     const aiResponse = await ai.models.generateContent({
       model: modelName,
       contents: formattedMessages,
       config: {
         systemInstruction: systemPrompt,
         temperature: 0.2,
-        maxOutputTokens: 1000,
+        maxOutputTokens: 350,
+        thinkingConfig: {
+          thinkingBudget: 0,
+        },
       },
     });
 

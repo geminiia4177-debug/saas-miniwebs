@@ -1,12 +1,22 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { checkRateLimit } from "@/lib/rate-limit";
+
+const CLICK_RATE_WINDOW_MS = 60_000;
+const CLICK_RATE_MAX = 30;
 
 export async function POST(req: Request) {
   try {
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const rateLimitKey = `biolink:click:${ip}`;
+    if (!(await checkRateLimit(rateLimitKey, CLICK_RATE_MAX, CLICK_RATE_WINDOW_MS))) {
+      return NextResponse.json({ error: "Demasiadas solicitudes" }, { status: 429 });
+    }
+
     const { linkId, businessId } = await req.json();
 
-    if (!linkId || !businessId) {
-      return NextResponse.json({ error: "Missing parameters" }, { status: 400 });
+    if (!linkId || !businessId || typeof linkId !== "string" || typeof businessId !== "string") {
+      return NextResponse.json({ error: "Parámetros inválidos" }, { status: 400 });
     }
 
     // We fetch the business to update the layoutConfig.biolinks.items
