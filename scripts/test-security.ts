@@ -40,10 +40,11 @@ function skip(description: string) {
 
 // ─── Unit Tests (No DB required) ─────────────────────────────────────────────
 
-// P0-001: Verify toSafeBusinessDTO never returns secrets
+// P0-001: Verify toSafeBusinessDTO never returns secrets (testing real implementation)
 section("P0-001: DTO Secret Exposure");
 {
-  // Simulate the fixed DTO behavior
+  const { toSafeBusinessDTO } = require("../lib/dtos");
+
   const mockBusiness = {
     id: "biz-1",
     name: "Test Business",
@@ -53,16 +54,7 @@ section("P0-001: DTO Secret Exposure");
     status: "ACTIVE",
   };
 
-  function simulateToSafeBusinessDTO(business: any) {
-    const { callMeBotApiKey, bankDetails, paymentData, ...safe } = business;
-    return {
-      ...safe,
-      hasCallMeBotApiKey: !!callMeBotApiKey,
-      hasBankDetails: !!bankDetails,
-    };
-  }
-
-  const result = simulateToSafeBusinessDTO(mockBusiness);
+  const result = toSafeBusinessDTO(mockBusiness);
 
   assert("DTO does not contain callMeBotApiKey", !("callMeBotApiKey" in result));
   assert("DTO does not contain bankDetails", !("bankDetails" in result));

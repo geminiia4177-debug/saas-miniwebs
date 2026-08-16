@@ -1,5 +1,12 @@
 import { prisma } from "../lib/db";
 import { AppointmentService } from "../lib/appointment-service";
+import { Business } from "@prisma/client";
+
+// P1-010 & P1-011: Strict production guard
+if (process.env.NODE_ENV === "production") {
+  console.error("FATAL: Cannot run integration/concurrency tests in production environment!");
+  process.exit(1);
+}
 
 async function runRealConcurrencyTest() {
   console.log("\n════════════════════════════════════════════════════════════");
@@ -7,7 +14,7 @@ async function runRealConcurrencyTest() {
   console.log("════════════════════════════════════════════════════════════\n");
 
   const testSubdomain = `test-concurrency-${Date.now()}`;
-  let testBusiness: any = null;
+  let testBusiness: Business | null = null;
 
   try {
     // 1. Create a real test business in the database
@@ -89,15 +96,31 @@ async function runRealConcurrencyTest() {
       process.exit(1);
     }
 
-    // 4. P0-001: Concurrent Reminder Claim Test
-    console.log("\n4. P0-001: Testing concurrent atomic reminder claims...");
+    // 4. P0-001: Concurrent Reminder Claim Test with Recoverable Lease
+    console.log("\n4. P0-001: Testing concurrent atomic reminder claims with recoverable lease...");
     const existingAppt = dbAppointments[0];
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+
     const claim1Promise = prisma.appointment.updateMany({
-      where: { id: existingAppt.id, reminderSent: false, reminderClaimedAt: null },
+      where: {
+        id: existingAppt.id,
+        reminderSent: false,
+        OR: [
+          { reminderClaimedAt: null },
+          { reminderClaimedAt: { lt: fiveMinutesAgo } },
+        ],
+      },
       data: { reminderClaimedAt: new Date() },
     });
     const claim2Promise = prisma.appointment.updateMany({
-      where: { id: existingAppt.id, reminderSent: false, reminderClaimedAt: null },
+      where: {
+        id: existingAppt.id,
+        reminderSent: false,
+        OR: [
+          { reminderClaimedAt: null },
+          { reminderClaimedAt: { lt: fiveMinutesAgo } },
+        ],
+      },
       data: { reminderClaimedAt: new Date() },
     });
 
@@ -108,6 +131,33 @@ async function runRealConcurrencyTest() {
       console.log("   ✅ PASS (P0-001): Reminder atomic claim verified! Exactly 1 worker acquired the reminder.");
     } else {
       console.error("   ❌ FAIL (P0-001): Reminder double claim anomaly detected!");
+      process.exit(1);
+    }
+
+    // 4b. Test lease recovery for reminder (simulating worker crash > 5 min ago)
+    console.log("\n4b. P0-001: Testing reminder lease recovery after 6-minute timeout...");
+    const sixMinutesAgo = new Date(Date.now() - 6 * 60 * 1000);
+    await prisma.appointment.update({
+      where: { id: existingAppt.id },
+      data: { reminderClaimedAt: sixMinutesAgo },
+    });
+
+    const recoveryClaim = await prisma.appointment.updateMany({
+      where: {
+        id: existingAppt.id,
+        reminderSent: false,
+        OR: [
+          { reminderClaimedAt: null },
+          { reminderClaimedAt: { lt: fiveMinutesAgo } },
+        ],
+      },
+      data: { reminderClaimedAt: new Date() },
+    });
+
+    if (recoveryClaim.count === 1) {
+      console.log("   ✅ PASS (P0-001): Stalled reminder successfully recovered by new worker after lease timeout!");
+    } else {
+      console.error("   ❌ FAIL (P0-001): Stalled reminder was NOT recovered!");
       process.exit(1);
     }
 

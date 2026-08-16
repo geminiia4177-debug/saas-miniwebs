@@ -8,7 +8,7 @@ const fs = require('fs');
 const cron = require('node-cron');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
-
+const crypto = require('crypto');
 const dev = process.env.NODE_ENV !== 'production';
 const hostname = 'localhost';
 const port = process.env.PORT || 3000;
@@ -120,18 +120,23 @@ app.prepare().then(() => {
          }
       });
 
-      // 🕒 TAREA PROGRAMADA 1: RECORDATORIOS (24 HORAS ANTES) — CLAIM ATÓMICO (P0-001) 🕒
+      // 🕒 TAREA PROGRAMADA 1: RECORDATORIOS (24 HORAS ANTES) — CLAIM ATÓMICO CON LEASE RECUPERABLE (P0-001 / P1-003 / P1-004) 🕒
       cron.schedule('* * * * *', async () => {
         const now = new Date();
-        const targetStart = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-        const targetEnd = new Date(now.getTime() + (24 * 60 + 1) * 60 * 1000);
+        // P1-004: Ventana tolerante a pequeñas caídas o retrasos (23h30m a 24h30m antes del turno)
+        const targetStart = new Date(now.getTime() + (23 * 60 + 30) * 60 * 1000);
+        const targetEnd = new Date(now.getTime() + (24 * 60 + 30) * 60 * 1000);
+        const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
 
         try {
           const upcomingAppointments = await prisma.appointment.findMany({
             where: {
               date: { gte: targetStart, lt: targetEnd },
               reminderSent: false,
-              reminderClaimedAt: null,
+              OR: [
+                { reminderClaimedAt: null },
+                { reminderClaimedAt: { lt: fiveMinutesAgo } }
+              ]
             },
             include: { business: true }
           });
@@ -139,12 +144,15 @@ app.prepare().then(() => {
           for (const appt of upcomingAppointments) {
             if (!appt.clientPhone) continue;
             
-            // P0-001: Claim atómico del recordatorio. Si otro worker ya lo tomó, count === 0
+            // P0-001: Claim atómico con lease de 5 minutos para evitar bloqueos permanentes ante caídas
             const claim = await prisma.appointment.updateMany({
               where: {
                 id: appt.id,
                 reminderSent: false,
-                reminderClaimedAt: null
+                OR: [
+                  { reminderClaimedAt: null },
+                  { reminderClaimedAt: { lt: fiveMinutesAgo } }
+                ]
               },
               data: { reminderClaimedAt: new Date() }
             });
@@ -153,7 +161,7 @@ app.prepare().then(() => {
 
             const businessClient = global.waPool.get(appt.businessId);
             if (!businessClient || businessClient.status !== 'AUTHENTICATED') {
-              // Liberar claim para que pueda reintentarse cuando haya conexión
+              // Liberar claim inmediatamente si este worker no tiene la sesión de WhatsApp activa
               await prisma.appointment.update({
                 where: { id: appt.id },
                 data: { reminderClaimedAt: null }
@@ -173,19 +181,25 @@ app.prepare().then(() => {
                 // Número inválido en WA: marcar como procesado para no bloquear
                 await prisma.appointment.update({
                   where: { id: appt.id },
-                  data: { reminderSent: true }
+                  data: { reminderSent: true, reminderClaimedAt: null }
                 });
                 continue;
               }
               
-              const hora = new Date(appt.date).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+              // P1-003: Usar el timezone configurado del negocio (por defecto America/Mexico_City)
+              const bizTimezone = appt.business?.timezone || 'America/Mexico_City';
+              const hora = new Date(appt.date).toLocaleTimeString('es-MX', {
+                timeZone: bizTimezone,
+                hour: '2-digit',
+                minute: '2-digit'
+              });
               const msg = `🔔 *Recordatorio*\n¡Hola ${appt.clientName}! Te recordamos que tu turno en ${appt.business?.name || "el local"} es mañana a las ${hora} hs. ¡Te esperamos!`;
 
               await activeClient.sendMessage(result.jid, { text: msg });
               
               await prisma.appointment.update({
                 where: { id: appt.id },
-                data: { reminderSent: true }
+                data: { reminderSent: true, reminderClaimedAt: null }
               });
               console.log(`> [Reminder] Recordatorio enviado a ${appt.clientName} (${cleanPhone}) vía Business[${appt.businessId}]`);
             } catch (sendErr) {
@@ -202,7 +216,7 @@ app.prepare().then(() => {
         }
       });
 
-      // 🕒 TAREA PROGRAMADA 2: COLA DE MENSAJES (ASÍNCRONO CON CLAIM ATÓMICO Y LEASE TOKEN P0-002) 🕒
+      // 🕒 TAREA PROGRAMADA 2: COLA DE MENSAJES (ASÍNCRONO CON CLAIM ATÓMICO Y LEASE TOKEN P0-002 / P1-001) 🕒
       cron.schedule('* * * * *', async () => {
         try {
           // P0-002: Recuperar mensajes en PROCESSING abandonados (> 5 minutos) revocando leaseToken
@@ -248,8 +262,8 @@ app.prepare().then(() => {
             const sender = senderEntry.sock;
 
             try {
-              // P0-002: Generar lease token único al reclamar
-              const leaseToken = Math.random().toString(36).substring(2) + Date.now().toString(36);
+              // P1-001: Usar crypto.randomUUID() para generar lease tokens criptográficamente seguros
+              const leaseToken = crypto.randomUUID();
               const claimResult = await prisma.whatsappMessageQueue.updateMany({
                 where: { id: msg.id, status: 'PENDING' },
                 data: { status: 'PROCESSING', lockedAt: new Date(), leaseToken: leaseToken }
