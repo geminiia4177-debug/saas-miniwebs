@@ -142,16 +142,18 @@ export async function POST(req: Request) {
     }
 
     // ─────────────────────────────────────────────────────────
-    // LA MAGIA: CREAR EL USUARIO DEL CLIENTE CON CLAVE "admin"
+    // P0-003: Crear usuario con clave temporal aleatoria segura
     // ─────────────────────────────────────────────────────────
     let clientUser = await prisma.user.findUnique({
       where: { email: email }
     });
 
-    // Si no existe el usuario, lo creamos con la contraseña por defecto "admin"
+    let temporaryPassword: string | null = null;
+
     if (!clientUser) {
-      // Como tiene mustChangePassword: true, el sistema lo forzará a cambiarla al entrar
-      const hashedPassword = await bcrypt.hash("admin", 10); 
+      // Clave temporal criptográficamente aleatoria (16 caracteres base64url)
+      temporaryPassword = crypto.randomBytes(12).toString("base64url");
+      const hashedPassword = await bcrypt.hash(temporaryPassword, 12);
       
       clientUser = await prisma.user.create({
         data: {
@@ -204,7 +206,10 @@ export async function POST(req: Request) {
       },
     });
 
-    return NextResponse.json(toSafeBusinessDTO(newBusiness), { status: 201 });
+    return NextResponse.json({
+      ...toSafeBusinessDTO(newBusiness),
+      ...(temporaryPassword ? { initialPassword: temporaryPassword } : {})
+    }, { status: 201 });
   } catch (error) {
     console.error("Error creando negocio:", error);
     return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });

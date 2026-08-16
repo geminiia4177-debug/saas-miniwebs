@@ -28,6 +28,42 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       return NextResponse.json({ error: "Estado inválido" }, { status: 400 });
     }
 
+    // P0-012: Validate employeeId belongs to this business if provided
+    let validEmployeeId: string | null = null;
+    if (employeeId) {
+      const emp = await prisma.employee.findUnique({
+        where: { id: employeeId },
+        select: { businessId: true },
+      });
+      if (!emp || emp.businessId !== existingAppointment.businessId) {
+        return NextResponse.json({ error: "El empleado no pertenece a este negocio" }, { status: 400 });
+      }
+      validEmployeeId = employeeId;
+    } else {
+      validEmployeeId = existingAppointment.employeeId;
+    }
+
+    const appointmentSelect = {
+      id: true,
+      businessId: true,
+      clientName: true,
+      clientPhone: true,
+      clientEmail: true,
+      date: true,
+      status: true,
+      serviceName: true,
+      serviceId: true,
+      notes: true,
+      patente: true,
+      employeeId: true,
+      paymentMethod: true,
+      paymentReference: true,
+      whatsappSent: true,
+      reminderSent: true,
+      createdAt: true,
+      updatedAt: true,
+    };
+
     // SEC-039 & SEC-040 Fix: Auto-create Sale atomically and idempotently if completed
     if (status === "COMPLETED" && existingAppointment.status !== "COMPLETED") {
       try {
@@ -50,7 +86,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
               type: "SERVICE",
               amount: amount,
               itemName: existingAppointment.serviceName || "Servicio Turno",
-              employeeId: employeeId || null,
+              employeeId: validEmployeeId,
               appointmentId: id
             }
           }),
@@ -58,9 +94,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
             where: { id },
             data: { 
               status,
+              ...(validEmployeeId !== existingAppointment.employeeId ? { employeeId: validEmployeeId } : {}),
               ...( (status === "CANCELLED" || status === "COMPLETED") ? { concurrencyToken: null } : {} )
             },
-            include: { business: true }
+            select: appointmentSelect
           })
         ]);
         return NextResponse.json(updatedAppointment);
@@ -73,9 +110,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         where: { id },
         data: { 
           status,
+          ...(validEmployeeId !== existingAppointment.employeeId ? { employeeId: validEmployeeId } : {}),
           ...( (status === "CANCELLED" || status === "COMPLETED") ? { concurrencyToken: null } : {} )
         },
-        include: { business: true }
+        select: appointmentSelect
       });
       return NextResponse.json(updatedAppointment);
     }

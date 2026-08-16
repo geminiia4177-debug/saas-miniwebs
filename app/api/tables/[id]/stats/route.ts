@@ -1,14 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireSession, requireBusinessOwner } from "@/lib/auth-helpers";
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.email) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-    }
+    const { error: sessionError } = await requireSession();
+    if (sessionError) return sessionError;
 
     const resolvedParams = await params;
     const tableId = resolvedParams.id;
@@ -20,12 +17,15 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     // Verify table belongs to user's business
     const table = await prisma.table.findUnique({
       where: { id: tableId },
-      include: { business: { include: { user: true } } }
+      select: { id: true, businessId: true }
     });
 
-    if (!table || table.business.user?.email !== session.user.email) {
-      return NextResponse.json({ error: "No autorizado o mesa no encontrada" }, { status: 403 });
+    if (!table) {
+      return NextResponse.json({ error: "Mesa no encontrada" }, { status: 404 });
     }
+
+    const { error: authError } = await requireBusinessOwner(table.businessId);
+    if (authError) return authError;
 
     const now = new Date();
     

@@ -79,20 +79,33 @@ export async function GET(
       (session.user.role === "ADMIN" ||
         session.user.id === business.userId);
 
-    if (!isOwnerOrAdmin && business.layoutConfig) {
-      // P0-001: Public users get a filtered layoutConfig (no internal secrets)
-      const original =
-        typeof business.layoutConfig === "object" && business.layoutConfig !== null
-          ? (business.layoutConfig as any)
-          : {};
+    // P0-006: Non-owners/visitors only receive PublicBusinessDTO (never draft layoutConfig, userId, paymentData, etc.)
+    if (!isOwnerOrAdmin) {
+      if (business.status === "BLOCKED" || business.status === "ARCHIVED") {
+        return NextResponse.json({ error: "Negocio no disponible" }, { status: 404 });
+      }
 
-      const { callMeBotApiKey, bankDetails, stripeKey, ...safeConfig } = original;
-      business.layoutConfig = safeConfig;
+      return NextResponse.json({
+        id: business.id,
+        name: business.name,
+        subdomain: business.subdomain,
+        customDomain: business.customDomain,
+        logoUrl: business.logoUrl,
+        bannerUrl: business.bannerUrl,
+        primaryColor: business.primaryColor,
+        secondaryColor: business.secondaryColor,
+        accentColor: business.accentColor,
+        fontFamily: business.fontFamily,
+        type: business.type,
+        status: business.status,
+        description: business.description,
+        timezone: business.timezone,
+        publishedConfig: business.publishedConfig,
+      });
     }
 
-    // P0-001: toSafeBusinessDTO strips callMeBotApiKey & bankDetails,
-    // returns hasCallMeBotApiKey and hasBankDetails booleans only.
-    return NextResponse.json(toSafeBusinessDTO(business, isOwnerOrAdmin ?? false));
+    // Authenticated owner/admin receives full safe business DTO
+    return NextResponse.json(toSafeBusinessDTO(business, true));
   } catch (error) {
     console.error("Error obteniendo negocio:", error instanceof Error ? error.message : "unknown");
     return NextResponse.json({ error: "Error al obtener" }, { status: 500 });

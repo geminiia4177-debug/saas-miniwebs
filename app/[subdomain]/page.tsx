@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { Metadata } from "next";
 import { getTheme } from "@/lib/themes";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import BookingForm from "./BookingForm";
 
 export const revalidate = 0; // Disable aggressive caching for public lands
@@ -15,9 +17,18 @@ export async function generateMetadata({ params }: { params: Promise<{ subdomain
         { customDomain: subdomain }
       ]
     },
+    select: {
+      name: true,
+      description: true,
+      type: true,
+      logoUrl: true,
+      customDomain: true,
+      status: true,
+    }
   });
 
-  if (!biz) return {};
+  // P0-004: Do not generate metadata for blocked or archived businesses
+  if (!biz || biz.status === "BLOCKED" || biz.status === "ARCHIVED") return {};
 
   const defaultImage = "https://saas-miniwebs.com/default-logo.jpg";
   const imageUrl = biz.logoUrl || defaultImage;
@@ -76,6 +87,7 @@ const ChatbotWidget = dynamic(() => import("@/components/landings/ChatbotWidget"
 // Como es Next.js 15, los params son asíncronos
 export default async function PublicLandingPage({ params, searchParams }: { params: Promise<{ subdomain: string }>, searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
   const { subdomain } = await params;
+  const sp = await searchParams;
 
   // 1. Buscamos el negocio en la base de datos (por subdominio o por dominio personalizado)
   const rawBiz = await prisma.business.findFirst({
@@ -92,20 +104,32 @@ export default async function PublicLandingPage({ params, searchParams }: { para
     }
   });
 
-  if (!rawBiz) {
+  // P0-004: BLOCKED and ARCHIVED businesses must never render public landing
+  if (!rawBiz || rawBiz.status === "BLOCKED" || rawBiz.status === "ARCHIVED") {
     return notFound();
   }
 
-  const layoutConf = (rawBiz as any).layoutConfig || {};
-  const pubConf = (rawBiz as any).publishedConfig || {};
-  // Merge publishedConfig over layoutConfig, falling back to layoutConfig for unset properties
-  const activeConfig = {
-    ...layoutConf,
-    ...pubConf,
-    videoUrl: pubConf.videoUrl || layoutConf.videoUrl || "",
-    bookingUrl: pubConf.bookingUrl || layoutConf.bookingUrl || "",
-    heroText: pubConf.heroText || layoutConf.heroText || "",
+  // P0-005: Preview authorization check (requires owner/admin session)
+  let isPreviewAuthorized = false;
+  if (sp.preview === "true") {
+    const session = await getServerSession(authOptions);
+    if (session?.user && (session.user.role === "ADMIN" || session.user.id === rawBiz.userId)) {
+      isPreviewAuthorized = true;
+    }
+  }
+
+  // P0-005: Public visitors ONLY see publishedConfig. LayoutConfig (draft) is only visible in authorized preview.
+  const defaultPublicConfig = {
+    sections: [
+      { id: "hero", label: "Hero / Portada", icon: "image", visible: true, config: { title: `Bienvenido a ${rawBiz.name}`, subtitle: "Tu negocio", ctaText: "Reservar Turno" } },
+      { id: "services", label: "Servicios", icon: "star", visible: true, config: { items: [] } },
+    ],
+    themeVariant: "classic"
   };
+
+  const activeConfig = isPreviewAuthorized
+    ? ((rawBiz.layoutConfig as any) || (rawBiz.publishedConfig as any) || defaultPublicConfig)
+    : ((rawBiz.publishedConfig as any) || (rawBiz.layoutConfig as any) || defaultPublicConfig);
 
   // SEC-033 Fix: Create a strict PublicBusinessDTO to avoid data leakage
   const biz = {
@@ -225,7 +249,6 @@ export default async function PublicLandingPage({ params, searchParams }: { para
     }
   `;
 
-  const sp = await searchParams;
   const editMode = sp.preview === 'true';
   const EditModeWrapper = editMode ? dynamic(() => import("@/components/landings/EditModeWrapper")) : null;
 

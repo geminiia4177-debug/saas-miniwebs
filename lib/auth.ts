@@ -5,30 +5,11 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 
-// SEC-020 Fix: Login rate limiting (in-memory)
-const LOGIN_RATE_LIMIT = new Map<string, { attempts: number, lockUntil: number }>();
+import { checkRateLimit } from "@/lib/rate-limit";
 
-function checkLoginRateLimit(email: string) {
-  const record = LOGIN_RATE_LIMIT.get(email);
-  const now = Date.now();
-  if (record && record.lockUntil > now) return false;
-  return true;
-}
-
-function recordLoginFail(email: string) {
-  const record = LOGIN_RATE_LIMIT.get(email) || { attempts: 0, lockUntil: 0 };
-  record.attempts++;
-  
-  // P1-005: Progressive backoff. 1st=none, 3rd=1min, 4th=5min, 5th+=15min+
-  if (record.attempts >= 3) {
-    const backoffMinutes = Math.pow(5, record.attempts - 3); // 3rd=1, 4th=5, 5th=25...
-    const maxLock = 60 * 24; // max 24 hours
-    const lockMins = Math.min(backoffMinutes, maxLock);
-    record.lockUntil = Date.now() + lockMins * 60 * 1000;
-  }
-  
-  LOGIN_RATE_LIMIT.set(email, record);
-}
+// P1-003: Distributed Login Rate Limiting (5 attempts per 15 minutes)
+const LOGIN_RATE_WINDOW_MS = 15 * 60 * 1000;
+const LOGIN_MAX_ATTEMPTS = 5;
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma) as any,
@@ -48,10 +29,12 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Faltan datos");
         }
 
-        const email = credentials.email.toLowerCase();
+        const email = credentials.email.toLowerCase().trim();
 
-        // SEC-020 Fix: Check lockout
-        if (!checkLoginRateLimit(email)) {
+        // P1-003: Check distributed rate limit
+        const rateLimitKey = `login:email:${email}`;
+        const isAllowed = await checkRateLimit(rateLimitKey, LOGIN_MAX_ATTEMPTS, LOGIN_RATE_WINDOW_MS, { failClosed: true });
+        if (!isAllowed) {
           throw new Error("Demasiados intentos fallidos. Cuenta bloqueada temporalmente por 15 minutos.");
         }
         
@@ -62,7 +45,6 @@ export const authOptions: NextAuthOptions = {
         if (!user || !user.password) {
           // Fake delay to prevent timing attacks
           await new Promise(r => setTimeout(r, 1000));
-          recordLoginFail(email);
           if (user) {
             await prisma.user.update({ where: { id: user.id }, data: { failedLoginCount: { increment: 1 } } });
           }
@@ -72,15 +54,12 @@ export const authOptions: NextAuthOptions = {
         
         const isValid = await bcrypt.compare(credentials.password, user.password);
         if (!isValid) {
-          recordLoginFail(email);
           await prisma.user.update({ where: { id: user.id }, data: { failedLoginCount: { increment: 1 } } });
           // P1-005: Do not reveal if user exists (use same generic message)
           throw new Error("Credenciales inválidas");
         }
 
-        // Success: clear failures
-        LOGIN_RATE_LIMIT.delete(email);
-        
+        // Success: reset failures and update login timestamp
         await prisma.user.update({
           where: { id: user.id },
           data: { lastLoginAt: new Date(), failedLoginCount: 0 }

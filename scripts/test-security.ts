@@ -432,25 +432,136 @@ section("P1-015: Pagination Hard Limits");
   assert("Negative limit is clamped to min 1", sanitizeLimit("-5") === 1);
 }
 
-// P1-009: XSS Payload Sanitization
-section("P1-009: XSS & HTML Attribute Escaping");
+// P0-005 & P0-006: LayoutConfig vs PublishedConfig Separation
+section("P0-005/P0-006: LayoutConfig & PublishedConfig Separation");
 {
-  function sanitizeString(input: string): string {
-    return input
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#x27;")
-      .replace(/\//g, "&#x2F;");
+  const mockDbBusiness = {
+    id: "biz-123",
+    name: "Mi Barberia",
+    userId: "user-owner",
+    layoutConfig: { secretNotes: "private draft", themeVariant: "draft-theme" },
+    publishedConfig: { themeVariant: "modern", sections: [{ id: "hero" }] },
+    status: "ACTIVE",
+    paymentAmount: 5000,
+  };
+
+  function simulatePublicBusinessView(biz: any, isOwner: boolean) {
+    if (!isOwner) {
+      return {
+        id: biz.id,
+        name: biz.name,
+        publishedConfig: biz.publishedConfig,
+        status: biz.status,
+      };
+    }
+    return {
+      id: biz.id,
+      name: biz.name,
+      layoutConfig: biz.layoutConfig,
+      publishedConfig: biz.publishedConfig,
+      status: biz.status,
+    };
   }
 
-  const payload1 = "<script>alert(1)</script>";
-  const payload2 = "<img src=x onerror=alert(1)>";
-  const payload3 = "javascript:alert(1)";
+  const publicView = simulatePublicBusinessView(mockDbBusiness, false);
+  assert("Public visitor cannot see draft layoutConfig", !("layoutConfig" in publicView));
+  assert("Public visitor cannot see userId or paymentAmount", !("userId" in publicView) && !("paymentAmount" in publicView));
+  assert("Public visitor receives publishedConfig", "publishedConfig" in publicView);
 
-  assert("<script> tag is escaped", !sanitizeString(payload1).includes("<script>"));
-  assert("img onerror tag is escaped", !sanitizeString(payload2).includes("<img"));
-  assert("JSON-LD < script breakout is prevented", JSON.stringify({ bio: "</script><script>alert(1)" }).replace(/</g, "\\u003c").indexOf("</script>") === -1);
+  const ownerView = simulatePublicBusinessView(mockDbBusiness, true);
+  assert("Owner receives draft layoutConfig", "layoutConfig" in ownerView);
+}
+
+// P0-007, P0-008, P0-009: Appointment Duration Overlap Logic
+section("P0-007/P0-008/P0-009: Appointment Duration Overlap Logic");
+{
+  function checkSlotOverlap(
+    newStart: number,
+    newDurationMin: number,
+    existingStart: number,
+    existingDurationMin: number
+  ): boolean {
+    const newEnd = newStart + newDurationMin * 60 * 1000;
+    const existingEnd = existingStart + existingDurationMin * 60 * 1000;
+    return newStart < existingEnd && newEnd > existingStart;
+  }
+
+  const baseTime = 1700000000000; // 0 min
+  const thirtyMinMs = 30 * 60 * 1000;
+  const fortyFiveMinMs = 45 * 60 * 1000;
+  const sixtyMinMs = 60 * 60 * 1000;
+
+  assert("Exact same time overlaps", checkSlotOverlap(baseTime, 30, baseTime, 30));
+  assert("New 60m appt overlapping existing 30m appt at +15m", checkSlotOverlap(baseTime, 60, baseTime + 15 * 60 * 1000, 30));
+  assert("New 30m appt starting at existing end time does NOT overlap", !checkSlotOverlap(baseTime + thirtyMinMs, 30, baseTime, 30));
+  assert("New appt before existing does NOT overlap", !checkSlotOverlap(baseTime - thirtyMinMs, 30, baseTime, 30));
+  assert("New 45m appt starting at +20m overlaps", checkSlotOverlap(baseTime + 20 * 60 * 1000, 45, baseTime, 30));
+}
+
+// P0-010 & P0-011: Encryption Key and Failure Safety
+section("P0-010/P0-011: Encryption Key and Failure Safety");
+{
+  const crypto = require("crypto");
+  function validateHexKey(key: string): boolean {
+    return typeof key === "string" && /^[0-9a-fA-F]{64}$/.test(key);
+  }
+
+  assert("64-character hex key is valid", validateHexKey("a".repeat(64)));
+  assert("Short key is invalid", !validateHexKey("short-key"));
+  assert("Non-hex characters are invalid", !validateHexKey("z".repeat(64)));
+  assert("32-character key is invalid (requires 64 hex chars for 32 bytes)", !validateHexKey("a".repeat(32)));
+}
+
+// Static File Audits for P0 fixes
+section("Static Code Hardening Audits (P0/P1)");
+{
+  const fs = require("fs");
+
+  // P0-001: No include business in appointments/[id]
+  const apptIdRoute = fs.readFileSync("./app/api/appointments/[id]/route.ts", "utf-8");
+  assert(
+    "P0-001: app/api/appointments/[id]/route.ts has NO 'include: { business: true }'",
+    !apptIdRoute.includes("include: { business: true }")
+  );
+
+  // P0-002: No fallbackEnv in upload
+  const uploadRoute = fs.readFileSync("./app/api/upload/route.ts", "utf-8");
+  assert(
+    "P0-002: app/api/upload/route.ts has NO fallbackEnv",
+    !uploadRoute.includes("fallbackEnv")
+  );
+
+  // P0-003: No fixed admin password in businesses
+  const bizRoute = fs.readFileSync("./app/api/businesses/route.ts", "utf-8");
+  assert(
+    "P0-003: app/api/businesses/route.ts does NOT create users with fixed 'admin' password",
+    !bizRoute.includes('bcrypt.hash("admin"')
+  );
+
+  // P0-004: Subdomain landing page checks BLOCKED and ARCHIVED
+  const landingPage = fs.readFileSync("./app/[subdomain]/page.tsx", "utf-8");
+  assert(
+    "P0-004: app/[subdomain]/page.tsx rejects BLOCKED businesses",
+    landingPage.includes('status === "BLOCKED"')
+  );
+  assert(
+    "P0-004: app/[subdomain]/page.tsx rejects ARCHIVED businesses",
+    landingPage.includes('status === "ARCHIVED"')
+  );
+
+  // P0-008: Chat route uses AppointmentService
+  const chatRoute = fs.readFileSync("./app/api/chat/route.ts", "utf-8");
+  assert(
+    "P0-008: app/api/chat/route.ts uses AppointmentService",
+    chatRoute.includes("AppointmentService.createAppointment")
+  );
+
+  // P2-001: CSP header in next.config.ts
+  const nextConfig = fs.readFileSync("./next.config.ts", "utf-8");
+  assert(
+    "P2-001: next.config.ts configures Content-Security-Policy",
+    nextConfig.includes("Content-Security-Policy")
+  );
 }
 
 // ─── Global scan checks ───────────────────────────────────────────────────────

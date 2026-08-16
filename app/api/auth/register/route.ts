@@ -2,22 +2,19 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
+import { checkRateLimit } from "@/lib/rate-limit";
 
-// SEC-018 Fix: Simple rate limiter (in-memory for Phase 1)
-const REGISTER_RATE_LIMIT = new Map<string, { count: number, timestamp: number }>();
+const REG_WINDOW_MS = 60 * 60 * 1000; // 1 hour
+const REG_MAX_IP = 5;
+const REG_MAX_EMAIL = 3;
 
 export async function POST(req: Request) {
   try {
-    // SEC-018 Fix: Rate limiting
-    const ip = req.headers.get("x-forwarded-for") || "unknown_ip";
-    const now = Date.now();
-    const rateRecord = REGISTER_RATE_LIMIT.get(ip) || { count: 0, timestamp: now };
-    
-    if (now - rateRecord.timestamp > 3600000) { // 1 hour
-      rateRecord.count = 0;
-      rateRecord.timestamp = now;
-    }
-    if (rateRecord.count >= 5) {
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown_ip";
+
+    // P1-004: Rate limit by IP
+    const ipAllowed = await checkRateLimit(`reg:ip:${ip}`, REG_MAX_IP, REG_WINDOW_MS, { failClosed: true });
+    if (!ipAllowed) {
       return NextResponse.json({ message: "Demasiados registros desde esta IP. Intenta más tarde." }, { status: 429 });
     }
 
@@ -27,16 +24,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "Email y contraseña son obligatorios" }, { status: 400 });
     }
 
-    // SEC-P1-005 Fix: Normalize email
     const normalizedEmail = email.toLowerCase().trim();
 
-    // SEC-P1-005 Fix: Rate limit by email
-    const emailRateRecord = REGISTER_RATE_LIMIT.get(normalizedEmail) || { count: 0, timestamp: now };
-    if (now - emailRateRecord.timestamp > 3600000) {
-      emailRateRecord.count = 0;
-      emailRateRecord.timestamp = now;
-    }
-    if (emailRateRecord.count >= 3) {
+    // P1-004: Rate limit by email
+    const emailAllowed = await checkRateLimit(`reg:email:${normalizedEmail}`, REG_MAX_EMAIL, REG_WINDOW_MS, { failClosed: true });
+    if (!emailAllowed) {
       return NextResponse.json({ message: "Demasiados intentos para este email. Intenta más tarde." }, { status: 429 });
     }
 
@@ -86,13 +78,6 @@ export async function POST(req: Request) {
         }
       }
     });
-
-    // SEC-018 Fix: Increment rate limit only on success
-    rateRecord.count++;
-    REGISTER_RATE_LIMIT.set(ip, rateRecord);
-    
-    emailRateRecord.count++;
-    REGISTER_RATE_LIMIT.set(normalizedEmail, emailRateRecord);
 
     return NextResponse.json({ message: "Usuario y negocio creados con éxito" }, { status: 201 });
   } catch (error) {

@@ -1,26 +1,34 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { requireBusinessOwner } from "@/lib/auth-helpers";
+import { requireSession, requireBusinessOwner } from "@/lib/auth-helpers";
+import { z } from "zod";
+
+const TableStatusSchema = z.enum(["OPEN", "CLOSED"]);
 
 export async function GET(req: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.email) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    const { session, error: sessionError } = await requireSession();
+    if (sessionError) return sessionError;
+
+    const { searchParams } = new URL(req.url);
+    let businessId = searchParams.get("businessId");
+
+    if (!businessId) {
+      const business = await prisma.business.findFirst({
+        where: { userId: session.user.id },
+        select: { id: true },
+      });
+      if (!business) {
+        return NextResponse.json({ error: "Negocio no encontrado" }, { status: 404 });
+      }
+      businessId = business.id;
     }
 
-    const business = await prisma.business.findFirst({
-      where: { user: { email: session.user.email } },
-    });
-
-    if (!business) {
-      return NextResponse.json({ error: "Negocio no encontrado" }, { status: 404 });
-    }
+    const { error: authError } = await requireBusinessOwner(businessId);
+    if (authError) return authError;
 
     const tables = await prisma.table.findMany({
-      where: { businessId: business.id },
+      where: { businessId },
       orderBy: { number: "asc" },
       include: {
         orders: {
@@ -31,60 +39,73 @@ export async function GET(req: Request) {
 
     return NextResponse.json(tables);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Error interno";
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error("Error fetching tables:", error instanceof Error ? error.message : "unknown");
+    return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }
 
 export async function POST(req: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.email) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    const { session, error: sessionError } = await requireSession();
+    if (sessionError) return sessionError;
+
+    const body = await req.json().catch(() => ({}));
+    let businessId = body.businessId;
+
+    if (!businessId) {
+      const business = await prisma.business.findFirst({
+        where: { userId: session.user.id },
+        select: { id: true, customDomain: true, subdomain: true },
+      });
+      if (!business) {
+        return NextResponse.json({ error: "Negocio no encontrado" }, { status: 404 });
+      }
+      businessId = business.id;
     }
 
-    const business = await prisma.business.findFirst({
-      where: { user: { email: session.user.email } },
-    });
+    const { error: authError } = await requireBusinessOwner(businessId);
+    if (authError) return authError;
 
+    const business = await prisma.business.findUnique({
+      where: { id: businessId },
+      select: { id: true, customDomain: true, subdomain: true },
+    });
     if (!business) {
       return NextResponse.json({ error: "Negocio no encontrado" }, { status: 404 });
     }
 
-    // Get max table number
-    const lastTable = await prisma.table.findFirst({
-      where: { businessId: business.id },
-      orderBy: { number: "desc" },
-    });
+    // Assign next available table number in a concurrency-safe loop/transaction
+    const newTable = await prisma.$transaction(async (tx) => {
+      const lastTable = await tx.table.findFirst({
+        where: { businessId: business.id },
+        orderBy: { number: "desc" },
+      });
 
-    const newNumber = lastTable ? lastTable.number + 1 : 1;
-    
-    const tableUrl = business.customDomain ? `https://${business.customDomain}/?mesa=${newNumber}` : `https://${business.subdomain}.saas-miniwebs.vercel.app/?mesa=${newNumber}`;
-    // Optionally generate a real QR code image URL here using a free API or a package
-    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(tableUrl)}`;
+      const newNumber = lastTable ? lastTable.number + 1 : 1;
+      const tableUrl = business.customDomain ? `https://${business.customDomain}/?mesa=${newNumber}` : `https://${business.subdomain}.saas-miniwebs.com/?mesa=${newNumber}`;
+      const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(tableUrl)}`;
 
-    const newTable = await prisma.table.create({
-      data: {
-        businessId: business.id,
-        number: newNumber,
-        status: "CLOSED",
-        qrCodeUrl,
-      },
+      return await tx.table.create({
+        data: {
+          businessId: business.id,
+          number: newNumber,
+          status: "CLOSED",
+          qrCodeUrl,
+        },
+      });
     });
 
     return NextResponse.json(newTable);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Error interno";
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error("Error creating table:", error instanceof Error ? error.message : "unknown");
+    return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }
 
 export async function PATCH(req: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.email) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-    }
+    const { error: sessionError } = await requireSession();
+    if (sessionError) return sessionError;
 
     const data = await req.json();
     const { tableId, status, paymentMethod, cancelOrders } = data;
@@ -93,7 +114,11 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: "Faltan datos" }, { status: 400 });
     }
 
-    // SEC-006 Fix: Resolve table -> businessId -> check ownership
+    const statusParsed = TableStatusSchema.safeParse(status);
+    if (!statusParsed.success) {
+      return NextResponse.json({ error: "Estado de mesa inválido (debe ser OPEN o CLOSED)" }, { status: 400 });
+    }
+
     const table = await prisma.table.findUnique({ where: { id: tableId } });
     if (!table) {
       return NextResponse.json({ error: "Mesa no encontrada" }, { status: 404 });
@@ -105,10 +130,10 @@ export async function PATCH(req: Request) {
     const updated = await prisma.$transaction(async (tx) => {
       const updatedTable = await tx.table.update({
         where: { id: tableId },
-        data: { status }
+        data: { status: statusParsed.data }
       });
 
-      if (status === "CLOSED") {
+      if (statusParsed.data === "CLOSED") {
         if (cancelOrders) {
           await tx.order.updateMany({
             where: { tableId, status: { in: ["PENDING", "CONFIRMED"] } },
@@ -126,7 +151,7 @@ export async function PATCH(req: Request) {
 
     return NextResponse.json(updated);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Error interno";
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error("Error updating table:", error instanceof Error ? error.message : "unknown");
+    return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }

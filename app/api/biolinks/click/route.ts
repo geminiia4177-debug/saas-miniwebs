@@ -19,7 +19,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Parámetros inválidos" }, { status: 400 });
     }
 
-    // We fetch the business to update the layoutConfig.biolinks.items
+    // We fetch the business to update the layoutConfig.biolinks
     const biz = await prisma.business.findUnique({
       where: { id: businessId },
       select: { id: true, layoutConfig: true },
@@ -29,23 +29,37 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Business not found" }, { status: 404 });
     }
 
-    const config = biz.layoutConfig as any;
-    if (config?.biolinks?.items) {
-      const items = config.biolinks.items.map((item: any) => {
-        // Find the specific item. If item.id doesn't exist, we fallback to comparing url (less safe but works for legacy)
-        if (item.id === linkId) {
+    const config = (biz.layoutConfig as any) || {};
+    let found = false;
+
+    if (Array.isArray(config?.biolinks?.items)) {
+      config.biolinks.items = config.biolinks.items.map((item: any) => {
+        if (item.id === linkId || item.url === linkId) {
+          found = true;
           return { ...item, clicks: (item.clicks || 0) + 1 };
         }
         return item;
       });
+    }
 
-      config.biolinks.items = items;
-
-      await prisma.business.update({
-        where: { id: businessId },
-        data: { layoutConfig: config },
+    if (Array.isArray(config?.biolinks?.links)) {
+      config.biolinks.links = config.biolinks.links.map((item: any) => {
+        if (item.id === linkId || item.url === linkId) {
+          found = true;
+          return { ...item, clicks: (item.clicks || 0) + 1 };
+        }
+        return item;
       });
     }
+
+    if (!found) {
+      return NextResponse.json({ error: "Link not found in business biolinks" }, { status: 404 });
+    }
+
+    await prisma.business.update({
+      where: { id: businessId },
+      data: { layoutConfig: config },
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

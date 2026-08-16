@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { GoogleGenAI, ThinkingLevel } from "@google/genai";
+import { AppointmentService } from "@/lib/appointment-service";
 import { checkRateLimit, getRateLimitRetryAfterMs } from "@/lib/rate-limit";
 import {
   getBusinessDayName,
@@ -328,7 +329,12 @@ Para crear una reserva confirmada:
         }
 
         if (cmd.action === "CONSULTAR_TURNOS") {
-          const slots = await fetchSlots(businessId, cmd.date, cmd.serviceId || "", timezone);
+          const slotResult = await AppointmentService.fetchAvailableSlots(
+            businessId,
+            cmd.date,
+            cmd.serviceId
+          );
+          const slots = slotResult.slots || [];
           responseText = responseText.replace(/(\\?[^?]*)$/, "").trim();
           if (slots.length > 0) {
             const formatted = slots.map((s) => `• ${s}`).join("  ");
@@ -339,23 +345,32 @@ Para crear una reserva confirmada:
         }
 
         if (cmd.action === "CREAR_TURNO") {
-          // Resolve actual serviceName from serviceId for the DB
-          const srv = allServices.find(s => s.id === cmd.serviceId);
-          const resolvedServiceName = srv ? srv.name : "Servicio";
+          // Build local-to-UTC target Date
+          const [year, month, day] = cmd.date.split("-").map(Number);
+          const [hours, minutes] = cmd.time.split(":").map(Number);
 
-          const result = await createAppointment(
+          const noonUTC = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+          const localNoon = new Date(noonUTC.toLocaleString("en-US", { timeZone: timezone }));
+          const offsetMs = noonUTC.getTime() - localNoon.getTime();
+          const localTargetMs = Date.UTC(year, month - 1, day, hours, minutes, 0);
+          const utcDate = new Date(localTargetMs + offsetMs);
+
+          const result = await AppointmentService.createAppointment({
             businessId,
-            cmd.clientName,
-            cmd.clientPhone,
-            resolvedServiceName,
-            cmd.date,
-            cmd.time,
-            timezone
-          );
-          if (result.success) {
-            responseText += `\n\n✅ ¡Tu turno quedó confirmado!\n📅 ${cmd.date} a las ${cmd.time}hs\n💈 Servicio: ${resolvedServiceName}\n\n¡Te esperamos, ${cmd.clientName}!`;
+            clientName: cmd.clientName,
+            clientPhone: cmd.clientPhone,
+            serviceId: cmd.serviceId || null,
+            date: utcDate,
+            employeeId: cmd.employeeId || null,
+            source: "WA",
+          });
+
+          if (result.success && result.appointment) {
+            responseText += `\n\n✅ ¡Tu turno quedó confirmado!\n📅 ${cmd.date} a las ${cmd.time}hs\n💈 Servicio: ${result.appointment.serviceName}\n\n¡Te esperamos, ${cmd.clientName}!`;
+          } else if (result.status === 409) {
+            responseText += `\n\n⚠️ El horario ${cmd.time}hs acaba de ser reservado o se solapa con otro turno. ¿Podrías elegir otro horario?`;
           } else {
-            responseText += `\n\n😕 Hubo un problema al guardar el turno. ¿Me repites los datos?`;
+            responseText += `\n\n😕 Hubo un problema al guardar el turno (${result.error || "Datos no válidos"}). ¿Me repites los datos?`;
           }
         }
       }
@@ -365,139 +380,5 @@ Para crear una reserva confirmada:
   } catch (error: any) {
     console.error("Error in Chat API:", error instanceof Error ? error.message : "unknown");
     return NextResponse.json({ error: "Error procesando tu consulta" }, { status: 500 });
-  }
-}
-
-// ─── Helper: Fetch slots ───────────────────────────────────────────────────────
-async function fetchSlots(
-  businessId: string,
-  date: string,
-  serviceName: string,
-  timezone: string
-): Promise<string[]> {
-  try {
-    const biz = await prisma.business.findUnique({
-      where: { id: businessId },
-      select: { layoutConfig: true, status: true },
-    });
-    if (!biz || biz.status === "BLOCKED" || biz.status === "ARCHIVED") return [];
-
-    const layout = biz.layoutConfig as any || {};
-    const sections = layout.sections || [];
-    const bookingSection = sections.find((s: any) => s.id === "booking");
-    const hours = layout.hours || bookingSection?.config?.hours || {
-      lunes: { open: true, from: "09:00", to: "18:00" },
-      martes: { open: true, from: "09:00", to: "18:00" },
-      miercoles: { open: true, from: "09:00", to: "18:00" },
-      jueves: { open: true, from: "09:00", to: "18:00" },
-      viernes: { open: true, from: "09:00", to: "18:00" },
-      sabado: { open: false, from: "09:00", to: "13:00" },
-      domingo: { open: false, from: "09:00", to: "13:00" },
-    };
-
-    // Find service duration
-    const allSrvs = [
-      ...(sections.find((s: any) => s.type === "services")?.items || []),
-      ...(layout.barberiaServices || []),
-      ...(layout.clinicaServices || []),
-      ...(layout.tallerServices || []),
-    ];
-    const serviceItem = allSrvs.find(
-      (s: any) => (s.name || s.title)?.toLowerCase() === serviceName?.toLowerCase()
-    );
-    const duration = serviceItem?.duration || 30;
-
-    // Determine day using business timezone
-    const [year, month, day] = date.split("-").map(Number);
-    const noonUTC = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
-    const dayName = getBusinessDayName(noonUTC, timezone);
-    const dayConfig = hours[dayName];
-    if (!dayConfig?.open) return [];
-
-    // Get existing appointments
-    const searchStart = new Date(Date.UTC(year, month - 1, day - 1, 0, 0, 0));
-    const searchEnd = new Date(Date.UTC(year, month - 1, day + 1, 23, 59, 59));
-
-    const existing = await prisma.appointment.findMany({
-      where: {
-        businessId,
-        date: { gte: searchStart, lte: searchEnd },
-        status: { not: "CANCELLED" },
-      },
-      select: { date: true, serviceName: true },
-    });
-
-    const bookedRanges = existing
-      .map((app) => {
-        const startMin = getBusinessMinutesSinceMidnight(app.date, timezone);
-        const srvItem = allSrvs.find((s: any) => s.name === app.serviceName);
-        return { start: startMin, end: startMin + (srvItem?.duration || 30) };
-      });
-
-    const openMin = parseTimeToMinutes(dayConfig.from || "09:00");
-    const closeMin = parseTimeToMinutes(dayConfig.to || "18:00");
-    const slots: string[] = [];
-
-    for (let cur = openMin; cur + duration <= closeMin; cur += duration) {
-      const overlaps = bookedRanges.some((r) => cur < r.end && cur + duration > r.start);
-      if (!overlaps) {
-        const h = Math.floor(cur / 60).toString().padStart(2, "0");
-        const m = (cur % 60).toString().padStart(2, "0");
-        slots.push(`${h}:${m}`);
-      }
-    }
-    return slots;
-  } catch (e) {
-    console.error("fetchSlots error:", e instanceof Error ? e.message : "unknown");
-    return [];
-  }
-}
-
-// ─── Helper: Create appointment from chat ─────────────────────────────────────
-async function createAppointment(
-  businessId: string,
-  clientName: string,
-  clientPhone: string,
-  serviceName: string,
-  date: string,
-  time: string,
-  timezone: string
-): Promise<{ success: boolean }> {
-  try {
-    // Verify slot is still available
-    const slots = await fetchSlots(businessId, date, serviceName, timezone);
-    if (!slots.includes(time)) {
-      return { success: false };
-    }
-
-    // Build UTC date for storage — interpret date+time as business-local
-    const [year, month, day] = date.split("-").map(Number);
-    const [hours, minutes] = time.split(":").map(Number);
-
-    // Create a noon reference to get the right timezone offset
-    const noonUTC = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
-    // Get timezone offset at this date
-    const localNoon = new Date(noonUTC.toLocaleString("en-US", { timeZone: timezone }));
-    const offsetMs = noonUTC.getTime() - localNoon.getTime();
-    // Reconstruct the target time in local, then convert to UTC
-    const localTargetMs = Date.UTC(year, month - 1, day, hours, minutes, 0);
-    const utcDate = new Date(localTargetMs + offsetMs);
-
-    await prisma.appointment.create({
-      data: {
-        businessId,
-        clientName: clientName.trim().substring(0, 100),
-        clientPhone: clientPhone.trim().substring(0, 30),
-        serviceName: serviceName.trim().substring(0, 200),
-        date: utcDate,
-        status: "PENDING",
-        notes: "Reservado vía chatbot ✅",
-        source: "WA",
-      },
-    });
-    return { success: true };
-  } catch (e) {
-    console.error("createAppointment (chat) error:", e instanceof Error ? e.message : "unknown");
-    return { success: false };
   }
 }

@@ -100,10 +100,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Contenido de archivo inválido o formato no soportado." }, { status: 400 });
     }
 
-    // 10. P0-002: Use ONLY the server-side IMGBB_API_KEY.
-    // NEVER use NEXT_PUBLIC_IMGBB_API_KEY directly on the client.
-    const fallbackEnv = "NEXT_PUBLIC_" + "IMGBB_API_KEY";
-    const key = process.env.IMGBB_API_KEY || process.env[fallbackEnv];
+    // 10. P0-002: Use strictly the server-side IMGBB_API_KEY.
+    const key = process.env.IMGBB_API_KEY;
     if (!key) {
       console.error("IMGBB_API_KEY is not configured");
       return NextResponse.json({ error: "Servicio de imágenes no disponible" }, { status: 500 });

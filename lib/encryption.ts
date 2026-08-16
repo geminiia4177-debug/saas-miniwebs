@@ -2,29 +2,26 @@ import crypto from 'crypto';
 
 const ALGORITHM = 'aes-256-gcm';
 
-// Asegúrate de que ENCRYPTION_KEY esté en el .env y tenga exactamente 32 bytes (64 caracteres hex)
-function getKey(): Buffer {
+// ENCRYPTION_KEY must be exactly 32 bytes (64 hexadecimal characters)
+export function getKey(): Buffer {
   const keyStr = process.env.ENCRYPTION_KEY;
   if (!keyStr) {
-    // Si no hay key, generamos una estática solo para desarrollo, PERO debe fallar en PROD.
-    // Para cumplir la auditoría P0, forzaremos un error si no hay key y estamos en producción.
     if (process.env.NODE_ENV === 'production') {
-      throw new Error('ENCRYPTION_KEY must be set in production');
+      throw new Error('ENCRYPTION_KEY must be set in production (64 hex characters)');
     }
-    // Clave dummy fallback segura solo para dev
-    return crypto.scryptSync('dummy-dev-key-12345', 'salt', 32);
+    // Fallback key only for non-production development/local test runner
+    return crypto.scryptSync('dummy-dev-key-12345-deterministic', 'salt', 32);
   }
   
-  if (keyStr.length === 64) {
-    return Buffer.from(keyStr, 'hex');
+  if (!/^[0-9a-fA-F]{64}$/.test(keyStr)) {
+    throw new Error('ENCRYPTION_KEY must be a 64-character hexadecimal string (32 bytes)');
   }
-  
-  // Fallback a derivación si es un string random
-  return crypto.scryptSync(keyStr, 'salt', 32);
+
+  return Buffer.from(keyStr, 'hex');
 }
 
 export function encryptSecret(text: string | null | undefined): string | null {
-  if (!text) return null;
+  if (text === null || text === undefined || text === '') return null;
 
   try {
     const iv = crypto.randomBytes(16);
@@ -35,11 +32,12 @@ export function encryptSecret(text: string | null | undefined): string | null {
     
     const authTag = cipher.getAuthTag().toString('hex');
     
-    // Formato: iv:authTag:encryptedData
+    // Format: iv:authTag:encryptedData
     return `${iv.toString('hex')}:${authTag}:${encrypted}`;
   } catch (error) {
-    console.error('Encryption failed:', error);
-    return null; // O throw error, dependiendo de si es crítico
+    console.error('Encryption failed');
+    // P0-010: Never silently return null on encryption failure if secret was provided
+    throw new Error('Encryption operation failed');
   }
 }
 

@@ -17,6 +17,16 @@ export async function PUT(req: Request) {
       return NextResponse.json({ error: "Faltan datos" }, { status: 400 });
     }
 
+    // P1-005: Enforce Password Policy
+    if (typeof newPassword !== "string" || newPassword.length < 8) {
+      return NextResponse.json({ error: "La nueva contraseña debe tener al menos 8 caracteres" }, { status: 400 });
+    }
+
+    const weakPasswords = ["12345678", "password", "admin123", "qwertyui", "123456789", "password123"];
+    if (weakPasswords.includes(newPassword.toLowerCase())) {
+      return NextResponse.json({ error: "Por favor elige una contraseña más segura" }, { status: 400 });
+    }
+
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
     });

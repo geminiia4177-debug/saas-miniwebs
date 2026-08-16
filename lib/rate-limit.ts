@@ -10,42 +10,54 @@ import { prisma } from "@/lib/db";
 export async function checkRateLimit(
   key: string,
   maxRequests: number,
-  windowMs: number
+  windowMs: number,
+  options?: { failClosed?: boolean }
 ): Promise<boolean> {
   const now = new Date();
   const expiresAt = new Date(now.getTime() + windowMs);
 
   try {
-    // 1. Clean up expired keys to keep table small
-    await prisma.rateLimit.deleteMany({
-      where: { expiresAt: { lt: now } },
-    });
+    // 1. Transactional rate limit check with window reset
+    const record = await prisma.$transaction(async (tx) => {
+      const existing = await tx.rateLimit.findUnique({
+        where: { key },
+      });
 
-    // 2. Upsert the rate limit key
-    const record = await prisma.rateLimit.upsert({
-      where: { key },
-      create: {
-        key,
-        count: 1,
-        expiresAt,
-      },
-      update: {
-        count: {
-          increment: 1,
+      if (!existing || existing.expiresAt < now) {
+        return await tx.rateLimit.upsert({
+          where: { key },
+          create: {
+            key,
+            count: 1,
+            expiresAt,
+          },
+          update: {
+            count: 1,
+            expiresAt,
+          },
+        });
+      }
+
+      return await tx.rateLimit.update({
+        where: { key },
+        data: {
+          count: { increment: 1 },
         },
-      },
+      });
     });
 
-    // 3. Evaluate limit
+    // 2. Evaluate limit
     if (record.count > maxRequests) {
       return false;
     }
     return true;
   } catch (error) {
     console.error("Rate limit check error:", error);
-    // Fallback: If DB fails, fail OPEN to not block critical operations,
-    // or fail CLOSED if strict security is preferred.
-    return true; // Fail open
+    // P1-002: If failClosed is requested for sensitive routes, return false
+    if (options?.failClosed) {
+      return false;
+    }
+    return true; // Fail open for general operations
   }
 }
 

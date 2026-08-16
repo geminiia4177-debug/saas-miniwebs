@@ -7,7 +7,13 @@ export async function GET(req: Request) {
   try {
     const alerts = await prisma.alert.findMany({
       where: { isActive: true },
-      orderBy: { createdAt: "desc" }
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        content: true,
+        type: true,
+        createdAt: true,
+      }
     });
     return NextResponse.json(alerts);
   } catch (error) {
@@ -23,9 +29,16 @@ export async function POST(req: Request) {
   try {
     const { content, type } = await req.json();
 
-    if (!content) {
+    if (!content || typeof content !== "string" || content.trim().length === 0) {
       return NextResponse.json({ error: "Missing content" }, { status: 400 });
     }
+
+    if (content.length > 1000) {
+      return NextResponse.json({ error: "El contenido de la alerta no puede superar 1000 caracteres" }, { status: 400 });
+    }
+
+    const validTypes = ["info", "warning", "success", "error"];
+    const alertType = validTypes.includes(type) ? type : "info";
 
     // Deactivate previous alerts to keep only 1 active globally
     await prisma.alert.updateMany({
@@ -35,9 +48,15 @@ export async function POST(req: Request) {
 
     const alert = await prisma.alert.create({
       data: {
-        content,
-        type: type || "info",
+        content: content.trim(),
+        type: alertType,
         isActive: true
+      },
+      select: {
+        id: true,
+        content: true,
+        type: true,
+        createdAt: true,
       }
     });
 
