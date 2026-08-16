@@ -111,8 +111,8 @@ export async function POST(req: Request) {
 
     const timezone = biz.timezone ?? DEFAULT_BUSINESS_TIMEZONE;
 
-    // P1-012: Separate system instructions from business data
-    const layoutConfig = (biz.publishedConfig || biz.layoutConfig || {}) as Record<string, any>;
+    // P0-001: Public chatbot consumes exclusively publishedConfig (never draft layoutConfig)
+    const layoutConfig = (biz.publishedConfig || {}) as Record<string, any>;
     const botName = chatbotName || layoutConfig.chatbotName || "Asistente Virtual";
     const address = layoutConfig.address || "No especificada";
     const phone = biz.phone || layoutConfig.whatsapp || "No especificado";

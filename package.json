@@ -10,6 +10,7 @@
     "postinstall": "prisma generate",
     "test": "npx tsx scripts/test-security.ts",
     "test:security": "npx tsx scripts/test-security.ts",
+    "test:concurrency": "npx tsx scripts/test-concurrent-appointments.ts",
     "test:typecheck": "npx tsc --noEmit"
   },
   "dependencies": {

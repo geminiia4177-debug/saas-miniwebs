@@ -17,9 +17,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
-    // P1-004: Rate limit by user for AI generation
+    // P1-001: Rate limit by user for AI generation with failClosed
     const userKey = `ai:gen:${session.user.id}`;
-    if (!(await checkRateLimit(userKey, AI_RATE_MAX, AI_RATE_WINDOW_MS))) {
+    if (!(await checkRateLimit(userKey, AI_RATE_MAX, AI_RATE_WINDOW_MS, { failClosed: true }))) {
       const retryAfter = Math.ceil(await getRateLimitRetryAfterMs(userKey, AI_RATE_WINDOW_MS) / 1000);
       return NextResponse.json(
         { error: "Límite de generación de inteligencia artificial excedido. Intenta más tarde." },
@@ -32,11 +32,15 @@ export async function POST(req: Request) {
     }
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-    const body = await req.json();
+    const body = await req.json().catch(() => ({}));
     const { businessId, campaignType, context, clientName } = body;
 
-    if (!businessId || !campaignType) {
+    if (!businessId || !campaignType || typeof campaignType !== "string") {
       return NextResponse.json({ error: "Faltan parámetros" }, { status: 400 });
+    }
+
+    if (context && (typeof context !== "string" || context.length > 2000)) {
+      return NextResponse.json({ error: "El contexto es demasiado largo (máximo 2000 caracteres)" }, { status: 400 });
     }
 
     // Verify ownership

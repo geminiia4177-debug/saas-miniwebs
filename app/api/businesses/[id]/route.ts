@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { toSafeBusinessDTO } from "@/lib/dtos";
-import { ownerBusinessUpdateSchema, adminBusinessUpdateSchema } from "@/lib/validations";
+import { ownerBusinessUpdateSchema, adminBusinessUpdateSchema, LayoutConfigSchema } from "@/lib/validations";
 import { requireBusinessOwner } from "@/lib/auth-helpers";
 import { encryptSecret } from "@/lib/encryption";
 import { getServerSession } from "next-auth";
@@ -238,9 +238,28 @@ export async function PUT(
       updateData.bankDetails = encryptSecret(data.bankDetails);
     }
 
-    // Publish config if requested
-    if (rawData.publish === true && newLayoutConfig) {
-      updateData.publishedConfig = newLayoutConfig as object;
+    // Publish config if requested: validate snapshot against LayoutConfigSchema
+    if (rawData.publish === true) {
+      const configToPublish = newLayoutConfig || (existingBusiness as { layoutConfig?: unknown }).layoutConfig;
+      if (!configToPublish) {
+        return NextResponse.json(
+          { error: "No hay configuración para publicar." },
+          { status: 400 }
+        );
+      }
+
+      const publishValidation = LayoutConfigSchema.safeParse(configToPublish);
+      if (!publishValidation.success) {
+        return NextResponse.json(
+          {
+            error: "La configuración no es válida para ser publicada.",
+            details: publishValidation.error.format(),
+          },
+          { status: 400 }
+        );
+      }
+
+      updateData.publishedConfig = configToPublish as object;
     }
 
     const updatedBusiness = await prisma.business.update({

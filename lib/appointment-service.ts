@@ -155,15 +155,34 @@ export function resolveServiceFromLayout(
   return null;
 }
 
+const defaultPublicConfig: RawLayoutConfig = {
+  hours: {
+    lunes: { open: true, from: "09:00", to: "18:00" },
+    martes: { open: true, from: "09:00", to: "18:00" },
+    miercoles: { open: true, from: "09:00", to: "18:00" },
+    jueves: { open: true, from: "09:00", to: "18:00" },
+    viernes: { open: true, from: "09:00", to: "18:00" },
+    sabado: { open: true, from: "09:00", to: "14:00" },
+    domingo: { open: false },
+  },
+  sections: [
+    { type: "hero" },
+    { type: "services", items: [] },
+  ],
+};
+
 export class AppointmentService {
   /**
    * Fetches available appointment slots for a given date, business, and service.
+   * Public requests consume strictly publishedConfig (or defaultPublicConfig).
+   * Authorized preview requests may pass isPreview: true to inspect draft layoutConfig.
    */
   static async fetchAvailableSlots(
     businessId: string,
     dateStr: string, // YYYY-MM-DD
     serviceIdOrName?: string | null,
-    employeeId?: string | null
+    employeeId?: string | null,
+    isPreview = false
   ): Promise<{ slots: string[]; duration: number; error?: string }> {
     const biz = await prisma.business.findUnique({
       where: { id: businessId },
@@ -175,7 +194,10 @@ export class AppointmentService {
     }
 
     const timezone = biz.timezone ?? DEFAULT_BUSINESS_TIMEZONE;
-    const configSource = (biz.publishedConfig || biz.layoutConfig || {}) as Record<string, unknown>;
+    // P0-001: Public slots consume exclusively publishedConfig. Draft layoutConfig is only accessible in authorized preview.
+    const configSource = (isPreview
+      ? (biz.layoutConfig || biz.publishedConfig || defaultPublicConfig)
+      : (biz.publishedConfig || defaultPublicConfig)) as Record<string, unknown>;
     const rawConfig = configSource as RawLayoutConfig;
 
     const service = resolveServiceFromLayout(configSource, serviceIdOrName);
@@ -241,6 +263,7 @@ export class AppointmentService {
   /**
    * Unified, server-authoritative appointment creation with:
    * - Business status validation (reject BLOCKED/ARCHIVED)
+   * - Strict publishedConfig consumption for public appointments (reject draft services)
    * - Server-side service duration and price resolution
    * - Strict date validations (reject NaN, past dates, max 365 days future)
    * - Slot interval alignment validation (reject non-grid minutes)
@@ -250,7 +273,7 @@ export class AppointmentService {
    * - Tracking token generation
    * - WhatsApp confirmation enqueued with unique idempotencyKey
    */
-  static async createAppointment(input: CreateAppointmentInput): Promise<{
+  static async createAppointment(input: CreateAppointmentInput & { isPreview?: boolean }): Promise<{
     success?: boolean;
     appointment?: PublicAppointmentDTO;
     error?: string;
@@ -269,6 +292,7 @@ export class AppointmentService {
       employeeId,
       paymentMethod,
       source,
+      isPreview,
     } = input;
 
     // 1. Validate date object
@@ -315,7 +339,10 @@ export class AppointmentService {
     }
 
     const timezone = business.timezone ?? DEFAULT_BUSINESS_TIMEZONE;
-    const configSource = (business.publishedConfig || business.layoutConfig || {}) as Record<string, unknown>;
+    // P0-001: Public bookings consume strictly publishedConfig
+    const configSource = (isPreview
+      ? (business.layoutConfig || business.publishedConfig || defaultPublicConfig)
+      : (business.publishedConfig || defaultPublicConfig)) as Record<string, unknown>;
     const rawConfig = configSource as RawLayoutConfig;
 
     // 5. Resolve service catalog item server-side

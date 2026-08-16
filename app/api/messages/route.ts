@@ -63,9 +63,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "El mensaje es demasiado largo (máximo 2000 caracteres)." }, { status: 400 });
     }
     
-    // P1-004: Rate limit message creation by user
+    // P1-001: Rate limit message creation by user with failClosed
     const userKey = `msg:user:${session.user.id}`;
-    if (!(await checkRateLimit(userKey, MSG_RATE_MAX, MSG_RATE_WINDOW_MS))) {
+    if (!(await checkRateLimit(userKey, MSG_RATE_MAX, MSG_RATE_WINDOW_MS, { failClosed: true }))) {
       const retryAfter = Math.ceil(await getRateLimitRetryAfterMs(userKey, MSG_RATE_WINDOW_MS) / 1000);
       return NextResponse.json(
         { error: "Estás enviando mensajes demasiado rápido. Intenta en un momento." },

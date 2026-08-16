@@ -132,42 +132,46 @@ export default async function PublicLandingPage({ params, searchParams }: { para
     ? ((rawBiz.layoutConfig as any) || (rawBiz.publishedConfig as any) || defaultPublicConfig)
     : ((rawBiz.publishedConfig as any) || defaultPublicConfig);
 
-  // SEC-033 Fix: Create a strict PublicBusinessDTO to avoid data leakage
+  // SEC-033 / P1-012 Fix: Create a strict PublicBusinessDTO to avoid data leakage
+  const safeLayoutConfig = {
+    sections: Array.isArray(activeConfig.sections) ? activeConfig.sections : [],
+    media: Array.isArray(activeConfig.media) ? activeConfig.media : [],
+    themeVariant: typeof activeConfig.themeVariant === "string" ? activeConfig.themeVariant : "classic",
+    chatbotEnabled: activeConfig.chatbotEnabled !== false,
+    chatbotName: typeof activeConfig.chatbotName === "string" ? activeConfig.chatbotName : "Asistente Virtual",
+    barberiaServices: Array.isArray(activeConfig.barberiaServices) ? activeConfig.barberiaServices : undefined,
+    clinicaServices: Array.isArray(activeConfig.clinicaServices) ? activeConfig.clinicaServices : undefined,
+    tallerServices: Array.isArray(activeConfig.tallerServices) ? activeConfig.tallerServices : undefined,
+    canchaTarifas: Array.isArray(activeConfig.canchaTarifas) ? activeConfig.canchaTarifas : undefined,
+    menuCategorias: Array.isArray(activeConfig.menuCategorias) ? activeConfig.menuCategorias : undefined,
+    hours: typeof activeConfig.hours === "object" && activeConfig.hours !== null ? activeConfig.hours : undefined,
+    buttonStyle: typeof activeConfig.buttonStyle === "string" ? activeConfig.buttonStyle : undefined,
+    backgroundType: typeof activeConfig.backgroundType === "string" ? activeConfig.backgroundType : undefined,
+    backgroundImageUrl: typeof activeConfig.backgroundImageUrl === "string" ? activeConfig.backgroundImageUrl : undefined,
+  };
+
   const biz = {
     id: rawBiz.id,
     name: rawBiz.name,
     type: rawBiz.type,
     description: rawBiz.description,
-    address: activeConfig.address || "",
+    address: typeof activeConfig.address === "string" ? activeConfig.address : "",
     phone: rawBiz.phone,
     logoUrl: rawBiz.logoUrl,
     bannerUrl: rawBiz.bannerUrl,
-    buttonStyle: activeConfig.buttonStyle,
-    backgroundType: activeConfig.backgroundType,
-    backgroundImageUrl: activeConfig.backgroundImageUrl,
+    buttonStyle: safeLayoutConfig.buttonStyle,
+    backgroundType: safeLayoutConfig.backgroundType,
+    backgroundImageUrl: safeLayoutConfig.backgroundImageUrl,
     primaryColor: rawBiz.primaryColor,
     secondaryColor: rawBiz.secondaryColor,
     accentColor: rawBiz.accentColor,
     fontFamily: rawBiz.fontFamily,
     employees: rawBiz.employees,
-    layoutConfig: {
-       ...activeConfig, // Spread all properties including visual ones
-       sections: activeConfig.sections || [],
-       media: activeConfig.media || [],
-       themeVariant: activeConfig.themeVariant || "classic",
-       chatbotEnabled: activeConfig.chatbotEnabled,
-       chatbotName: activeConfig.chatbotName,
-       barberiaServices: activeConfig.barberiaServices,
-       clinicaServices: activeConfig.clinicaServices,
-       tallerServices: activeConfig.tallerServices,
-       canchaTarifas: activeConfig.canchaTarifas,
-       menuCategorias: activeConfig.menuCategorias,
-       hours: activeConfig.hours,
-    },
-    instagram: activeConfig.instagram || "",
-    facebook: activeConfig.facebook || "",
-    whatsapp: activeConfig.whatsapp || "",
-    tiktok: activeConfig.tiktok || "",
+    layoutConfig: safeLayoutConfig,
+    instagram: typeof activeConfig.instagram === "string" ? activeConfig.instagram : "",
+    facebook: typeof activeConfig.facebook === "string" ? activeConfig.facebook : "",
+    whatsapp: typeof activeConfig.whatsapp === "string" ? activeConfig.whatsapp : "",
+    tiktok: typeof activeConfig.tiktok === "string" ? activeConfig.tiktok : "",
   };
 
   // ─────────────────────────────────────────────────────────
@@ -215,10 +219,10 @@ export default async function PublicLandingPage({ params, searchParams }: { para
   const TemplateComponent = renderTemplate();
   const theme = getTheme(biz.type);
 
-  // SEC-031 Fix: Sanitize color values to prevent CSS injection
+  // SEC-031 / P1-006 Fix: Strict hex / rgb color sanitizer to prevent CSS injection
   const safeColor = (color: string | null | undefined) => {
     if (!color) return null;
-    return /^[a-zA-Z0-9#\-\(\)\.,% ]+$/.test(color) ? color : null;
+    return /^#([0-9a-fA-F]{3,8})$|^rgb\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*\)$|^hsl\(\s*\d+\s*,\s*[\d.]+%?\s*,\s*[\d.]+%?\s*\)$/.test(color.trim()) ? color.trim() : null;
   };
   
   const customAccent = safeColor(biz.accentColor);

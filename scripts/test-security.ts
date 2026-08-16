@@ -592,10 +592,40 @@ section("Static Code Hardening Audits (P0/P1)");
     schemaContent.includes("@@unique([businessId, number])")
   );
 
-  // P0-008: Chat route uses AppointmentService
+  // P0-001: AppointmentService uses publishedConfig by default
   assert(
-    "P0-008: app/api/chat/route.ts uses AppointmentService",
-    chatRouteContent.includes("AppointmentService.createAppointment")
+    "P0-001: AppointmentService fetchAvailableSlots does not use layoutConfig as public fallback",
+    apptServiceContent.includes("biz.publishedConfig || defaultPublicConfig")
+  );
+  assert(
+    "P0-001: AppointmentService createAppointment does not use layoutConfig as public fallback",
+    apptServiceContent.includes("business.publishedConfig || defaultPublicConfig")
+  );
+
+  // P1-001: failClosed on AI generation and messages
+  const aiGenContent = fs.readFileSync("./app/api/intelligence/generate/route.ts", "utf-8");
+  assert(
+    "P1-001: AI generation route enforces failClosed rate limiting",
+    aiGenContent.includes("failClosed: true")
+  );
+
+  const messagesRouteContent = fs.readFileSync("./app/api/messages/route.ts", "utf-8");
+  assert(
+    "P1-001: messages route enforces failClosed rate limiting",
+    messagesRouteContent.includes("failClosed: true")
+  );
+
+  // P1-012: No indiscriminate activeConfig spread in public landing
+  assert(
+    "P1-012: app/[subdomain]/page.tsx does NOT do '...activeConfig' spread",
+    !landingPageContent.includes("...activeConfig,")
+  );
+
+  // P1-013 & P1-014: Publish validates against LayoutConfigSchema
+  const bizIdRouteContent = fs.readFileSync("./app/api/businesses/[id]/route.ts", "utf-8");
+  assert(
+    "P1-013/P1-014: businesses/[id] validates LayoutConfigSchema on publish",
+    bizIdRouteContent.includes("LayoutConfigSchema.safeParse(configToPublish)")
   );
 
   // P2-001: CSP header in next.config.ts
