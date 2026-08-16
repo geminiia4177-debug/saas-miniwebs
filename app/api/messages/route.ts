@@ -117,7 +117,7 @@ export async function POST(req: Request) {
         if (!process.env.GEMINI_API_KEY) {
           console.error("Gemini API key not configured");
         } else {
-          const { GoogleGenAI } = await import("@google/genai");
+          const { GoogleGenAI, ThinkingLevel } = await import("@google/genai");
           const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
           const startOfDay = new Date();
@@ -235,7 +235,7 @@ ${todayAppointments.length > 0 ? todayAppointments.map(a => `  • ${a.date.toLo
               temperature: 0.2,
               maxOutputTokens: 350,
               thinkingConfig: {
-                thinkingBudget: 0,
+                thinkingLevel: ThinkingLevel.MINIMAL,
               },
             }
           });

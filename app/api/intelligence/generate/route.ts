@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 import { checkRateLimit, getRateLimitRetryAfterMs } from "@/lib/rate-limit";
 
 // ─── RATE LIMITING: AI Generation ─────────────────────────────────────────────
@@ -83,7 +83,7 @@ Escribe un mensaje agradeciéndole por su fidelidad y regalándole un upgrade en
         temperature: 0.7,
         maxOutputTokens: 300,
         thinkingConfig: {
-          thinkingBudget: 0,
+          thinkingLevel: ThinkingLevel.MINIMAL,
         },
       }
     });

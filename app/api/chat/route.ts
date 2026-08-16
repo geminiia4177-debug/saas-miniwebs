@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 import { checkRateLimit, getRateLimitRetryAfterMs } from "@/lib/rate-limit";
 import {
   getBusinessDayName,
@@ -271,7 +271,7 @@ Para crear una reserva confirmada:
         temperature: 0.2,
         maxOutputTokens: 350,
         thinkingConfig: {
-          thinkingBudget: 0,
+          thinkingLevel: ThinkingLevel.MINIMAL,
         },
       },
     });
