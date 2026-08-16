@@ -270,8 +270,8 @@ export default function Dashboard() {
   if (!biz) return (
     <div className="min-h-[100dvh] flex items-center justify-center bg-[#070b12]">
       <div className="text-center p-8 border border-white/10 rounded-2xl bg-white/5">
-        <h2 className="text-xl text-white font-bold mb-2">Acceso Restringido ðŸ›‘</h2>
-        <p className="text-slate-400 text-sm">Tu cuenta no tiene un negocio asignado.<br />ContactÃ¡ a la administraciÃ³n para obtener tu acceso.</p>
+        <h2 className="text-xl text-white font-bold mb-2">Acceso Restringido 🛑</h2>
+        <p className="text-slate-400 text-sm">Tu cuenta no tiene un negocio asignado.<br />Contactá a la administración para obtener tu acceso.</p>
       </div>
     </div>
   );
@@ -310,7 +310,7 @@ export default function Dashboard() {
                 {biz.logoUrl
                   ? <img src={biz.logoUrl} className="w-10 h-10 rounded-xl object-cover flex-shrink-0" alt="logo" />
                   : <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-black text-lg flex-shrink-0"
-                    style={{ background: `linear-gradient(135deg,${biz.primaryColor},${biz.secondaryColor})` }}>{biz.name.charAt(0)}</div>}
+                    style={{ background: `linear-gradient(135deg,${biz.primaryColor},${biz.secondaryColor})` }}>{biz.name ? biz.name.charAt(0) : "M"}</div>}
                 <div className="min-w-0">
                   <p className="text-white font-bold text-sm truncate">{biz.name}</p>
                   <div className="flex items-center gap-1.5 mt-0.5">
@@ -325,22 +325,22 @@ export default function Dashboard() {
             </div>
             <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto custom-scrollbar">
               <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-widest px-3 py-2">Principal</p>
-              <NavItem icon="grid" label="Resumen" tab="home" active={tab} setActive={(t) => { setTab(t); setMobileMenuOpen(false); }} />
+              <NavItem icon="grid" label="Resumen" tab="home" active={tab} setActive={(t: string) => { setTab(t); setMobileMenuOpen(false); }} />
               
               <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-widest px-3 py-2 mt-3">Crear y editar</p>
-              <NavItem icon="eye" label="Editor Visual" tab="editor" active={tab} setActive={(t) => { setTab(t); setMobileMenuOpen(false); }} />
-              <NavItem icon="image" label="Galería" tab="gallery" active={tab} setActive={(t) => { setTab(t); setMobileMenuOpen(false); }} badge={media.length} />
+              <NavItem icon="eye" label="Editor Visual" tab="editor" active={tab} setActive={(t: string) => { setTab(t); setMobileMenuOpen(false); }} />
+              <NavItem icon="image" label="Galería" tab="gallery" active={tab} setActive={(t: string) => { setTab(t); setMobileMenuOpen(false); }} badge={media.length} />
               
               <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-widest px-3 py-2 mt-3">Contenido</p>
-              <NavItem icon="calendar" label="Turnos" tab="appointments" active={tab} setActive={(t) => { setTab(t); setMobileMenuOpen(false); }} badge={pending.length} />
+              <NavItem icon="calendar" label="Turnos" tab="appointments" active={tab} setActive={(t: string) => { setTab(t); setMobileMenuOpen(false); }} badge={pending.length} />
               {(biz.type === "menu" || biz.type === "restaurante") && (
-                <NavItem icon="box" label="Pedidos / Mesas" tab="orders" active={tab} setActive={(t) => { setTab(t); setMobileMenuOpen(false); }} />
+                <NavItem icon="box" label="Pedidos / Mesas" tab="orders" active={tab} setActive={(t: string) => { setTab(t); setMobileMenuOpen(false); }} />
               )}
 
               <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-widest px-3 py-2 mt-3">Herramientas</p>
-              <NavItem icon="bot" label="Asesor Inteligente" tab="intelligence" active={tab} setActive={(t) => { setTab(t); setMobileMenuOpen(false); }} />
-              <NavItem icon="link" label="BioLinks" tab="biolinks" active={tab} setActive={(t) => { setTab(t); setMobileMenuOpen(false); }} />
-              <NavItem icon="list" label="CRM y Finanzas" tab="crm" active={tab} setActive={(t) => { setTab(t); setMobileMenuOpen(false); }} />
+              <NavItem icon="bot" label="Asesor Inteligente" tab="intelligence" active={tab} setActive={(t: string) => { setTab(t); setMobileMenuOpen(false); }} />
+              <NavItem icon="link" label="BioLinks" tab="biolinks" active={tab} setActive={(t: string) => { setTab(t); setMobileMenuOpen(false); }} />
+              <NavItem icon="list" label="CRM y Finanzas" tab="crm" active={tab} setActive={(t: string) => { setTab(t); setMobileMenuOpen(false); }} />
 
               <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-widest px-3 py-2 mt-3">Configuración</p>
               <NavItem icon="settings" label="Ajustes Generales" tab="config" active={tab} setActive={(t: string) => { setTab(t); setMobileMenuOpen(false); }} />
@@ -355,7 +355,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* â”€â”€ SIDEBAR (Desktop only) â”€â”€ */}
+      {/* ── SIDEBAR (Desktop only) ── */}
       <Sidebar
         biz={biz}
         tab={tab}
@@ -380,36 +380,47 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* TOP BAR GUARDADO PERSISTENTE */}
-        <div className="bg-[#0f1523] border-b border-white/5 flex items-center justify-between px-6 py-3 z-10 shrink-0 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className={`w-2.5 h-2.5 rounded-full ${hasUnsavedChanges ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400'}`} />
-            <span className="text-sm font-medium text-slate-300">
-              {saving ? "Guardando cambios..." : hasUnsavedChanges ? "Tienes cambios sin guardar" : "Todos los cambios estÃ¡n guardados"}
-            </span>
+        {/* TOP BAR GUARDADO PERSISTENTE & MOBILE HEADER */}
+        <div className="bg-[#0f1523] border-b border-white/5 flex items-center justify-between px-3 sm:px-6 py-2.5 sm:py-3 z-10 shrink-0 shadow-sm gap-2">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            {/* Botón de Menú Móvil */}
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              className="md:hidden w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-slate-300 hover:text-white hover:bg-white/10 transition-colors flex-shrink-0"
+              aria-label="Abrir menú"
+            >
+              <Ico n="menu" s={18} />
+            </button>
+
+            <div className="flex items-center gap-2 min-w-0">
+              <div className={`w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full flex-shrink-0 ${hasUnsavedChanges ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400'}`} />
+              <span className="text-xs sm:text-sm font-medium text-slate-300 truncate">
+                {saving ? "Guardando..." : hasUnsavedChanges ? "Cambios sin guardar" : "Todos los cambios están guardados"}
+              </span>
+            </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-1.5 sm:gap-2 flex-shrink-0">
             <button 
               onClick={() => saveAll(false)} 
               disabled={!hasUnsavedChanges || saving}
-              className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${!hasUnsavedChanges || saving ? 'bg-white/5 text-slate-500 cursor-not-allowed' : 'bg-slate-700 text-white hover:bg-slate-600'}`}
+              className={`px-2.5 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-bold transition-all ${!hasUnsavedChanges || saving ? 'bg-white/5 text-slate-500 cursor-not-allowed' : 'bg-slate-700 text-white hover:bg-slate-600'}`}
             >
-              {saving ? "Guardando..." : "Guardar Borrador"}
+              {saving ? "..." : "Guardar Borrador"}
             </button>
             <button 
               onClick={() => saveAll(true)} 
               disabled={saving}
-              className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${saving ? 'bg-indigo-500/50 text-white/50 cursor-not-allowed' : 'bg-indigo-500 text-white hover:bg-indigo-400 shadow-[0_0_15px_rgba(99,102,241,0.3)]'}`}
+              className={`px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-bold transition-all ${saving ? 'bg-indigo-500/50 text-white/50 cursor-not-allowed' : 'bg-indigo-500 text-white hover:bg-indigo-400 shadow-[0_0_15px_rgba(99,102,241,0.3)]'}`}
             >
               Publicar Web
             </button>
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-6 pb-[calc(env(safe-area-inset-bottom)+6rem)] md:pb-6 relative" style={{ background: "radial-gradient(ellipse at 50% -20%, rgba(99,102,241,0.05), transparent 60%)" }}>
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-3 sm:p-4 md:p-6 pb-[calc(env(safe-area-inset-bottom)+5rem)] md:pb-6 relative" style={{ background: "radial-gradient(ellipse at 50% -20%, rgba(99,102,241,0.05), transparent 60%)" }}>
 
           <div className="max-w-[1400px] mx-auto h-full flex flex-col">
-            {/* â”€â”€ HOME (Overview) â”€â”€ */}
+            {/* ── HOME (Overview) ── */}
             {tab === "home" && (
               <HomeTab
                 biz={biz}
@@ -423,7 +434,7 @@ export default function Dashboard() {
               />
             )}
 
-            {/* â”€â”€ EDITOR â”€â”€ */}
+            {/* ── EDITOR ── */}
             {tab === "editor" && (
               <EditorTab
                 biz={biz} setBiz={setBiz} sections={sections} setSections={setSections}
@@ -432,7 +443,7 @@ export default function Dashboard() {
               />
             )}
 
-            {/* â”€â”€ BIOLINKS EDITOR â”€â”€ */}
+            {/* ── BIOLINKS EDITOR ── */}
             {tab === "biolinks" && (
               <BiolinksTab
                 biz={biz} setBiz={setBiz} saveAll={saveAll} saving={saving}
@@ -445,7 +456,7 @@ export default function Dashboard() {
               />
             )}
 
-            {/* â”€â”€ TABS HIJOS IMPORTADOS â”€â”€ */}
+            {/* ── TABS HIJOS IMPORTADOS ── */}
             {(tab === "appointments" || tab === "gallery" || tab === "config") && (
               <ManagementTabs
                 tab={tab} biz={biz} setBiz={setBiz} media={media} setMedia={setMedia}
@@ -467,6 +478,48 @@ export default function Dashboard() {
             )}
           </div>
         </div>
+
+        {/* ── BOTTOM NAVIGATION BAR (Mobile Only) ── */}
+        <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-[#0b1020]/95 border-t border-white/10 backdrop-blur-xl flex items-center justify-around py-2 px-2 pb-[calc(env(safe-area-inset-bottom,0px)+0.5rem)] shadow-2xl">
+          <button
+            onClick={() => setTab("home")}
+            className={`flex flex-col items-center gap-1 py-1 px-3 rounded-xl transition-all ${tab === "home" ? "text-indigo-400 font-bold" : "text-slate-400 hover:text-white"}`}
+          >
+            <Ico n="grid" s={18} />
+            <span className="text-[10px]">Inicio</span>
+          </button>
+          <button
+            onClick={() => setTab("editor")}
+            className={`flex flex-col items-center gap-1 py-1 px-3 rounded-xl transition-all ${tab === "editor" ? "text-indigo-400 font-bold" : "text-slate-400 hover:text-white"}`}
+          >
+            <Ico n="eye" s={18} />
+            <span className="text-[10px]">Editor</span>
+          </button>
+          <button
+            onClick={() => setTab("appointments")}
+            className={`flex flex-col items-center gap-1 py-1 px-3 rounded-xl transition-all relative ${tab === "appointments" ? "text-indigo-400 font-bold" : "text-slate-400 hover:text-white"}`}
+          >
+            <Ico n="calendar" s={18} />
+            <span className="text-[10px]">Turnos</span>
+            {pending.length > 0 && (
+              <span className="absolute top-0 right-2 w-2 h-2 rounded-full bg-red-500" />
+            )}
+          </button>
+          <button
+            onClick={() => setTab("biolinks")}
+            className={`flex flex-col items-center gap-1 py-1 px-3 rounded-xl transition-all ${tab === "biolinks" ? "text-indigo-400 font-bold" : "text-slate-400 hover:text-white"}`}
+          >
+            <Ico n="link" s={18} />
+            <span className="text-[10px]">BioLinks</span>
+          </button>
+          <button
+            onClick={() => setMobileMenuOpen(true)}
+            className="flex flex-col items-center gap-1 py-1 px-3 rounded-xl text-slate-400 hover:text-white transition-all"
+          >
+            <Ico n="menu" s={18} />
+            <span className="text-[10px]">Menú</span>
+          </button>
+        </nav>
       </main>
 
       <SupportWidget biz={biz} />

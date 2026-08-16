@@ -649,22 +649,6 @@ export default function ManagementTabs({
               </button>
             </div>
 
-            {/* Zona de Peligro */}
-            <div className="rounded-2xl p-5" style={{ background: "linear-gradient(135deg,rgba(239,68,68,0.05),rgba(239,68,68,0.1))", border: "1px solid rgba(239,68,68,0.2)" }}>
-              <p className="text-[11px] font-bold text-red-400 uppercase tracking-widest mb-2 flex items-center gap-2">
-                <Ico n="alert-triangle" s={14}/> Zona de Peligro
-              </p>
-              <p className="text-xs text-red-400/80 mb-4">
-                Atención: Al eliminar tu tienda perderás todos los datos, turnos y configuraciones. Esta acción es irreversible y está alineada con las leyes de eliminación de datos.
-              </p>
-              <button 
-                onClick={() => setDeleteModalOpen(true)}
-                className="px-5 py-2.5 bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 rounded-xl text-sm font-bold transition-colors"
-              >
-                Eliminar mi tienda
-              </button>
-            </div>
-
             {/* Horarios de Atención */}
             <div className="rounded-2xl p-5" style={{ background: "linear-gradient(135deg,#131929,#111825)", border: "1px solid rgba(255,255,255,0.06)" }}>
               <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-4">Horarios de Atención</p>
@@ -802,6 +786,22 @@ export default function ManagementTabs({
             <button disabled={saving} onClick={saveAll} className="w-full py-3 rounded-xl text-sm font-bold text-white transition-opacity flex items-center justify-center gap-2 disabled:opacity-50" style={{ background: "linear-gradient(135deg,#6366f1,#a855f7)" }}>
               {saving ? <><Ico n="loader" s={14} c="animate-spin" /> Guardando...</> : <><Ico n="check" s={14} /> Guardar toda la configuración</>}
             </button>
+
+            {/* Zona de Peligro (Abajo de todo) */}
+            <div className="rounded-2xl p-5 mt-6 border border-red-500/20" style={{ background: "linear-gradient(135deg,rgba(239,68,68,0.04),rgba(239,68,68,0.08))" }}>
+              <p className="text-[11px] font-bold text-red-400 uppercase tracking-widest mb-2 flex items-center gap-2">
+                <Ico n="alert-triangle" s={14}/> Zona de Peligro
+              </p>
+              <p className="text-xs text-red-400/80 mb-4 leading-relaxed">
+                Atención: Al eliminar tu tienda perderás todos los datos, turnos y configuraciones. Esta acción es irreversible y está alineada con las leyes de eliminación de datos.
+              </p>
+              <button 
+                onClick={() => setDeleteModalOpen(true)}
+                className="px-5 py-2.5 bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 rounded-xl text-sm font-bold transition-colors"
+              >
+                Eliminar mi tienda
+              </button>
+            </div>
           </div>
         </div>
       )}

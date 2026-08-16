@@ -237,11 +237,38 @@ export default function EditorTab({
   const tabs = getTabs();
 
   const [mainTab, setMainTab] = useState<string>("diseno");
+  const [mobileView, setMobileView] = useState<"edit" | "preview">("edit");
 
   return (
-    <div className="flex h-screen animate-fadeIn">
+    <div className="flex flex-col md:flex-row h-full min-h-[calc(100vh-8rem)] animate-fadeIn relative">
+      {/* ── MOBILE VIEW TOGGLE ── */}
+      <div className="md:hidden flex items-center justify-between p-2 bg-[#0a0f1c] border-b border-white/10 shrink-0">
+        <div className="flex gap-1 w-full bg-white/5 p-1 rounded-xl">
+          <button
+            onClick={() => setMobileView("edit")}
+            className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+              mobileView === "edit"
+                ? "bg-indigo-600 text-white shadow-md"
+                : "text-slate-400 hover:text-white"
+            }`}
+          >
+            <Ico n="edit" s={14} /> Controles de Edición
+          </button>
+          <button
+            onClick={() => setMobileView("preview")}
+            className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+              mobileView === "preview"
+                ? "bg-indigo-600 text-white shadow-md"
+                : "text-slate-400 hover:text-white"
+            }`}
+          >
+            <Ico n="eye" s={14} /> Ver cómo queda
+          </button>
+        </div>
+      </div>
+
       {/* ──────────── LEFT PANEL ──────────── */}
-      <div className="w-72 flex-shrink-0 flex flex-col border-r overflow-hidden"
+      <div className={`w-full md:w-72 flex-shrink-0 flex-col border-r overflow-hidden ${mobileView === "edit" ? "flex" : "hidden md:flex"}`}
         style={{ borderColor: "rgba(255,255,255,0.05)", background: "rgba(255,255,255,0.01)" }}>
 
         {/* TOP TABS */}
@@ -602,9 +629,9 @@ export default function EditorTab({
       </div>
 
       {/* ──────────── RIGHT PANEL — PREVIEW ──────────── */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-3 border-b flex-shrink-0" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
-          <div className="flex items-center gap-1 p-1 rounded-xl" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
+      <div className={`flex-1 flex-col overflow-hidden ${mobileView === "preview" ? "flex" : "hidden md:flex"}`}>
+        <div className="flex items-center justify-between px-4 sm:px-6 py-2.5 sm:py-3 border-b flex-shrink-0 gap-2 overflow-x-auto" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
+          <div className="flex items-center gap-1 p-1 rounded-xl flex-shrink-0" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
             {([["desktop", "monitor", "Escritorio"], ["mobile", "smartphone", "Móvil"]] as const).map(([d, ic, lbl]) => (
               <button key={d} onClick={() => setPreviewDevice(d as any)}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
@@ -615,30 +642,30 @@ export default function EditorTab({
               </button>
             ))}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-shrink-0">
             <button onClick={undo} disabled={historyIndex <= 0} className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-white disabled:opacity-30" style={{ background: "rgba(255,255,255,0.05)" }}><Ico n="undo" s={14} /></button>
             <button onClick={redo} disabled={historyIndex >= history.length - 1} className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-white disabled:opacity-30" style={{ background: "rgba(255,255,255,0.05)" }}><Ico n="redo" s={14} /></button>
             
             <button onClick={() => setTab("gallery")}
-              className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold text-indigo-400 hover:text-white transition-colors ml-2"
+              className="hidden sm:flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold text-indigo-400 hover:text-white transition-colors ml-2"
               style={{ background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.2)" }}>
-              <Ico n="image" s={12} /> Gestionar Galería
+              <Ico n="image" s={12} /> Galería
             </button>
             <button onClick={saveAll} disabled={saving}
               className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold text-white transition-opacity disabled:opacity-50"
               style={{ background: "linear-gradient(135deg,#6366f1,#a855f7)" }}>
               <Ico n={saving ? "loader" : "check"} s={12} c={saving ? "animate-spin" : ""} />
-              {saving ? "Guardando..." : "Guardar"}
+              {saving ? "..." : "Guardar"}
             </button>
           </div>
         </div>
 
-        <div className="flex-1 overflow-auto p-10 flex items-start justify-center"
+        <div className="flex-1 overflow-auto p-2 sm:p-4 md:p-10 flex items-start justify-center"
           style={{ background: "radial-gradient(ellipse at 50% 0%,rgba(99,102,241,0.06) 0%,transparent 70%), #050810" }}>
-          <div className={`transition-all duration-300 ${previewDevice === "mobile" ? "w-[390px]" : "w-full"}`}>
+          <div className={`transition-all duration-300 ${previewDevice === "mobile" ? "w-full max-w-[390px]" : "w-full"}`}>
             <div className="relative" style={{ transform: 'translateZ(0)' }}>
               {previewDevice === "mobile" && (
-                <div className="absolute -inset-4 rounded-[48px] pointer-events-none z-50"
+                <div className="hidden sm:block absolute -inset-4 rounded-[48px] pointer-events-none z-50"
                   style={{ border: "8px solid rgba(255,255,255,0.08)", boxShadow: "0 0 0 1px rgba(255,255,255,0.04)" }} />
               )}
               <LandingPreview biz={biz} sections={sections} media={media} />
@@ -646,6 +673,18 @@ export default function EditorTab({
           </div>
         </div>
       </div>
+
+      {/* ── FLOATING SWITCH BUTTON (Mobile Only) ── */}
+      <button
+        onClick={() => setMobileView(mobileView === "edit" ? "preview" : "edit")}
+        className="md:hidden fixed bottom-16 right-4 z-40 px-4 py-2.5 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white shadow-2xl font-bold text-xs flex items-center gap-2 border border-white/20 active:scale-95 transition-all"
+      >
+        {mobileView === "edit" ? (
+          <><Ico n="eye" s={15} /> Ver cómo queda</>
+        ) : (
+          <><Ico n="edit" s={15} /> Volver al editor</>
+        )}
+      </button>
 
       {/* ── MODAL: EDIT SECTION (solo para tipos genéricos) ── */}
       {editingSection && (
