@@ -38,5 +38,11 @@ next-env.d.ts
 **_IGNORE_**
 # end managed
 
-# security
+# security & WhatsApp persistent auth storage
 baileys_auth_info/
+baileys_auth_*/
+auth_info_baileys/
+auth_info_baileys_*/
+*.wadata
+.wadata/
+.wadata*/

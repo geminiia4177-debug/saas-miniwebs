@@ -9,7 +9,7 @@ const cron = require('node-cron');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const crypto = require('crypto');
-const { normalizePhoneToE164, phoneToWhatsAppJid } = require('./lib/phone-core.js');
+const { phoneToWhatsAppJid } = require('./lib/phone-core.js');
 const dev = process.env.NODE_ENV !== 'production';
 const hostname = 'localhost';
 const port = process.env.PORT || 3000;
@@ -299,9 +299,11 @@ app.prepare().then(() => {
                 continue;
               }
               
+              let messageDispatched = false;
               const [result] = await sender.onWhatsApp(jid);
               if (result && result.exists) {
                 await sender.sendMessage(result.jid, { text: msg.message });
+                messageDispatched = true;
                 // P0-002: Solo marcar SENT si el leaseToken sigue siendo el nuestro
                 const updateRes = await prisma.whatsappMessageQueue.updateMany({
                   where: { id: msg.id, leaseToken: leaseToken },
@@ -315,23 +317,36 @@ app.prepare().then(() => {
               } else {
                  await prisma.whatsappMessageQueue.updateMany({
                   where: { id: msg.id, leaseToken: leaseToken },
-                  data: { status: 'FAILED', lockedAt: null, leaseToken: null, errorMessage: 'Número no existe en WhatsApp' }
+                  data: { status: 'FAILED_BEFORE_SEND', lockedAt: null, leaseToken: null, errorMessage: 'Número no existe en WhatsApp' }
                 });
               }
             } catch (error) {
               console.error(`Error enviando mensaje de la cola (ID: ${msg.id}):`, error);
               if (leaseToken) {
-                const nextRetries = (msg.retries || 0) + 1;
-                await prisma.whatsappMessageQueue.updateMany({
-                  where: { id: msg.id, leaseToken: leaseToken },
-                  data: { 
-                    status: nextRetries >= 3 ? 'FAILED' : 'PENDING', 
-                    retries: nextRetries,
-                    lockedAt: null,
-                    leaseToken: null,
-                    errorMessage: error.message || 'Error desconocido'
-                  }
-                });
+                // P1-008: Si falló antes del envío real, reintentar con límite; si ya fue despachado a WhatsApp, marcar UNKNOWN_AFTER_SEND
+                if (!messageDispatched) {
+                  const nextRetries = (msg.retries || 0) + 1;
+                  await prisma.whatsappMessageQueue.updateMany({
+                    where: { id: msg.id, leaseToken: leaseToken },
+                    data: { 
+                      status: nextRetries >= 3 ? 'FAILED_BEFORE_SEND' : 'PENDING', 
+                      retries: nextRetries,
+                      lockedAt: null,
+                      leaseToken: null,
+                      errorMessage: error.message || 'Error desconocido'
+                    }
+                  });
+                } else {
+                  await prisma.whatsappMessageQueue.updateMany({
+                    where: { id: msg.id, leaseToken: leaseToken },
+                    data: {
+                      status: 'UNKNOWN_AFTER_SEND',
+                      lockedAt: null,
+                      leaseToken: null,
+                      errorMessage: 'Despachado a WhatsApp pero ocurrió error de confirmación en DB: ' + (error.message || '')
+                    }
+                  });
+                }
               }
             }
           }
@@ -339,6 +354,41 @@ app.prepare().then(() => {
            console.error("Error general procesando cola de WhatsApp:", error);
         }
       });
+
+      // 🕒 TAREA PROGRAMADA 3: LIMPIEZA PERIÓDICA DE RATE LIMITS EXPIRADOS (P1-004) 🕒
+      cron.schedule('*/15 * * * *', async () => {
+        try {
+          const deleted = await prisma.rateLimit.deleteMany({
+            where: { expiresAt: { lt: new Date() } }
+          });
+          if (deleted.count > 0) {
+            console.log(`> [RateLimiter] Limpieza de ${deleted.count} registros expirados`);
+          }
+        } catch (err) {
+          console.error("Error en limpieza periódica de rate limits:", err);
+        }
+      });
+
+      // 🛑 CIERRE GRACEFUL DE PROCESO PERSISTENTE EN PRODUCCIÓN (ORACLE / DOCKER / SYSTEMD) 🛑
+      const cleanupAndExit = async (signal) => {
+        console.log(`> [System] Recibida señal ${signal}. Cerrando conexiones de WhatsApp y Prisma...`);
+        try {
+          for (const [, entry] of global.waPool.entries()) {
+            try {
+              entry.sock?.end();
+            } catch {}
+          }
+          await prisma.$disconnect();
+          console.log('> [System] Cierre limpio completado.');
+          process.exit(0);
+        } catch (err) {
+          console.error('> [System] Error durante cierre limpio:', err);
+          process.exit(1);
+        }
+      };
+
+      process.on('SIGINT', () => cleanupAndExit('SIGINT'));
+      process.on('SIGTERM', () => cleanupAndExit('SIGTERM'));
 
     });
 });

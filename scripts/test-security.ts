@@ -727,6 +727,25 @@ section("Static Code Hardening Audits (P0/P1)");
     !safeSerialized.includes("<script>") && safeSerialized.includes("\\u003cscript")
   );
 
+  // P0-002: Baileys auth state ignored in .gitignore
+  const gitignoreContent = fs.readFileSync("./.gitignore", "utf-8");
+  assert(
+    "P0-002: .gitignore contains Baileys persistent auth state patterns",
+    gitignoreContent.includes("baileys_auth_info/") && gitignoreContent.includes("auth_info_baileys")
+  );
+
+  // P1-004: Periodic rate limit cleanup configured in server.js
+  assert(
+    "P1-004: server.js includes periodic rate limit cleanup for expired records",
+    serverJsContent.includes("prisma.rateLimit.deleteMany") && serverJsContent.includes("expiresAt: { lt: new Date() }")
+  );
+
+  // P1-008: Queue UNKNOWN_AFTER_SEND state handling in server.js
+  assert(
+    "P1-008: server.js distinguishes post-send failure and uses UNKNOWN_AFTER_SEND",
+    serverJsContent.includes("UNKNOWN_AFTER_SEND") && serverJsContent.includes("FAILED_BEFORE_SEND")
+  );
+
   // P2-001: CSP header in next.config.ts
   const nextConfig = fs.readFileSync("./next.config.ts", "utf-8");
   assert(
