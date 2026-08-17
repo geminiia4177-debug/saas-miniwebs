@@ -5,6 +5,16 @@ import {
   Biz, Section, MediaItem, ServiceItem, BookingField,
   DEFAULT_BOOKING_FIELDS, DEFAULT_HOURS, Ico
 } from "@/lib/constants";
+import {
+  TemplateLevel,
+  ThreePresetId,
+  AnimationIntensity,
+  switchTemplateLevel,
+} from "@/lib/templates/contract";
+import {
+  TEMPLATE_LEVEL_METADATA,
+  THEME_REGISTRY,
+} from "@/lib/templates/themes";
 import { ConfiguradorAvanzado } from "./editor/ConfiguradorAvanzado";
 import { LandingPreview } from "./editor/LandingPreview";
 import ConfiguradorTaller from "@/components/dashboard/cartuchos/ConfiguradorTaller";
@@ -503,23 +513,246 @@ export default function EditorTab({
                   </div>
                 )}
 
-                <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-2 mt-3">Tema de Diseño</p>
-                <div className="grid grid-cols-2 gap-1.5">
-                  {[
-                    { val: "classic", label: "Clásico" },
-                    { val: "modern",  label: "Moderno" },
-                    { val: "dark",    label: "Dark Elegance" },
-                    { val: "list",    label: "Lista Rápida" },
-                  ].map(b => (
-                    <button key={b.val} onClick={() => setBiz((prev: any) => prev ? { ...prev, layoutConfig: { ...prev.layoutConfig, themeVariant: b.val } } : prev)}
-                      className="py-1.5 rounded-lg text-[10px] font-semibold transition-all"
-                      style={biz.layoutConfig?.themeVariant === b.val || (!biz.layoutConfig?.themeVariant && b.val === "classic")
-                        ? { background: "rgba(99,102,241,0.2)", color: "#818cf8", border: "1px solid rgba(99,102,241,0.4)" }
-                        : { background: "rgba(255,255,255,0.03)", color: "#64748b", border: "1px solid rgba(255,255,255,0.06)" }}>
-                      {b.label}
-                    </button>
-                  ))}
+                {/* ── MULTI-LEVEL VISUAL TEMPLATE SELECTOR ── */}
+                <div className="mt-3 pt-3 border-t border-white/5">
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 flex items-center justify-between">
+                    <span>Nivel de Plantilla</span>
+                    <span className="text-[9px] text-indigo-400 font-bold">4 estilos</span>
+                  </p>
+
+                  <div className="space-y-2">
+                    {(["classic", "motion", "premium", "immersive"] as TemplateLevel[]).map((levelKey) => {
+                      const meta = TEMPLATE_LEVEL_METADATA[levelKey];
+                      const currentLvl = biz.layoutConfig?.templateLevel || (
+                        biz.layoutConfig?.themeVariant === "modern" || biz.layoutConfig?.themeVariant === "dynamic" ? "motion" :
+                        biz.layoutConfig?.themeVariant === "dark" || biz.layoutConfig?.themeVariant === "luxury" || biz.layoutConfig?.themeVariant === "editorial" || biz.layoutConfig?.themeVariant === "minimal_luxury" ? "premium" :
+                        biz.layoutConfig?.themeVariant === "flow" || biz.layoutConfig?.themeVariant === "particles" || biz.layoutConfig?.themeVariant === "organic" || biz.layoutConfig?.themeVariant === "immersive_dark" ? "immersive" :
+                        "classic"
+                      );
+                      const isSelected = currentLvl === levelKey;
+
+                      return (
+                        <button
+                          key={levelKey}
+                          onClick={() => {
+                            const updated = switchTemplateLevel(biz, levelKey);
+                            setBiz(updated);
+                          }}
+                          className={`w-full p-2.5 rounded-xl text-left border transition-all flex flex-col gap-1 ${
+                            isSelected
+                              ? "bg-indigo-600/20 border-indigo-500 text-white shadow-lg shadow-indigo-500/10"
+                              : "bg-white/[0.02] border-white/10 text-slate-400 hover:text-white hover:border-white/20 hover:bg-white/[0.04]"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                              {levelKey === "classic" && "⚡"}
+                              {levelKey === "motion" && "🌊"}
+                              {levelKey === "premium" && "👑"}
+                              {levelKey === "immersive" && "🌌"}
+                              {meta.marketingName}
+                            </span>
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold ${
+                                isSelected
+                                  ? "bg-indigo-500 text-white shadow-sm"
+                                  : "bg-white/10 text-slate-400"
+                              }`}
+                            >
+                              {meta.badge}
+                            </span>
+                          </div>
+
+                          <p className="text-[10px] text-slate-400 leading-tight">
+                            {meta.description}
+                          </p>
+
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {meta.tags.map((tag) => (
+                              <span
+                                key={tag}
+                                className="px-1.5 py-0.5 rounded text-[8px] font-semibold bg-white/5 text-slate-400"
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
+
+                {/* ── THEME SELECTOR FOR CURRENT LEVEL ── */}
+                {(() => {
+                  const currentLvl = (biz.layoutConfig?.templateLevel || (
+                    biz.layoutConfig?.themeVariant === "modern" || biz.layoutConfig?.themeVariant === "dynamic" ? "motion" :
+                    biz.layoutConfig?.themeVariant === "dark" || biz.layoutConfig?.themeVariant === "luxury" || biz.layoutConfig?.themeVariant === "editorial" || biz.layoutConfig?.themeVariant === "minimal_luxury" ? "premium" :
+                    biz.layoutConfig?.themeVariant === "flow" || biz.layoutConfig?.themeVariant === "particles" || biz.layoutConfig?.themeVariant === "organic" || biz.layoutConfig?.themeVariant === "immersive_dark" ? "immersive" :
+                    "classic"
+                  )) as TemplateLevel;
+                  const allowedThemes = TEMPLATE_LEVEL_METADATA[currentLvl]?.allowedThemes || ["clean", "essential"];
+
+                  return (
+                    <div className="mt-3 pt-3 border-t border-white/5">
+                      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">
+                        Tema Visual ({TEMPLATE_LEVEL_METADATA[currentLvl]?.marketingName})
+                      </p>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {allowedThemes.map((thId) => {
+                          const th = THEME_REGISTRY[thId];
+                          if (!th) return null;
+                          const isSelected =
+                            biz.layoutConfig?.themeVariant === thId ||
+                            biz.layoutConfig?.themeId === thId ||
+                            (!biz.layoutConfig?.themeVariant && thId === allowedThemes[0]);
+
+                          return (
+                            <button
+                              key={thId}
+                              onClick={() =>
+                                setBiz((prev: any) =>
+                                  prev
+                                    ? {
+                                        ...prev,
+                                        layoutConfig: {
+                                          ...prev.layoutConfig,
+                                          themeVariant: thId,
+                                          themeId: thId,
+                                          templateLevel: currentLvl,
+                                          ...(th.defaultPreset ? { visualPreset: th.defaultPreset } : {}),
+                                        },
+                                      }
+                                    : prev
+                                )
+                              }
+                              className={`p-2 rounded-xl text-left border transition-all flex flex-col gap-1 ${
+                                isSelected
+                                  ? "bg-indigo-500/20 border-indigo-500 text-white"
+                                  : "bg-white/[0.02] border-white/10 text-slate-400 hover:text-white hover:bg-white/[0.04]"
+                              }`}
+                            >
+                              <div className="flex items-center gap-1.5">
+                                <span
+                                  className="w-2.5 h-2.5 rounded-full shrink-0"
+                                  style={{ backgroundColor: th.visuals.defaultPrimary }}
+                                />
+                                <span className="text-[10px] font-bold truncate text-white">
+                                  {th.name}
+                                </span>
+                              </div>
+                              <span className="text-[8px] text-slate-400 line-clamp-2 leading-tight">
+                                {th.description}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* ── ANIMATION INTENSITY (Level 2 & 3) ── */}
+                {(() => {
+                  const currentLvl = biz.layoutConfig?.templateLevel || (
+                    biz.layoutConfig?.themeVariant === "modern" || biz.layoutConfig?.themeVariant === "dynamic" ? "motion" :
+                    biz.layoutConfig?.themeVariant === "dark" || biz.layoutConfig?.themeVariant === "luxury" || biz.layoutConfig?.themeVariant === "editorial" || biz.layoutConfig?.themeVariant === "minimal_luxury" ? "premium" :
+                    "classic"
+                  );
+                  if (currentLvl !== "motion" && currentLvl !== "premium") return null;
+
+                  return (
+                    <div className="mt-3 pt-3 border-t border-white/5">
+                      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">
+                        Intensidad de Animación
+                      </p>
+                      <div className="grid grid-cols-3 gap-1">
+                        {[
+                          { val: "subtle", label: "Sutil", desc: "Elegante" },
+                          { val: "balanced", label: "Equilibrado", desc: "Fluido" },
+                          { val: "dynamic", label: "Dinámico", desc: "Activo" },
+                        ].map((opt) => (
+                          <button
+                            key={opt.val}
+                            onClick={() =>
+                              setBiz((prev: any) =>
+                                prev
+                                  ? {
+                                      ...prev,
+                                      layoutConfig: {
+                                        ...prev.layoutConfig,
+                                        animationIntensity: opt.val,
+                                      },
+                                    }
+                                  : prev
+                              )
+                            }
+                            className={`py-1.5 px-2 rounded-lg text-center border transition-all ${
+                              (biz.layoutConfig?.animationIntensity || "balanced") === opt.val
+                                ? "bg-indigo-500/30 border-indigo-500 text-white"
+                                : "bg-white/5 border-white/10 text-slate-400 hover:text-white"
+                            }`}
+                          >
+                            <div className="text-[9px] font-bold">{opt.label}</div>
+                            <div className="text-[7px] text-slate-500">{opt.desc}</div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* ── 3D VISUAL PRESET SELECTOR (Level 4) ── */}
+                {(() => {
+                  const currentLvl = biz.layoutConfig?.templateLevel || (
+                    ["flow", "particles", "organic", "immersive_dark"].includes(biz.layoutConfig?.themeVariant) ? "immersive" : "classic"
+                  );
+                  if (currentLvl !== "immersive") return null;
+
+                  return (
+                    <div className="mt-3 pt-3 border-t border-white/5">
+                      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">
+                        Estilo Visual Inmersivo
+                      </p>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {[
+                          { id: "flow", name: "Ondas Fluidas", desc: "Movimiento suave y orgánico" },
+                          { id: "particles", name: "Partículas", desc: "Constelación cósmica sutil" },
+                          { id: "luxury", name: "Lujo Geométrico", desc: "Reflejos y facetas premium" },
+                          { id: "organic", name: "Curvas Botánicas", desc: "Formas naturales ondulantes" },
+                        ].map((p) => {
+                          const isSelected = (biz.layoutConfig?.visualPreset || "flow") === p.id;
+                          return (
+                            <button
+                              key={p.id}
+                              onClick={() =>
+                                setBiz((prev: any) =>
+                                  prev
+                                    ? {
+                                        ...prev,
+                                        layoutConfig: {
+                                          ...prev.layoutConfig,
+                                          visualPreset: p.id,
+                                        },
+                                      }
+                                    : prev
+                                )
+                              }
+                              className={`p-2 rounded-xl text-left border transition-all ${
+                                isSelected
+                                  ? "bg-cyan-500/20 border-cyan-500 text-white"
+                                  : "bg-white/[0.02] border-white/10 text-slate-400 hover:text-white hover:bg-white/[0.04]"
+                              }`}
+                            >
+                              <div className="text-[10px] font-bold text-white">{p.name}</div>
+                              <div className="text-[8px] text-slate-400 leading-tight">{p.desc}</div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-2 mt-3">Forma de Botones</p>
                 <div className="grid grid-cols-3 gap-1.5">

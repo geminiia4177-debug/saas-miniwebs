@@ -79,6 +79,7 @@ const GeneralTemplate = dynamic(() => import("@/components/landings/GeneralTempl
 const DefaultTemplate = dynamic(() => import("@/components/landings/DefaultTemplate"));
 
 // NUEVOS TEMAS UNIVERSALES
+const TemplateRenderer = dynamic(() => import("@/components/landings/templates/TemplateRenderer"));
 const ModernTheme = dynamic(() => import("@/components/landings/themes/ModernTheme"));
 const DarkEleganceTheme = dynamic(() => import("@/components/landings/themes/DarkEleganceTheme"));
 const ListTheme = dynamic(() => import("@/components/landings/themes/ListTheme"));
@@ -136,9 +137,14 @@ export default async function PublicLandingPage({ params, searchParams }: { para
   const safeLayoutConfig = {
     sections: Array.isArray(activeConfig.sections) ? activeConfig.sections : [],
     media: Array.isArray(activeConfig.media) ? activeConfig.media : [],
+    templateLevel: typeof activeConfig.templateLevel === "string" ? activeConfig.templateLevel : undefined,
     themeVariant: typeof activeConfig.themeVariant === "string" ? activeConfig.themeVariant : "classic",
+    themeId: typeof activeConfig.themeId === "string" ? activeConfig.themeId : undefined,
+    visualPreset: typeof activeConfig.visualPreset === "string" ? activeConfig.visualPreset : undefined,
+    animationIntensity: typeof activeConfig.animationIntensity === "string" ? activeConfig.animationIntensity : undefined,
     chatbotEnabled: activeConfig.chatbotEnabled !== false,
     chatbotName: typeof activeConfig.chatbotName === "string" ? activeConfig.chatbotName : "Asistente Virtual",
+    services: Array.isArray(activeConfig.services) ? activeConfig.services : undefined,
     barberiaServices: Array.isArray(activeConfig.barberiaServices) ? activeConfig.barberiaServices : undefined,
     clinicaServices: Array.isArray(activeConfig.clinicaServices) ? activeConfig.clinicaServices : undefined,
     tallerServices: Array.isArray(activeConfig.tallerServices) ? activeConfig.tallerServices : undefined,
@@ -195,12 +201,49 @@ export default async function PublicLandingPage({ params, searchParams }: { para
     const layoutConfig = biz.layoutConfig || {};
     const media = layoutConfig.media || [];
     const sections = layoutConfig.sections || [];
+    const templateLevel = layoutConfig.templateLevel;
     const themeVariant = layoutConfig.themeVariant || "classic";
     
-    // Si se eligió un tema premium (no clásico), cargamos la vista universal adaptada
-    if (themeVariant === "modern") return <ModernTheme negocio={biz} media={media} businessId={biz.id} sections={sections} />;
-    if (themeVariant === "dark") return <DarkEleganceTheme negocio={biz} media={media} businessId={biz.id} sections={sections} />;
-    if (themeVariant === "list") return <ListTheme negocio={biz} media={media} businessId={biz.id} sections={sections} />;
+    // Si se eligió una plantilla multinivel o tema universal, usamos TemplateRenderer
+    const isMultiLevel =
+      !!templateLevel ||
+      [
+        "classic",
+        "clean",
+        "essential",
+        "motion",
+        "modern",
+        "dynamic",
+        "premium",
+        "luxury",
+        "editorial",
+        "minimal_luxury",
+        "dark",
+        "list",
+        "immersive",
+        "flow",
+        "particles",
+        "organic",
+        "immersive_dark",
+      ].includes(themeVariant);
+
+    if (isMultiLevel) {
+      return (
+        <TemplateRenderer
+          negocio={biz}
+          media={media}
+          sections={sections}
+          bookingElement={
+            <BookingForm
+              businessId={biz.id}
+              services={((layoutConfig.services || layoutConfig.barberiaServices || [{ name: "Servicio General" }]) as any[]).map((s: any) => typeof s === "string" ? s : s.name)}
+              primaryColor={biz.primaryColor || undefined}
+              secondaryColor={biz.secondaryColor || undefined}
+            />
+          }
+        />
+      );
+    }
     
     // Diseño clásico según el tipo de negocio
     if (biz.type === "barberia") return <BarberiaTemplate negocio={biz} media={media} businessId={biz.id} sections={sections} />;
