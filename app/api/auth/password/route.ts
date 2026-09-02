@@ -26,8 +26,8 @@ export async function PUT(req: Request) {
 
     const { currentPassword, newPassword } = await req.json();
 
-    if (!currentPassword || !newPassword) {
-      return NextResponse.json({ error: "Faltan datos" }, { status: 400 });
+    if (!newPassword) {
+      return NextResponse.json({ error: "Faltan datos de la nueva contraseña" }, { status: 400 });
     }
 
     // P1-005: Enforce Password Policy
@@ -48,9 +48,15 @@ export async function PUT(req: Request) {
       return NextResponse.json({ error: "Usuario no encontrado o no tiene contraseña configurada." }, { status: 404 });
     }
 
-    const isMatch = await bcrypt.compare(currentPassword, user.password);
-    if (!isMatch) {
-      return NextResponse.json({ error: "La contraseña actual es incorrecta." }, { status: 400 });
+    // Si no está en flujo forzoso de primer cambio de clave, validamos la contraseña actual
+    if (!user.mustChangePassword) {
+      if (!currentPassword) {
+        return NextResponse.json({ error: "Debes ingresar tu contraseña actual." }, { status: 400 });
+      }
+      const isMatch = await bcrypt.compare(currentPassword, user.password);
+      if (!isMatch) {
+        return NextResponse.json({ error: "La contraseña actual es incorrecta." }, { status: 400 });
+      }
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, 12);

@@ -28,6 +28,32 @@ export default function PremiumTemplate({ data, bookingElement }: TemplateProps)
 
   const buttonClass = branding.buttonStyle === "pill" ? "rounded-full" : (branding.buttonStyle === "square" ? "rounded-none" : "rounded-xl");
 
+  // Dynamic business status (Open / Closed now)
+  const isBusinessOpenNow = () => {
+    try {
+      const now = new Date();
+      const days = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+      const currentDayKey = days[now.getDay()];
+      const todaySchedule = schedule.find(s => s.day === currentDayKey);
+      if (!todaySchedule || !todaySchedule.enabled) return { open: false, text: "Cerrado hoy • Citas online" };
+
+      const [openH, openM] = todaySchedule.open.split(":").map(Number);
+      const [closeH, closeM] = todaySchedule.close.split(":").map(Number);
+      const currentMinutes = now.getHours() * 60 + now.getMinutes();
+      const openMinutes = openH * 60 + (openM || 0);
+      const closeMinutes = closeH * 60 + (closeM || 0);
+
+      if (currentMinutes >= openMinutes && currentMinutes < closeMinutes) {
+        return { open: true, text: `Abierto ahora hasta las ${todaySchedule.close} hs` };
+      }
+      return { open: false, text: "Cerrado ahora • Agenda disponible" };
+    } catch {
+      return { open: true, text: "Citas exclusivas disponibles" };
+    }
+  };
+
+  const status = isBusinessOpenNow();
+
   return (
     <div
       className={`min-h-screen ${isDark ? "bg-[#0a0a0d] text-[#f5f2eb]" : "bg-[#faf8f5] text-[#1c1917]"} selection:bg-[#c5a059] selection:text-black`}
@@ -60,6 +86,12 @@ export default function PremiumTemplate({ data, bookingElement }: TemplateProps)
               </span>
             </div>
           </a>
+
+          {/* Status Badge */}
+          <div className="hidden lg:flex items-center gap-2 px-3.5 py-1 rounded-full border border-amber-500/20 bg-amber-500/5 text-xs font-sans">
+            <span className={`w-2 h-2 rounded-full ${status.open ? "bg-emerald-400 animate-pulse" : "bg-amber-400"}`} />
+            <span className="text-stone-300 tracking-wider text-[11px] uppercase">{status.text}</span>
+          </div>
 
           <nav className="hidden md:flex items-center gap-8 text-xs uppercase tracking-widest font-sans font-medium text-stone-400">
             <a href="#servicios" className="hover:text-amber-400 transition-colors">Servicios</a>
@@ -355,7 +387,13 @@ export default function PremiumTemplate({ data, bookingElement }: TemplateProps)
           </div>
 
           {bookingElement ? (
-            bookingElement
+            React.isValidElement(bookingElement) ? (
+              React.cloneElement(bookingElement as React.ReactElement<any>, {
+                preselectedService: selectedService || undefined,
+              })
+            ) : (
+              bookingElement
+            )
           ) : (
             <div className="text-center space-y-4 font-sans">
               <a
@@ -383,6 +421,49 @@ export default function PremiumTemplate({ data, bookingElement }: TemplateProps)
           <p>&copy; {new Date().getFullYear()} {identity.name}. Reservados todos los derechos.</p>
         </div>
       </footer>
+
+      {/* ── BARRA FLOTANTE MÓVIL LUXURY ── */}
+      <div className="md:hidden fixed bottom-3 inset-x-3 z-40">
+        <div
+          className="p-2.5 rounded-2xl border shadow-2xl flex items-center justify-between gap-2.5 backdrop-blur-xl"
+          style={{
+            background: isDark ? "rgba(16, 16, 22, 0.94)" : "rgba(255, 255, 255, 0.94)",
+            borderColor: "rgba(197, 160, 89, 0.3)",
+            boxShadow: "0 12px 36px rgba(0, 0, 0, 0.7)"
+          }}
+        >
+          <div className="pl-2">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5 font-sans">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+              {status.open ? "Citas Hoy" : "Agenda Online"}
+            </div>
+            <div className="text-xs font-serif font-bold text-stone-100 truncate max-w-[130px]">
+              {identity.name}
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {contact.whatsapp && (
+              <a
+                href={getWhatsAppLink()}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center font-bold text-lg hover:scale-105 active:scale-95 transition-all"
+                title="Atención Exclusiva WhatsApp"
+              >
+                💬
+              </a>
+            )}
+            <a
+              href="#reservar"
+              className="px-5 py-2.5 rounded-xl font-sans font-bold text-xs uppercase tracking-wider text-white shadow-lg flex items-center gap-1.5 hover:scale-105 active:scale-95 transition-all"
+              style={{ background: `linear-gradient(135deg, ${primary}, ${secondary})` }}
+            >
+              <span>Agendar</span>
+              <span>✦</span>
+            </a>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

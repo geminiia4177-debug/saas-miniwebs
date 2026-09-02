@@ -31,6 +31,32 @@ export default function ClassicTemplate({ data, bookingElement }: TemplateProps)
 
   const buttonClass = branding.buttonStyle === "pill" ? "rounded-full" : (branding.buttonStyle === "square" ? "rounded-none" : "rounded-xl");
 
+  // Dynamic business status (Open / Closed now)
+  const isBusinessOpenNow = () => {
+    try {
+      const now = new Date();
+      const days = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+      const currentDayKey = days[now.getDay()];
+      const todaySchedule = schedule.find(s => s.day === currentDayKey);
+      if (!todaySchedule || !todaySchedule.enabled) return { open: false, text: "Cerrado hoy • Turnos online" };
+
+      const [openH, openM] = todaySchedule.open.split(":").map(Number);
+      const [closeH, closeM] = todaySchedule.close.split(":").map(Number);
+      const currentMinutes = now.getHours() * 60 + now.getMinutes();
+      const openMinutes = openH * 60 + (openM || 0);
+      const closeMinutes = closeH * 60 + (closeM || 0);
+
+      if (currentMinutes >= openMinutes && currentMinutes < closeMinutes) {
+        return { open: true, text: `Abierto ahora hasta las ${todaySchedule.close} hs` };
+      }
+      return { open: false, text: "Cerrado ahora • Agendá para mañana" };
+    } catch {
+      return { open: true, text: "Turnos online disponibles" };
+    }
+  };
+
+  const status = isBusinessOpenNow();
+
   return (
     <div
       className={`min-h-screen font-sans ${isDark ? "bg-zinc-950 text-zinc-100" : "bg-white text-zinc-900"}`}
@@ -65,6 +91,12 @@ export default function ClassicTemplate({ data, bookingElement }: TemplateProps)
               )}
             </div>
           </a>
+
+          {/* Live Status */}
+          <div className="hidden lg:flex items-center gap-2 px-3.5 py-1 rounded-full border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-900 text-xs">
+            <span className={`w-2 h-2 rounded-full ${status.open ? "bg-emerald-500 animate-pulse" : "bg-amber-500"}`} />
+            <span className="font-medium text-zinc-600 dark:text-zinc-400">{status.text}</span>
+          </div>
 
           {/* Desktop Nav */}
           <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
@@ -348,7 +380,13 @@ export default function ClassicTemplate({ data, bookingElement }: TemplateProps)
           </div>
 
           {bookingElement ? (
-            bookingElement
+            React.isValidElement(bookingElement) ? (
+              React.cloneElement(bookingElement as React.ReactElement<any>, {
+                preselectedService: selectedService || undefined,
+              })
+            ) : (
+              bookingElement
+            )
           ) : (
             <div className="text-center space-y-4">
               <p className="text-sm text-zinc-500">
@@ -391,6 +429,46 @@ export default function ClassicTemplate({ data, bookingElement }: TemplateProps)
           <p>&copy; {new Date().getFullYear()} {identity.name}. Todos los derechos reservados.</p>
         </div>
       </footer>
+
+      {/* ── BARRA FLOTANTE MÓVIL ── */}
+      <div className="md:hidden fixed bottom-3 inset-x-3 z-40">
+        <div
+          className={`p-2.5 rounded-2xl border shadow-xl flex items-center justify-between gap-2.5 backdrop-blur-xl ${
+            isDark ? "bg-zinc-900/90 border-zinc-800 shadow-black/60" : "bg-white/95 border-zinc-200 shadow-zinc-300/50"
+          }`}
+        >
+          <div className="pl-2">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-500 flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              {status.open ? "Abierto" : "Turnos online"}
+            </div>
+            <div className="text-xs font-bold truncate max-w-[130px]">
+              {identity.name}
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {contact.whatsapp && (
+              <a
+                href={getWhatsAppLink()}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold text-lg hover:scale-105 active:scale-95 transition-all"
+                title="WhatsApp"
+              >
+                💬
+              </a>
+            )}
+            <a
+              href="#reservar"
+              className="px-5 py-2.5 rounded-xl font-bold text-xs text-white shadow-md flex items-center gap-1.5 hover:scale-105 active:scale-95 transition-all"
+              style={{ backgroundColor: primary }}
+            >
+              <span>Reservar</span>
+              <span>→</span>
+            </a>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

@@ -143,7 +143,7 @@ export async function POST(req: Request) {
     }
 
     // ─────────────────────────────────────────────────────────
-    // P0-003: Crear usuario con clave temporal aleatoria segura
+    // P0-003: Crear o actualizar usuario con clave inicial segura
     // ─────────────────────────────────────────────────────────
     let clientUser = await prisma.user.findUnique({
       where: { email: email }
@@ -152,8 +152,8 @@ export async function POST(req: Request) {
     let temporaryPassword: string | null = null;
 
     if (!clientUser) {
-      // Clave temporal criptográficamente aleatoria (16 caracteres base64url)
-      temporaryPassword = crypto.randomBytes(12).toString("base64url");
+      // Usar contraseña provista por admin o generar una clave segura aleatoria
+      temporaryPassword = data.initialPassword?.trim() || crypto.randomBytes(9).toString("base64url");
       const hashedPassword = await bcrypt.hash(temporaryPassword, 12);
       
       clientUser = await prisma.user.create({
@@ -162,6 +162,19 @@ export async function POST(req: Request) {
           name: name,
           password: hashedPassword,
           mustChangePassword: true,
+        }
+      });
+    } else if (data.initialPassword?.trim()) {
+      // Si el usuario ya existía y el admin indicó una contraseña inicial explícita
+      temporaryPassword = data.initialPassword.trim();
+      const hashedPassword = await bcrypt.hash(temporaryPassword, 12);
+      clientUser = await prisma.user.update({
+        where: { id: clientUser.id },
+        data: {
+          password: hashedPassword,
+          mustChangePassword: true,
+          failedLoginCount: 0,
+          sessionVersion: { increment: 1 }
         }
       });
     }

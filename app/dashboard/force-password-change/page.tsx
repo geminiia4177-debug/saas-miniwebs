@@ -39,7 +39,7 @@ export default function ForcePasswordChangePage() {
       const res = await fetch("/api/auth/password", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ currentPassword: "admin", newPassword }),
+        body: JSON.stringify({ newPassword }),
       });
 
       const data = await res.json();

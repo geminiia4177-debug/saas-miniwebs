@@ -34,7 +34,8 @@ export const authOptions: NextAuthOptions = {
       name: "Credenciales",
       credentials: {
         email: { label: "Email", type: "email", placeholder: "tu@email.com" },
-        password: { label: "Contraseña", type: "password" }
+        password: { label: "Contraseña", type: "password" },
+        remember: { label: "Recordarme", type: "text" }
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
@@ -76,8 +77,10 @@ export const authOptions: NextAuthOptions = {
           where: { id: user.id },
           data: { lastLoginAt: new Date(), failedLoginCount: 0 }
         });
+
+        const rememberMe = credentials.remember === "true" || credentials.remember === "1" || credentials.remember === true;
         
-        const authUser: ExtendedAuthUser = {
+        const authUser: ExtendedAuthUser & { remember?: boolean } = {
           id: user.id,
           name: user.name,
           email: user.email,
@@ -85,6 +88,7 @@ export const authOptions: NextAuthOptions = {
           mustChangePassword: user.mustChangePassword,
           forcePasswordChange: user.mustChangePassword,
           sessionVersion: user.sessionVersion,
+          remember: rememberMe,
         };
 
         return authUser;
@@ -96,17 +100,29 @@ export const authOptions: NextAuthOptions = {
   },
   session: {
     strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 días
   },
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        const u = user as ExtendedAuthUser;
+        const u = user as ExtendedAuthUser & { remember?: boolean };
         token.role = u.role;
         token.sessionVersion = u.sessionVersion || 1;
+        const remember = u.remember ?? true;
+        token.remember = remember;
+        // 30 días si recordó, 24 horas si no marcó recordar
+        token.customExp = Date.now() + (remember ? 30 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000);
         if (u.forcePasswordChange) {
           token.forcePasswordChange = true;
         }
       } else if (token.sub) {
+        // Verificar si la sesión personalizada no-persistente expiró
+        if (token.customExp && Date.now() > (token.customExp as number)) {
+          token.sub = "";
+          token.role = "";
+          return token;
+        }
+
         // SEC-P1-015 Fix: Verify session version to allow remote logout/password change invalidation
         const dbUser = await prisma.user.findUnique({ where: { id: token.sub }, select: { sessionVersion: true, role: true } });
         

@@ -76,10 +76,17 @@ function ExpandedDetail({ negocio, onSave, onNoteAdd, toast }: any) {
   const [form, setForm] = useState({ ...negocio });
   const [noteText, setNoteText] = useState("");
 
+  // Estado para reseteo de contraseña desde el admin
+  const [resetPwd, setResetPwd] = useState("");
+  const [resetMustChange, setResetMustChange] = useState(true);
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetResult, setResetResult] = useState<any>(null);
+
   const tabs = [
-    { id: "info",    label: "Información" },
-    { id: "payment", label: "Pagos" },
-    { id: "notes",   label: `Notas (${negocio.notes.length})` },
+    { id: "info",     label: "Información" },
+    { id: "payment",  label: "Pagos" },
+    { id: "security", label: "Seguridad y Clave" },
+    { id: "notes",    label: `Notas (${negocio.notes?.length || 0})` },
   ];
 
   const handleSave = () => {
@@ -94,11 +101,46 @@ function ExpandedDetail({ negocio, onSave, onNoteAdd, toast }: any) {
     toast("Nota agregada");
   };
 
+  const handleGenRandomPwd = () => {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
+    let pwd = "Pass-";
+    for (let i = 0; i < 6; i++) {
+      pwd += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setResetPwd(pwd);
+  };
+
+  const handleResetPassword = async () => {
+    setResetLoading(true);
+    try {
+      const res = await fetch(`/api/businesses/${negocio.id}/reset-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          newPassword: resetPwd.trim() || undefined,
+          mustChangePassword: resetMustChange,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Error al resetear contraseña");
+      setResetResult(data);
+      toast("¡Contraseña actualizada exitosamente!", "ok");
+    } catch (err: any) {
+      toast(err.message || "Error al resetear contraseña", "warn");
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
   return (
     <div className={styles['card-expanded']}>
       <div className={styles['exp-tabs']}>
         {tabs.map(t => (
-          <button key={t.id} className={`exp-tab ${tab === t.id ? "active" : ""}`} onClick={() => setTab(t.id)}>
+          <button
+            key={t.id}
+            className={`${styles['exp-tab']} ${tab === t.id ? styles.active : ""}`}
+            onClick={() => setTab(t.id)}
+          >
             {t.label}
           </button>
         ))}
@@ -254,6 +296,96 @@ function ExpandedDetail({ negocio, onSave, onNoteAdd, toast }: any) {
           </>
         )}
 
+        {/* ── SECURITY TAB ── */}
+        {tab === "security" && (
+          <div className={styles['sec-card']}>
+            <div className={styles['sec-head']}>
+              <div className={styles['sec-title']}>
+                <span>🔒</span> Control de Acceso y Credenciales
+              </div>
+              <span className={`${styles['sec-badge']} ${styles.ok}`}>
+                Cuenta Vinculada
+              </span>
+            </div>
+
+            <div style={{ fontSize: 13, color: "var(--t1)", marginBottom: 16, lineHeight: 1.5 }}>
+              Usuario vinculado: <strong style={{ color: "var(--t0)" }}>{negocio.email || "Sin email asignado"}</strong>.
+              Desde acá podés resetear la contraseña del cliente para que pueda ingresar inmediatamente al panel.
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 12, alignItems: "flex-end", marginBottom: 14 }}>
+              <div className={styles.fgroup}>
+                <label className={styles.flabel}>Nueva Contraseña (o dejar en blanco para autogenerar)</label>
+                <input
+                  className={styles.finput}
+                  placeholder="Ej: Negocio2025! o dejar vacío"
+                  value={resetPwd}
+                  onChange={e => setResetPwd(e.target.value)}
+                />
+              </div>
+              <button
+                type="button"
+                className={`${styles['chip-btn']} ${styles.ghost}`}
+                onClick={handleGenRandomPwd}
+                style={{ padding: "9px 14px", height: "40px" }}
+              >
+                ⚡ Generar aleatoria
+              </button>
+            </div>
+
+            <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 12, color: "var(--t1)", marginBottom: 18 }}>
+              <input
+                type="checkbox"
+                checked={resetMustChange}
+                onChange={e => setResetMustChange(e.target.checked)}
+                style={{ accentColor: "var(--accent)" }}
+              />
+              Exigir cambio de contraseña en su próximo inicio de sesión
+            </label>
+
+            <button
+              className={styles['btn-submit']}
+              disabled={resetLoading}
+              onClick={handleResetPassword}
+              style={{ width: "100%", justifyContent: "center" }}
+            >
+              {resetLoading ? "Actualizando clave..." : "🔑 Confirmar y Resetear Contraseña"}
+            </button>
+
+            {resetResult && (
+              <div className={styles['cred-box']}>
+                <div>
+                  <div style={{ fontSize: 10, color: "var(--t2)", textTransform: "uppercase", fontWeight: 700, marginBottom: 2 }}>
+                    Nueva contraseña activa:
+                  </div>
+                  <div className={styles['cred-text']}>{resetResult.password}</div>
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button
+                    className={styles['btn-copy']}
+                    onClick={() => {
+                      navigator.clipboard.writeText(resetResult.password);
+                      toast("Contraseña copiada al portapapeles", "ok");
+                    }}
+                  >
+                    📋 Copiar
+                  </button>
+                  <a
+                    className={styles['btn-wa']}
+                    href={`https://wa.me/?text=${encodeURIComponent(
+                      `¡Hola! Te compartimos tus accesos a la plataforma:\n\n🌐 Enlace: https://${negocio.subdomain}.saas-miniwebs.vercel.app/login\n📧 Email: ${resetResult.email}\n🔑 Contraseña: ${resetResult.password}\n\nPor seguridad, el sistema te solicitará cambiarla al iniciar sesión.`
+                    )}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    💬 WhatsApp
+                  </a>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* ── NOTES TAB ── */}
         {tab === "notes" && (
           <>
@@ -302,24 +434,26 @@ function BizCard({ negocio, isExpanded, onToggle, onStatusChange, onDelete, onSa
 
   if (viewMode === "list") {
     return (
-      <div className={`biz-card ${isExpanded ? "selected" : ""}`} style={{ "--stripe-c": rubro.color } as any}>
+      <div className={`${styles['biz-card']} ${isExpanded ? styles.selected : ""}`} style={{ "--stripe-c": rubro.color } as any}>
         <div className={styles['card-stripe']} />
         <div style={{ display: "flex", alignItems: "center", padding: "14px 20px", gap: 16 }}>
           <div className={styles['card-avatar']} style={{ background: `${rubro.color}18`, color: rubro.color, width: 38, height: 38 }}>
             {rubro.icon}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div className={styles['card-name']} style={{ fontSize: 14 }}>{negocio.name}</div>
-            <div className={styles['card-url']}>{negocio.customDomain || `${negocio.subdomain}.saas-miniwebs.vercel.app`}</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span className={styles['card-name']}>{negocio.name}</span>
+              <span className={styles['card-url']}>({negocio.subdomain})</span>
+            </div>
+            <div style={{ fontSize: 12, color: "var(--t2)", marginTop: 2 }}>{negocio.email}</div>
           </div>
-          <div style={{ fontSize: 12, color: "var(--t1)", minWidth: 100 }}>{negocio.email}</div>
-          <div style={{ minWidth: 80 }}><StatusPill status={negocio.status} /></div>
-          <div style={{ minWidth: 80 }}><PayChip status={negocio.paymentStatus} /></div>
-          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-            <button className={`${styles['chip-btn']} ${styles.green}`} onClick={e => { e.stopPropagation(); onStatusChange(negocio.id, "ACTIVE"); }}>✓</button>
-            <button className={`${styles['chip-btn']} ${styles.red}`}   onClick={e => { e.stopPropagation(); onStatusChange(negocio.id, "BLOCKED"); }}>✕</button>
-            <button className={`${styles['chip-btn']} ${styles.ghost}`} onClick={e => { e.stopPropagation(); onToggle(negocio.id); }}>
-              <span className={`expand-arrow ${isExpanded ? "open" : ""}`}>▼</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <StatusPill status={negocio.status} />
+            <PayChip status={negocio.paymentStatus} />
+          </div>
+          <div style={{ display: "flex", gap: 6 }} onClick={e => e.stopPropagation()}>
+            <button className={`${styles['chip-btn']} ${styles.ghost}`} onClick={() => onToggle(negocio.id)}>
+              Detalle <span className={`${styles['expand-arrow']} ${isExpanded ? styles.open : ""}`}>▼</span>
             </button>
           </div>
         </div>
@@ -387,7 +521,7 @@ function BizCard({ negocio, isExpanded, onToggle, onStatusChange, onDelete, onSa
             Ver Landing ↗
           </a>
           <button className={`${styles['chip-btn']} ${styles.ghost}`} onClick={() => onToggle(negocio.id)}>
-            Detalle <span className={`expand-arrow ${isExpanded ? "open" : ""}`}>▼</span>
+            Detalle <span className={`${styles['expand-arrow']} ${isExpanded ? styles.open : ""}`}>▼</span>
           </button>
         </div>
       </div>
@@ -407,9 +541,19 @@ function NewClientDrawer({ onClose, onSave }: any) {
     name: "", subdomain: "", customDomain: "", email: "", phone: "",
     type: "barberia", status: "DEMO", description: "",
     nextPayment: "", paymentAmount: "", paymentStatus: "pending",
+    initialPassword: "",
   });
 
   const set = (k: string, v: string) => setForm((p: any) => ({ ...p, [k]: v }));
+
+  const handleGenRandomPassword = () => {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
+    let pwd = "Pass-";
+    for (let i = 0; i < 6; i++) {
+      pwd += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    set("initialPassword", pwd);
+  };
 
   const handleSubmit = () => {
     if (!form.name || !form.email) return;
@@ -418,6 +562,7 @@ function NewClientDrawer({ onClose, onSave }: any) {
       ...form,
       id: uid(),
       paymentAmount: Number(form.paymentAmount) || 0,
+      initialPassword: form.initialPassword.trim() || undefined,
       createdAt: new Date().toISOString().slice(0, 10),
       demoExpiresAt: form.status === "DEMO" ? exp.toISOString().slice(0, 10) : null,
       notes: [],
@@ -486,15 +631,39 @@ function NewClientDrawer({ onClose, onSave }: any) {
           </div>
 
           <div className={styles['drawer-section']}>
-            <div className={styles['drawer-section-title']}>Contacto</div>
+            <div className={styles['drawer-section-title']}>Contacto y Acceso</div>
             <div className={styles['form-row']}>
               <div className={styles.fgroup}>
-                <label className={styles.flabel}>Email *</label>
+                <label className={styles.flabel}>Email de acceso *</label>
                 <input className={styles.finput} type="email" placeholder="dueño@mail.com" value={form.email} onChange={e => set("email", e.target.value)} />
               </div>
               <div className={styles.fgroup}>
                 <label className={styles.flabel}>Teléfono</label>
                 <input className={styles.finput} placeholder="+54 9 11..." value={form.phone} onChange={e => set("phone", e.target.value)} />
+              </div>
+            </div>
+            <div className={`${styles['form-row']} ${styles.full}`} style={{ marginTop: 10 }}>
+              <div className={styles.fgroup}>
+                <label className={styles.flabel}>Contraseña Inicial (Opcional)</label>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <input
+                    className={styles.finput}
+                    placeholder="Dejar vacío para autogenerar"
+                    value={form.initialPassword}
+                    onChange={e => set("initialPassword", e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    className={`${styles['chip-btn']} ${styles.ghost}`}
+                    onClick={handleGenRandomPassword}
+                    style={{ padding: "0 12px", whiteSpace: "nowrap" }}
+                  >
+                    ⚡ Generar
+                  </button>
+                </div>
+                <div style={{ fontSize: 11, color: "var(--t2)", marginTop: 2 }}>
+                  Si la dejas en blanco, el sistema creará una contraseña segura automáticamente.
+                </div>
               </div>
             </div>
           </div>
@@ -595,9 +764,80 @@ function AdminWhatsApp() {
   );
 }
 
+// ── MODAL CREDENCIALES NUEVO CLIENTE ──────────────────────────────────────────
+function CreatedCredentialsModal({ data, onClose, toast }: any) {
+  if (!data) return null;
+  const loginUrl = typeof window !== "undefined" ? `${window.location.origin}/login` : "/login";
+  const waMsg = `¡Hola! Ya creamos el acceso a tu plataforma "${data.name}":\n\n🌐 Enlace: ${loginUrl}\n📧 Email: ${data.email}\n🔑 Contraseña temporal: ${data.password}\n\nPor seguridad, te solicitará cambiarla al entrar. ¡Muchos éxitos!`;
+
+  return (
+    <div className={styles['modal-overlay']} onClick={onClose}>
+      <div className={styles['modal-cred-box']} onClick={e => e.stopPropagation()}>
+        <div className={styles['modal-cred-head']}>
+          <div className={styles['modal-cred-icon']}>✓</div>
+          <div className={styles['modal-cred-title']}>¡Negocio Creado con Éxito!</div>
+          <div className={styles['modal-cred-sub']}>
+            Guardá estas credenciales y compartíselas al cliente para que pueda ingresar inmediatamente a su panel.
+          </div>
+        </div>
+
+        <div className={styles['modal-cred-grid']}>
+          <div className={styles['modal-cred-item']}>
+            <div className={styles['modal-cred-lbl']}>Negocio</div>
+            <div className={styles['modal-cred-val']}>{data.name} ({data.subdomain})</div>
+          </div>
+          <div className={styles['modal-cred-item']}>
+            <div className={styles['modal-cred-lbl']}>Email de Login</div>
+            <div className={styles['modal-cred-val']}>{data.email}</div>
+          </div>
+          <div className={styles['modal-cred-item']} style={{ border: "1px solid rgba(108,142,255,0.4)", background: "rgba(108,142,255,0.06)" }}>
+            <div className={styles['modal-cred-lbl']}>Contraseña de Acceso</div>
+            <div className={`${styles['modal-cred-val']} ${styles.highlight}`}>{data.password}</div>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
+          <button
+            type="button"
+            className={styles['btn-copy']}
+            style={{ flex: 1, padding: "12px", fontSize: 13, borderRadius: 10 }}
+            onClick={() => {
+              navigator.clipboard.writeText(
+                `Plataforma: ${data.name}\nWeb: ${loginUrl}\nEmail: ${data.email}\nContraseña: ${data.password}`
+              );
+              toast("Credenciales copiadas al portapapeles", "ok");
+            }}
+          >
+            📋 Copiar Credenciales
+          </button>
+          <a
+            className={styles['btn-wa']}
+            style={{ flex: 1, padding: "12px", fontSize: 13, borderRadius: 10, justifyContent: "center" }}
+            href={`https://wa.me/?text=${encodeURIComponent(waMsg)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            💬 Enviar por WhatsApp
+          </a>
+        </div>
+
+        <button
+          type="button"
+          className={styles['btn-cancel']}
+          style={{ width: "100%", padding: "10px", borderRadius: 10 }}
+          onClick={onClose}
+        >
+          Cerrar
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ── MAIN APP ──────────────────────────────────────────────────────────────────
 export default function AdminCRM() {
   const [negocios, setNegocios] = useState<any[]>([]);
+  const [createdCreds, setCreatedCreds] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [totales, setTotales] = useState<any>({ all: 0, ACTIVE: 0, DEMO: 0, BLOCKED: 0, revenue: 0, chartData: [] });
   const [page, setPage] = useState(0);
@@ -780,7 +1020,15 @@ export default function AdminCRM() {
 
       setNegocios(p => [newBusiness, ...p]);
       pushToast("Cliente creado con éxito", "ok");
-      // Trigger a re-fetch to update stats? We can just do a page reload or let it be.
+
+      if (newBusiness.initialPassword) {
+        setCreatedCreds({
+          name: newBusiness.name,
+          subdomain: newBusiness.subdomain,
+          email: newBusiness.email,
+          password: newBusiness.initialPassword,
+        });
+      }
     } catch (error: any) {
       pushToast(error.message || "Error al crear cliente", "warn");
     }
@@ -997,10 +1245,19 @@ export default function AdminCRM() {
         </div>
       )}
 
+      {/* MODAL DE CREDENCIALES AL CREAR CLIENTE */}
+      {createdCreds && (
+        <CreatedCredentialsModal
+          data={createdCreds}
+          onClose={() => setCreatedCreds(null)}
+          toast={pushToast}
+        />
+      )}
+
       {/* TOASTS */}
       <div className={styles['toast-wrap']}>
         {toasts.map(t => (
-          <div key={t.id} className={`toast ${t.fading ? "fade" : ""}`}>
+          <div key={t.id} className={`${styles.toast} ${t.fading ? styles.fade : ""}`}>
             <span style={{ color: t.type === "warn" ? "var(--yellow)" : "var(--green)" }}>
               {t.type === "warn" ? "◑" : "✓"}
             </span>

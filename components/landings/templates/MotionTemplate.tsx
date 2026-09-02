@@ -39,6 +39,32 @@ export default function MotionTemplate({ data, bookingElement }: TemplateProps) 
 
   const buttonClass = branding.buttonStyle === "pill" ? "rounded-full" : (branding.buttonStyle === "square" ? "rounded-none" : "rounded-2xl");
 
+  // Dynamic business status (Open / Closed now)
+  const isBusinessOpenNow = () => {
+    try {
+      const now = new Date();
+      const days = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+      const currentDayKey = days[now.getDay()];
+      const todaySchedule = schedule.find(s => s.day === currentDayKey);
+      if (!todaySchedule || !todaySchedule.enabled) return { open: false, text: "Cerrado hoy • Turnos online" };
+
+      const [openH, openM] = todaySchedule.open.split(":").map(Number);
+      const [closeH, closeM] = todaySchedule.close.split(":").map(Number);
+      const currentMinutes = now.getHours() * 60 + now.getMinutes();
+      const openMinutes = openH * 60 + (openM || 0);
+      const closeMinutes = closeH * 60 + (closeM || 0);
+
+      if (currentMinutes >= openMinutes && currentMinutes < closeMinutes) {
+        return { open: true, text: `Abierto ahora hasta las ${todaySchedule.close} hs` };
+      }
+      return { open: false, text: "Cerrado ahora • Agendá para mañana" };
+    } catch {
+      return { open: true, text: "Turnos online disponibles" };
+    }
+  };
+
+  const status = isBusinessOpenNow();
+
   // Extract unique categories from services
   const categories = ["all", ...Array.from(new Set(services.map((s) => s.category).filter(Boolean)))];
   const filteredServices = activeCategory === "all"
@@ -100,6 +126,12 @@ export default function MotionTemplate({ data, bookingElement }: TemplateProps) 
             </div>
           </a>
 
+          {/* Live Status Pill */}
+          <div className="hidden lg:flex items-center gap-2 px-3.5 py-1 rounded-full bg-white/5 border border-white/10 text-xs backdrop-blur-md">
+            <span className={`w-2 h-2 rounded-full ${status.open ? "bg-emerald-400 animate-pulse" : "bg-amber-400"}`} />
+            <span className="text-slate-300 font-semibold">{status.text}</span>
+          </div>
+
           {/* Nav links */}
           <nav className="hidden md:flex items-center gap-8 text-sm font-semibold text-slate-300">
             <a href="#servicios" className="hover:text-white transition-colors">Servicios</a>
@@ -120,12 +152,10 @@ export default function MotionTemplate({ data, bookingElement }: TemplateProps) 
       {/* ── HERO SECTION WITH DYNAMIC PARALLAX ── */}
       <section id="hero" className="relative pt-32 pb-20 sm:pt-40 sm:pb-32 px-4 sm:px-6 z-10">
         <div className="max-w-5xl mx-auto text-center space-y-8">
-          {hero.badge && (
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 backdrop-blur-md shadow-inner text-xs font-bold text-indigo-300">
-              <span className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: primary }} />
-              {hero.badge}
-            </div>
-          )}
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 backdrop-blur-md shadow-inner text-xs font-bold">
+            <span className={`w-2 h-2 rounded-full ${status.open ? "bg-emerald-400 animate-pulse" : "bg-indigo-400"}`} />
+            <span className="text-indigo-200">{hero.badge || status.text}</span>
+          </div>
 
           <h1
             className="text-4xl sm:text-6xl md:text-7xl font-black tracking-tight leading-[1.1] text-transparent bg-clip-text"
@@ -154,6 +184,22 @@ export default function MotionTemplate({ data, bookingElement }: TemplateProps) 
             >
               {hero.ctaSecondary || "Explorar Servicios"}
             </a>
+          </div>
+
+          {/* Social Proof Badges */}
+          <div className="pt-8 flex flex-wrap items-center justify-center gap-4 sm:gap-8 text-xs font-medium text-slate-300">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/10">
+              <span className="text-amber-400 font-bold">★ 4.9/5</span>
+              <span>en Google</span>
+            </div>
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/10">
+              <span className="text-emerald-400 font-bold">⚡ Inmediato</span>
+              <span>Confirmación por WhatsApp</span>
+            </div>
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/10">
+              <span className="text-indigo-400 font-bold">🛡️ 100% Sin espera</span>
+              <span>Horarios puntuales</span>
+            </div>
           </div>
 
           {/* Quick Metrics Bar */}
@@ -444,7 +490,13 @@ export default function MotionTemplate({ data, bookingElement }: TemplateProps) 
           </div>
 
           {bookingElement ? (
-            bookingElement
+            React.isValidElement(bookingElement) ? (
+              React.cloneElement(bookingElement as React.ReactElement<any>, {
+                preselectedService: selectedService || undefined,
+              })
+            ) : (
+              bookingElement
+            )
           ) : (
             <div className="text-center space-y-4">
               <a
@@ -472,6 +524,49 @@ export default function MotionTemplate({ data, bookingElement }: TemplateProps) 
           <p>&copy; {new Date().getFullYear()} {identity.name}. Desarrollado con tecnología de alta velocidad.</p>
         </div>
       </footer>
+
+      {/* ── BARRA FLOTANTE MÓVIL DE ALTA CONVERSIÓN ── */}
+      <div className="md:hidden fixed bottom-3 inset-x-3 z-40">
+        <div
+          className="p-2.5 rounded-2xl border shadow-2xl flex items-center justify-between gap-2.5 backdrop-blur-xl"
+          style={{
+            background: "rgba(9, 13, 22, 0.92)",
+            borderColor: "rgba(255, 255, 255, 0.12)",
+            boxShadow: "0 12px 36px rgba(0, 0, 0, 0.7)"
+          }}
+        >
+          <div className="pl-2">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              {status.open ? "Abierto hoy" : "Turnos online"}
+            </div>
+            <div className="text-xs font-extrabold text-white truncate max-w-[130px]">
+              {identity.name}
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {contact.whatsapp && (
+              <a
+                href={getWhatsAppLink()}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center font-bold text-lg hover:scale-105 active:scale-95 transition-all"
+                title="Escribir por WhatsApp"
+              >
+                💬
+              </a>
+            )}
+            <a
+              href="#reservar"
+              className="px-5 py-2.5 rounded-xl font-extrabold text-xs text-white shadow-lg flex items-center gap-1.5 hover:scale-105 active:scale-95 transition-all"
+              style={{ background: `linear-gradient(135deg, ${primary}, ${secondary})` }}
+            >
+              <span>Reservar Turno</span>
+              <span>→</span>
+            </a>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
