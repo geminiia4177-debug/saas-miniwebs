@@ -78,7 +78,7 @@ export const authOptions: NextAuthOptions = {
           data: { lastLoginAt: new Date(), failedLoginCount: 0 }
         });
 
-        const rememberMe = credentials.remember === "true" || credentials.remember === "1" || credentials.remember === true;
+        const rememberMe = credentials.remember === "true" || credentials.remember === "1";
         
         const authUser: ExtendedAuthUser & { remember?: boolean } = {
           id: user.id,
