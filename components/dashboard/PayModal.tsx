@@ -31,18 +31,39 @@ export default function PayModal({ biz, open, onClose }: PayModalProps) {
           <div className="bg-[#050810] border border-white/5 rounded-xl p-5 mb-6 text-center">
             <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Datos de Transferencia</p>
             <div className="space-y-4">
-              <div>
-                <p className="text-[10px] text-slate-500 uppercase font-semibold">CBU / CVU</p>
-                <p className="text-lg font-mono text-white font-medium select-all">{biz?.paymentData?.cbu || "No configurado"}</p>
-              </div>
-              <div>
-                <p className="text-[10px] text-slate-500 uppercase font-semibold">Alias</p>
-                <p className="text-lg font-mono text-emerald-400 font-bold select-all">{biz?.paymentData?.alias || "No configurado"}</p>
-              </div>
-              <div>
-                <p className="text-[10px] text-slate-500 uppercase font-semibold">Titular</p>
-                <p className="text-sm font-medium text-white">{biz?.paymentData?.titular || "No configurado"}</p>
-              </div>
+              {biz?.paymentData?.clabe ? (
+                <>
+                  <div>
+                    <p className="text-[10px] text-slate-500 uppercase font-semibold">CLABE Interbancaria (México)</p>
+                    <p className="text-lg font-mono text-white font-bold select-all tracking-wider">{biz.paymentData.clabe}</p>
+                  </div>
+                  {biz.paymentData.bank && (
+                    <div>
+                      <p className="text-[10px] text-slate-500 uppercase font-semibold">Banco</p>
+                      <p className="text-base font-semibold text-indigo-300">{biz.paymentData.bank}</p>
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-[10px] text-slate-500 uppercase font-semibold">Titular / Beneficiario</p>
+                    <p className="text-sm font-medium text-white">{biz.paymentData.titular || "Titular de la cuenta"}</p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <p className="text-[10px] text-slate-500 uppercase font-semibold">CBU / CVU</p>
+                    <p className="text-lg font-mono text-white font-medium select-all">{biz?.paymentData?.cbu || "No configurado"}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-slate-500 uppercase font-semibold">Alias</p>
+                    <p className="text-lg font-mono text-emerald-400 font-bold select-all">{biz?.paymentData?.alias || "No configurado"}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-slate-500 uppercase font-semibold">Titular</p>
+                    <p className="text-sm font-medium text-white">{biz?.paymentData?.titular || "No configurado"}</p>
+                  </div>
+                </>
+              )}
             </div>
           </div>
 

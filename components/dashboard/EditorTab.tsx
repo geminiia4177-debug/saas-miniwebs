@@ -27,6 +27,7 @@ import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea
 import { DropZone } from "./editor/DropZone";
 import { FieldRow } from "./editor/FieldRow";
 import { uploadToImgBB } from "@/lib/utils/upload";
+import HelpTooltip from "@/components/ui/HelpTooltip";
 
 function ColorPickerPopup({ color, onChange }: { color: string, onChange: (c: string) => void }) {
   const [open, setOpen] = useState(false);
@@ -250,7 +251,7 @@ export default function EditorTab({
   const [mobileView, setMobileView] = useState<"edit" | "preview">("edit");
 
   return (
-    <div className="flex flex-col md:flex-row h-full min-h-[calc(100vh-8rem)] animate-fadeIn relative">
+    <div className="flex flex-col md:flex-row h-full min-h-[calc(100dvh-8rem)] animate-fadeIn relative">
       {/* ── MOBILE VIEW TOGGLE ── */}
       <div className="md:hidden flex items-center justify-between p-2 bg-[#0a0f1c] border-b border-white/10 shrink-0">
         <div className="flex gap-1 w-full bg-white/5 p-1 rounded-xl">
@@ -317,7 +318,7 @@ export default function EditorTab({
 
           {/* ── DISEÑO ── */}
           {mainTab === "diseno" && (
-            <div className="animate-fadeIn pb-6">
+            <div className="animate-fadeIn pb-28">
               
               {/* ── Título Principal ── */}
               <div className="px-3 pt-4 pb-2 border-b border-white/5">
@@ -343,7 +344,14 @@ export default function EditorTab({
               </div>
 
               <div className="px-3 pt-3 pb-1">
-                <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest px-0.5 mb-2">Colores rápidos</p>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-0.5">Colores de Marca</p>
+                  <HelpTooltip
+                    title="Colores de Marca"
+                    description="Personaliza la paleta cromática de tu web: Principal (P, fondo y botones primarios), Secundario (S, degradados y tarjetas) y Acento (A, detalles y precios)."
+                    tip="Haz clic sobre cualquier cuadro de color para abrir el selector visual interactivo."
+                  />
+                </div>
                 <div className="flex gap-2 items-center">
                   {[
                     { key: "primaryColor",   label: "P" },
@@ -351,7 +359,7 @@ export default function EditorTab({
                     { key: "accentColor",    label: "A" },
                   ].map(({ key, label }) => (
                     <div key={key} className="flex-1 flex flex-col items-center gap-1">
-                      <span className="text-[9px] text-slate-600">{label}</span>
+                      <span className="text-[9px] text-slate-500">{label}</span>
                       <ColorPickerPopup 
                         color={(biz as any)[key] || "#000"} 
                         onChange={c => setBiz((prev: any) => prev ? { ...prev, [key]: c } : prev)} 
@@ -362,24 +370,24 @@ export default function EditorTab({
               </div>
 
               <div className="px-3 pt-3 pb-1">
-                <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest px-0.5 mb-2">Colores Adicionales</p>
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-0.5 mb-2">Colores Adicionales</p>
                 <div className="flex gap-2 items-center">
                   <div className="flex-1 flex flex-col items-center gap-1">
-                    <span className="text-[9px] text-slate-600 text-center">Fondo<br/>Contacto</span>
+                    <span className="text-[9px] text-slate-500 text-center">Fondo<br/>Contacto</span>
                     <ColorPickerPopup 
                       color={biz.layoutConfig?.footerBgColor || "#050505"} 
                       onChange={c => setBiz((prev: any) => ({ ...prev, layoutConfig: { ...prev.layoutConfig, footerBgColor: c } }))} 
                     />
                   </div>
                   <div className="flex-1 flex flex-col items-center gap-1">
-                    <span className="text-[9px] text-slate-600 text-center">Texto<br/>Contacto</span>
+                    <span className="text-[9px] text-slate-500 text-center">Texto<br/>Contacto</span>
                     <ColorPickerPopup 
                       color={biz.layoutConfig?.footerTextColor || "#888888"} 
                       onChange={c => setBiz((prev: any) => ({ ...prev, layoutConfig: { ...prev.layoutConfig, footerTextColor: c } }))} 
                     />
                   </div>
                   <div className="flex-1 flex flex-col items-center gap-1">
-                    <span className="text-[9px] text-slate-600 text-center">Caja<br/>Reservas</span>
+                    <span className="text-[9px] text-slate-500 text-center">Caja<br/>Reservas</span>
                     <ColorPickerPopup 
                       color={biz.layoutConfig?.bookingBgColor || "#111111"} 
                       onChange={c => setBiz((prev: any) => ({ ...prev, layoutConfig: { ...prev.layoutConfig, bookingBgColor: c } }))} 
@@ -389,7 +397,14 @@ export default function EditorTab({
               </div>
 
               <div className="px-3 pt-2 pb-2">
-                <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-2">Fuente de Letra (Google Fonts)</p>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Tipografía (Google Fonts)</p>
+                  <HelpTooltip
+                    title="Tipografías Oficiales"
+                    description="Elige entre tipografías modernas de Google Fonts optimizadas para alta legibilidad tanto en pantallas de alta resolución como en celulares."
+                    tip="Inter y Montserrat son excelentes para negocios modernos, mientras que Playfair Display otorga un estilo refinado y sofisticado."
+                  />
+                </div>
                 <select
                   value={biz.fontFamily || "sans"}
                   onChange={e => setBiz((prev: any) => prev ? { ...prev, fontFamily: e.target.value } : prev)}
@@ -397,11 +412,11 @@ export default function EditorTab({
                   style={{ background: "#0a0f1c" }}
                 >
                   <option value="sans">Sans (Defecto)</option>
-                  <option value="'Inter', sans-serif">Inter</option>
-                  <option value="'Roboto', sans-serif">Roboto</option>
-                  <option value="'Playfair Display', serif">Playfair Display</option>
-                  <option value="'Montserrat', sans-serif">Montserrat</option>
-                  <option value="'Oswald', sans-serif">Oswald</option>
+                  <option value="'Inter', sans-serif">Inter (Moderna)</option>
+                  <option value="'Roboto', sans-serif">Roboto (Clean)</option>
+                  <option value="'Playfair Display', serif">Playfair Display (Elegante)</option>
+                  <option value="'Montserrat', sans-serif">Montserrat (Geométrica)</option>
+                  <option value="'Oswald', sans-serif">Oswald (Impacto)</option>
                 </select>
               </div>
 
@@ -515,10 +530,17 @@ export default function EditorTab({
 
                 {/* ── MULTI-LEVEL VISUAL TEMPLATE SELECTOR ── */}
                 <div className="mt-3 pt-3 border-t border-white/5">
-                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 flex items-center justify-between">
-                    <span>Nivel de Plantilla</span>
-                    <span className="text-[9px] text-indigo-400 font-bold">4 estilos</span>
-                  </p>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
+                      <span>Nivel de Plantilla</span>
+                      <span className="text-[9px] text-indigo-400 font-bold">(4 estilos)</span>
+                    </p>
+                    <HelpTooltip
+                      title="Niveles de Plantilla Visual"
+                      description="Elige la experiencia estética de tu página: Clásico (rendimiento ultra rápido y diseño sobrio), Motion (animaciones sutiles y tarjetas vivas), Premium (sombras profundas y elegancia de lujo) o Inmersivo (fondos dinámicos en movimiento continuo)."
+                      tip="Tus servicios, productos y turnos se adaptan automáticamente a cualquier nivel sin perder datos."
+                    />
+                  </div>
 
                   <div className="space-y-2">
                     {(["classic", "motion", "premium", "immersive"] as TemplateLevel[]).map((levelKey) => {
@@ -663,9 +685,16 @@ export default function EditorTab({
 
                   return (
                     <div className="mt-3 pt-3 border-t border-white/5">
-                      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">
-                        Intensidad de Animación
-                      </p>
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                          Intensidad de Animación
+                        </p>
+                        <HelpTooltip
+                          title="Intensidad de Animación"
+                          description="Controla la velocidad y amplitud de las transiciones entre secciones, hover de tarjetas y efectos de desplazamiento."
+                          tip="Para dispositivos móviles o ahorro de batería, 'Sutil' ofrece la experiencia más liviana y ágil."
+                        />
+                      </div>
                       <div className="grid grid-cols-3 gap-1">
                         {[
                           { val: "subtle", label: "Sutil", desc: "Elegante" },
@@ -711,9 +740,16 @@ export default function EditorTab({
 
                   return (
                     <div className="mt-3 pt-3 border-t border-white/5">
-                      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">
-                        Estilo Visual Inmersivo
-                      </p>
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                          Estilo Visual Inmersivo
+                        </p>
+                        <HelpTooltip
+                          title="Efectos Inmersivos y Fondos 3D"
+                          description="Genera fondos cinemáticos en vivo que reaccionan sutilmente al desplazamiento del usuario, otorgando una sensación de alta gama y modernidad."
+                          tip="Las 'Ondas Fluidas' y 'Partículas' están aceleradas por hardware para un rendimiento impecable en iPhone y Android."
+                        />
+                      </div>
                       <div className="grid grid-cols-2 gap-1.5">
                         {[
                           { id: "flow", name: "Ondas Fluidas", desc: "Movimiento suave y orgánico" },
@@ -745,7 +781,7 @@ export default function EditorTab({
                               }`}
                             >
                               <div className="text-[10px] font-bold text-white">{p.name}</div>
-                              <div className="text-[8px] text-slate-400 leading-tight">{p.desc}</div>
+                              <div className="text-[7px] text-slate-400 leading-tight">{p.desc}</div>
                             </button>
                           );
                         })}
@@ -754,7 +790,14 @@ export default function EditorTab({
                   );
                 })()}
 
-                <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-2 mt-3">Forma de Botones</p>
+                <div className="flex items-center justify-between mb-2 mt-3">
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Forma de Botones</p>
+                  <HelpTooltip
+                    title="Forma de Botones y Botón de Reserva"
+                    description="Define el radio de curvatura de todos los botones de acción en tu página web: Curvos (estándar moderno), Cuadrados (editorial/sobrio) o Pastilla (redondeo total)."
+                    tip="El estilo Pastilla es la tendencia preferida para estéticas de belleza, barbería y gastronomía."
+                  />
+                </div>
                 <div className="grid grid-cols-3 gap-1.5">
                   {[
                     { val: "rounded", label: "Curvos" },
@@ -777,8 +820,15 @@ export default function EditorTab({
 
           {/* ── Secciones genéricas o Reordenamiento Barberia ── */}
           {(mainTab === "config" || mainTab === "generalConfig") && (
-            <div className="p-3 space-y-1.5 animate-fadeIn">
-              <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest px-0.5 mb-3">Orden de Secciones</p>
+            <div className="p-3 space-y-1.5 animate-fadeIn pb-24">
+              <div className="flex items-center justify-between mb-3 px-0.5">
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Orden de Secciones</p>
+                <HelpTooltip
+                  title="Estructura y Orden de Secciones"
+                  description="Arrastra las secciones hacia arriba o hacia abajo para cambiar el orden en que aparecen en tu página web. También puedes ocultar o mostrar secciones según tus necesidades."
+                  tip="El Hero y el botón de Turnos se recomienda mantenerlos cerca de la parte superior para maximizar conversiones."
+                />
+              </div>
               <DragDropContext onDragEnd={onDragEnd}>
                 <Droppable droppableId="sections-list">
                   {(provided) => (

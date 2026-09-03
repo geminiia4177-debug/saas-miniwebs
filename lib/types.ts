@@ -131,6 +131,9 @@ export interface Biz {
   tiktok?: string;
   tagline?: string;
   paymentData?: {
+    country?: "MX" | "AR" | "OTHER";
+    clabe?: string;
+    bank?: string;
     cbu?: string;
     alias?: string;
     titular?: string;

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Ico } from "@/lib/constants";
+import HelpTooltip from "@/components/ui/HelpTooltip";
 
 type Sale = { id: string; type: string; amount: number; itemName: string; date: string; employeeId?: string | null; };
 type Employee = { 
@@ -17,6 +18,17 @@ type Employee = {
   isPublic: boolean;
 };
 type Supplier = { id: string; name: string; phone: string; products: string; };
+type Client = {
+  id: string;
+  name: string;
+  phone: string;
+  visits: number;
+  completedVisits: number;
+  favoriteService: string;
+  lastVisit: string;
+  daysSinceLastVisit: number;
+  status: "VIP" | "ACTIVE" | "INACTIVE";
+};
 
 const getCrmLabels = (type: string) => {
   switch (type) {
@@ -70,9 +82,13 @@ const getCrmLabels = (type: string) => {
 };
 
 export default function CrmTab({ biz, setBiz, saveAll, showToast }: { biz: any; setBiz?: any; saveAll?: any; showToast: (msg: string, type?: "success" | "error" | "info") => void }) {
-  const [activeSubTab, setActiveSubTab] = useState<"sales" | "employees" | "suppliers">("sales");
-  const [data, setData] = useState<{ sales: Sale[], employees: Employee[], suppliers: Supplier[] }>({ sales: [], employees: [], suppliers: [] });
+  const [activeSubTab, setActiveSubTab] = useState<"clients" | "sales" | "employees" | "suppliers">("clients");
+  const [data, setData] = useState<{ sales: Sale[], employees: Employee[], suppliers: Supplier[], clients: Client[] }>({ sales: [], employees: [], suppliers: [], clients: [] });
   const [loading, setLoading] = useState(true);
+
+  // Client search and filter state
+  const [clientSearch, setClientSearch] = useState("");
+  const [clientFilter, setClientFilter] = useState<"ALL" | "VIP" | "ACTIVE" | "INACTIVE">("ALL");
 
   const [newSale, setNewSale] = useState({ amount: "", description: "", saleType: "SERVICE", employeeId: "" });
   const [newEmployee, setNewEmployee] = useState({ name: "", role: "", salaryType: "FIXED", salaryValue: 0, isPublic: true, imageUrl: "", bio: "" });
@@ -83,15 +99,22 @@ export default function CrmTab({ biz, setBiz, saveAll, showToast }: { biz: any; 
   const fetchData = React.useCallback(async () => {
     setLoading(true);
     try {
-      const [salesRes, empRes, supRes] = await Promise.all([
+      const [salesRes, empRes, supRes, clientsRes] = await Promise.all([
         fetch(`/api/crm?businessId=${biz.id}&type=sales`),
         fetch(`/api/crm?businessId=${biz.id}&type=employees`),
         fetch(`/api/crm?businessId=${biz.id}&type=suppliers`),
+        fetch(`/api/crm?businessId=${biz.id}&type=clients`),
       ]);
       const sales = await salesRes.json();
       const employees = await empRes.json();
       const suppliers = await supRes.json();
-      setData({ sales: sales || [], employees: employees || [], suppliers: suppliers || [] });
+      const clients = await clientsRes.json();
+      setData({
+        sales: Array.isArray(sales) ? sales : [],
+        employees: Array.isArray(employees) ? employees : [],
+        suppliers: Array.isArray(suppliers) ? suppliers : [],
+        clients: Array.isArray(clients) ? clients : [],
+      });
     } catch (err) {
       console.error(err);
       showToast("Error al cargar datos del CRM", "error");
@@ -258,24 +281,189 @@ export default function CrmTab({ biz, setBiz, saveAll, showToast }: { biz: any; 
       </div>
 
       {/* Sub Tabs */}
-      <div className="flex gap-2 mb-6 border-b border-white/10 pb-4">
-        {[
-          { id: "sales" as const, label: "Ingresos", icon: "zap" },
-          { id: "employees" as const, label: labels.employeesTab, icon: "user" },
-          { id: "suppliers" as const, label: "Proveedores", icon: "truck" }
-        ].map(t => (
-          <button
-            key={t.id}
-            onClick={() => setActiveSubTab(t.id)}
-            className={`px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-colors ${activeSubTab === t.id ? "bg-white/10 text-white" : "text-slate-500 hover:bg-white/5 hover:text-white"}`}
-          >
-            {/* fallback icon if user/truck are not in Ico constants */}
-            <Ico n={t.icon === "user" ? "info" : t.icon === "truck" ? "list" : "zap"} s={14} /> {t.label}
-          </button>
-        ))}
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6 border-b border-white/10 pb-4">
+        <div className="flex flex-wrap gap-2">
+          {[
+            { id: "clients" as const, label: `Clientes (${data.clients?.length || 0})`, icon: "user" },
+            { id: "sales" as const, label: "Ingresos y Caja", icon: "zap" },
+            { id: "employees" as const, label: labels.employeesTab, icon: "user" },
+            { id: "suppliers" as const, label: "Proveedores", icon: "truck" }
+          ].map(t => (
+            <button
+              key={t.id}
+              onClick={() => setActiveSubTab(t.id)}
+              className={`px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-all ${activeSubTab === t.id ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/20" : "text-slate-400 hover:bg-white/5 hover:text-white"}`}
+            >
+              <Ico n={t.icon === "user" ? "info" : t.icon === "truck" ? "list" : "zap"} s={14} /> {t.label}
+            </button>
+          ))}
+        </div>
+
+        <HelpTooltip
+          title="Gestión de Clientes y CRM"
+          description="Tus clientes se registran automáticamente cuando agendan citas. Puedes ver quiénes son tus clientes más fieles (VIP) o quiénes no vuelven hace más de 45 días (Inactivos) para enviarles una promoción por WhatsApp."
+          tip="Usa el botón directo de WhatsApp para reactivar clientes o agradecerles su preferencia."
+        />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      {/* ── CLIENTES TAB ── */}
+      {activeSubTab === "clients" && (
+        <div className="space-y-6">
+          {/* Quick Metrics */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/5 flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Total Clientes</p>
+                <p className="text-2xl font-black text-white">{data.clients?.length || 0}</p>
+              </div>
+              <div className="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center font-bold text-lg">
+                👥
+              </div>
+            </div>
+            <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/5 flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Clientes VIP</p>
+                <p className="text-2xl font-black text-amber-400">{data.clients?.filter(c => c.status === "VIP").length || 0}</p>
+              </div>
+              <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center font-bold text-lg">
+                👑
+              </div>
+            </div>
+            <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/5 flex items-center justify-between">
+              <div>
+                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Inactivos (+45 días)</p>
+                <p className="text-2xl font-black text-rose-400">{data.clients?.filter(c => c.status === "INACTIVE").length || 0}</p>
+              </div>
+              <div className="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-400 flex items-center justify-center font-bold text-lg">
+                ⚠️
+              </div>
+            </div>
+          </div>
+
+          {/* Search & Filters */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white/[0.02] p-3 rounded-2xl border border-white/5">
+            <div className="relative flex-1 max-w-md">
+              <input
+                type="text"
+                value={clientSearch}
+                onChange={e => setClientSearch(e.target.value)}
+                placeholder="Buscar cliente por nombre o teléfono..."
+                className="w-full pl-9 pr-4 py-2 rounded-xl bg-white/5 border border-white/10 text-xs sm:text-sm text-white focus:outline-none focus:border-indigo-500"
+              />
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">
+                <Ico n="search" s={14} />
+              </div>
+            </div>
+
+            <div className="flex gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+              {[
+                { id: "ALL", label: "Todos" },
+                { id: "VIP", label: "VIP 👑" },
+                { id: "ACTIVE", label: "Activos 🟢" },
+                { id: "INACTIVE", label: "Inactivos ⚠️" },
+              ].map(f => (
+                <button
+                  key={f.id}
+                  onClick={() => setClientFilter(f.id as any)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${clientFilter === f.id ? "bg-indigo-600 text-white shadow" : "bg-white/5 text-slate-400 hover:text-white"}`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Client List */}
+          {(() => {
+            const filtered = (data.clients || []).filter(c => {
+              const matchesSearch = c.name.toLowerCase().includes(clientSearch.toLowerCase()) || c.phone.includes(clientSearch);
+              const matchesFilter = clientFilter === "ALL" || c.status === clientFilter;
+              return matchesSearch && matchesFilter;
+            });
+
+            if (filtered.length === 0) {
+              return (
+                <div className="text-center py-16 bg-white/[0.02] rounded-3xl border border-white/5">
+                  <p className="text-slate-400 font-bold text-sm mb-1">No se encontraron clientes</p>
+                  <p className="text-xs text-slate-600">Los clientes aparecerán automáticamente cuando reserven turnos en tu página.</p>
+                </div>
+              );
+            }
+
+            return (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filtered.map(c => {
+                  const cleanPhone = c.phone.replace(/\D/g, "");
+                  const waUrl = cleanPhone
+                    ? `https://wa.me/${cleanPhone}?text=${encodeURIComponent(`¡Hola ${c.name}! Te escribimos de ${biz.name}. ¿Cómo estás?`)}`
+                    : null;
+
+                  return (
+                    <div
+                      key={c.id}
+                      className="p-5 rounded-2xl bg-white/[0.03] border border-white/10 hover:border-white/20 transition-all flex flex-col justify-between gap-4 group"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 text-indigo-300 font-black text-sm flex items-center justify-center">
+                            {c.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <h4 className="text-white font-bold text-sm truncate max-w-[150px]">{c.name}</h4>
+                            <p className="text-xs text-slate-400 font-mono mt-0.5">{c.phone || "Sin teléfono"}</p>
+                          </div>
+                        </div>
+
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                          c.status === "VIP"
+                            ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                            : c.status === "INACTIVE"
+                            ? "bg-rose-500/20 text-rose-300 border border-rose-500/30"
+                            : "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                        }`}>
+                          {c.status === "VIP" ? "👑 VIP" : c.status === "INACTIVE" ? "Inactivo" : "Activo"}
+                        </span>
+                      </div>
+
+                      <div className="space-y-1.5 text-xs text-slate-400 border-t border-white/5 pt-3">
+                        <div className="flex justify-between">
+                          <span className="text-slate-500">Visitas:</span>
+                          <span className="font-bold text-white">{c.completedVisits || c.visits}</span>
+                        </div>
+                        <div className="flex justify-between truncate">
+                          <span className="text-slate-500">Favorito:</span>
+                          <span className="font-medium text-slate-300 truncate max-w-[140px]">{c.favoriteService}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-500">Última visita:</span>
+                          <span className="text-slate-300">
+                            {c.daysSinceLastVisit === 0 ? "Hoy" : `Hace ${c.daysSinceLastVisit} días`}
+                          </span>
+                        </div>
+                      </div>
+
+                      {waUrl && (
+                        <a
+                          href={waUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="w-full py-2 px-3 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 text-xs font-bold flex items-center justify-center gap-2 transition-all border border-emerald-500/20 group-hover:border-emerald-500/40"
+                        >
+                          <Ico n="whatsapp" s={14} /> Contactar por WhatsApp
+                        </a>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
+      {/* ── INGRESOS / EMPLEADOS / PROVEEDORES ── */}
+      {activeSubTab !== "clients" && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
         {/* Left Col: Form */}
         <div className="lg:col-span-1">
@@ -514,6 +702,7 @@ export default function CrmTab({ biz, setBiz, saveAll, showToast }: { biz: any; 
           )}
         </div>
       </div>
+      )}
     </div>
   );
 }

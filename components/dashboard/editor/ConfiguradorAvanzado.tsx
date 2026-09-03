@@ -551,44 +551,13 @@ export function ConfiguradorAvanzado({
             </label>
             
             <div className="h-px bg-white/5 mt-4" />
-            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-4">Transferencias Bancarias</p>
-            
-            <div>
-              <label className="text-[9px] font-bold text-slate-500 uppercase mb-1.5 block">Datos Bancarios para Transferencias</label>
-              <textarea
-                value={layoutConfig.bankDetails || ""}
-                placeholder="Ej: Banco Santander, Cuenta 123456, CLABE 123456789012345678, A nombre de Juan Pérez"
-                rows={4}
-                onChange={e => updateLayout({ bankDetails: e.target.value })}
-                className="w-full px-3 py-2 rounded-xl text-sm text-white bg-white/5 border border-white/10 focus:border-indigo-500/50 focus:outline-none resize-none"
-              />
-              <p className="text-[10px] text-slate-600 mt-1">Si completas este campo, los clientes podrán elegir pagar por transferencia y recibirán estos datos.</p>
-            </div>
-
-            <div className="h-px bg-white/5 mt-4" />
-            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-4">Mensajes de WhatsApp</p>
-            <p className="text-[10px] text-slate-500 mb-4">Variables: {'{{cliente}}'}, {'{{negocio}}'}, {'{{fecha}}'}, {'{{hora}}'}, {'{{servicio}}'}, {'{{referencia}}'}, {'{{datos_bancarios}}'}</p>
-
-            <div>
-              <label className="text-[9px] font-bold text-slate-500 uppercase mb-1.5 block">Mensaje Normal (Abono en local)</label>
-              <textarea
-                value={layoutConfig.waTemplateConfirmed || ""}
-                placeholder="¡Hola! {{cliente}} tu turno en {{negocio}} quedó confirmado..."
-                rows={3}
-                onChange={e => updateLayout({ waTemplateConfirmed: e.target.value })}
-                className="w-full px-3 py-2 rounded-xl text-sm text-white bg-white/5 border border-white/10 focus:border-indigo-500/50 focus:outline-none resize-none"
-              />
-            </div>
-
-            <div>
-              <label className="text-[9px] font-bold text-slate-500 uppercase mb-1.5 block">Mensaje para Transferencia</label>
-              <textarea
-                value={layoutConfig.waTemplateTransfer || ""}
-                placeholder="¡Hola! {{cliente}} para confirmar tu turno, transfiere a {{datos_bancarios}} y pon el código {{referencia}} en el concepto."
-                rows={4}
-                onChange={e => updateLayout({ waTemplateTransfer: e.target.value })}
-                className="w-full px-3 py-2 rounded-xl text-sm text-white bg-white/5 border border-white/10 focus:border-indigo-500/50 focus:outline-none resize-none"
-              />
+            <div className="p-3.5 rounded-2xl bg-white/[0.02] border border-white/10 space-y-1.5">
+              <p className="text-xs font-bold text-indigo-300 flex items-center gap-1.5">
+                💳 Datos Bancarios y WhatsApp
+              </p>
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                Los datos bancarios (CLABE 18 dígitos para México / CBU para Argentina) y las plantillas de confirmación por WhatsApp se gestionan de forma centralizada en la pestaña <strong>Ajustes Generales</strong> del menú lateral.
+              </p>
             </div>
 
             <div className="h-px bg-white/5 mt-4" />

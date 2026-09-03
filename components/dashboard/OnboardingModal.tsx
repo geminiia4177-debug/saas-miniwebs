@@ -21,14 +21,25 @@ const uploadToImgBB = async (file: File, businessId: string): Promise<string> =>
   return data.url;
 };
 
+import HelpTooltip from "@/components/ui/HelpTooltip";
+
 export default function OnboardingModal({ biz, setBiz, saving, setSaving, showToast }: OnboardingModalProps) {
   const [onboardingStep, setOnboardingStep] = useState(1);
-  const [onboardingData, setOnboardingData] = useState({ name: biz.name || "", cbu: "", alias: "", phone: biz.phone || "" });
+  const [country, setCountry] = useState<"MX" | "AR">("MX");
+  const [onboardingData, setOnboardingData] = useState({
+    name: biz.name || "",
+    phone: biz.phone || "",
+    clabe: "",
+    bank: "",
+    cbu: "",
+    alias: "",
+    titular: "",
+  });
   const logoRef = useRef<HTMLInputElement>(null);
 
   return (
-    <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-[#070b12]/95 backdrop-blur-xl p-3 sm:p-4 overflow-y-auto pb-[env(safe-area-inset-bottom)]">
-      <div className="bg-[#111825] w-full max-w-xl rounded-3xl border border-indigo-500/20 shadow-2xl p-5 sm:p-8 relative overflow-hidden animate-slideUp max-h-[calc(100vh-2rem)] overflow-y-auto custom-scrollbar my-auto">
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-[#070b12]/95 backdrop-blur-xl p-3 sm:p-4 overflow-y-auto pb-[calc(env(safe-area-inset-bottom,0px)+1rem)]">
+      <div className="bg-[#111825] w-full max-w-xl rounded-3xl border border-indigo-500/20 shadow-2xl p-5 sm:p-8 relative overflow-hidden animate-slideUp max-h-[88dvh] overflow-y-auto custom-scrollbar my-auto">
         {/* Decors */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl -ml-20 -mb-20 pointer-events-none" />
@@ -86,18 +97,111 @@ export default function OnboardingModal({ biz, setBiz, saving, setSaving, showTo
                 <input type="text" value={onboardingData.phone} onChange={e => setOnboardingData({ ...onboardingData, phone: e.target.value })}
                   className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white focus:border-indigo-500 focus:outline-none text-[16px] sm:text-sm" placeholder="Ej: 5512345678" />
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">CBU (Opcional)</label>
-                  <input type="text" value={onboardingData.cbu} onChange={e => setOnboardingData({ ...onboardingData, cbu: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white focus:border-indigo-500 focus:outline-none text-[16px] sm:text-sm" placeholder="00000..." />
+
+              {/* País / Sistema Bancario */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs font-bold text-slate-400 uppercase tracking-wide">Datos Bancarios para Cobros (Opcional)</label>
+                    <HelpTooltip
+                      title="Datos Bancarios para Cobros"
+                      description="Permite que tus clientes te transfieran directamente para abonar sus turnos o servicios. En México se utiliza la CLABE interbancaria (18 dígitos) y el nombre de tu Banco."
+                      tip="Si eres de México selecciona 🇲🇽 México para ingresar tu CLABE. Si eres de Argentina selecciona 🇦🇷 para CBU y Alias."
+                    />
+                  </div>
+                  <div className="flex gap-1 bg-white/5 p-1 rounded-xl border border-white/10">
+                    <button
+                      type="button"
+                      onClick={() => setCountry("MX")}
+                      className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all ${country === "MX" ? "bg-indigo-600 text-white shadow" : "text-slate-400 hover:text-white"}`}
+                    >
+                      🇲🇽 México
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCountry("AR")}
+                      className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all ${country === "AR" ? "bg-indigo-600 text-white shadow" : "text-slate-400 hover:text-white"}`}
+                    >
+                      🇦🇷 Argentina
+                    </button>
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Alias (Opcional)</label>
-                  <input type="text" value={onboardingData.alias} onChange={e => setOnboardingData({ ...onboardingData, alias: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white focus:border-indigo-500 focus:outline-none text-[16px] sm:text-sm" placeholder="MI.ALIAS" />
-                </div>
+
+                {country === "MX" ? (
+                  <div className="space-y-3 bg-white/[0.02] p-4 rounded-2xl border border-white/5">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wide mb-1.5">CLABE Interbancaria (18 dígitos)</label>
+                      <input
+                        type="text"
+                        maxLength={18}
+                        value={onboardingData.clabe}
+                        onChange={e => setOnboardingData({ ...onboardingData, clabe: e.target.value.replace(/\D/g, "") })}
+                        className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white focus:border-indigo-500 focus:outline-none text-sm font-mono"
+                        placeholder="012180001234567890"
+                      />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wide mb-1.5">Banco Receptor</label>
+                        <input
+                          type="text"
+                          value={onboardingData.bank}
+                          onChange={e => setOnboardingData({ ...onboardingData, bank: e.target.value })}
+                          className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white focus:border-indigo-500 focus:outline-none text-sm"
+                          placeholder="BBVA, Santander, Nu..."
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wide mb-1.5">Nombre del Titular</label>
+                        <input
+                          type="text"
+                          value={onboardingData.titular}
+                          onChange={e => setOnboardingData({ ...onboardingData, titular: e.target.value })}
+                          className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white focus:border-indigo-500 focus:outline-none text-sm"
+                          placeholder="Nombre y Apellido"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-3 bg-white/[0.02] p-4 rounded-2xl border border-white/5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wide mb-1.5">CBU / CVU (22 dígitos)</label>
+                        <input
+                          type="text"
+                          maxLength={22}
+                          value={onboardingData.cbu}
+                          onChange={e => setOnboardingData({ ...onboardingData, cbu: e.target.value.replace(/\D/g, "") })}
+                          className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white focus:border-indigo-500 focus:outline-none text-sm font-mono"
+                          placeholder="00000031000..."
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wide mb-1.5">Alias</label>
+                        <input
+                          type="text"
+                          value={onboardingData.alias}
+                          onChange={e => setOnboardingData({ ...onboardingData, alias: e.target.value })}
+                          className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white focus:border-indigo-500 focus:outline-none text-sm uppercase"
+                          placeholder="MI.ALIAS.MP"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wide mb-1.5">Titular de la Cuenta</label>
+                      <input
+                        type="text"
+                        value={onboardingData.titular}
+                        onChange={e => setOnboardingData({ ...onboardingData, titular: e.target.value })}
+                        className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white focus:border-indigo-500 focus:outline-none text-sm"
+                        placeholder="Nombre completo"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
+
               <div className="flex gap-3 pt-2">
                 <button onClick={() => setOnboardingStep(1)} className="px-5 sm:px-6 py-3.5 rounded-xl bg-white/5 hover:bg-white/10 text-white font-bold transition-colors min-h-[48px]">
                   Atrás
@@ -105,7 +209,14 @@ export default function OnboardingModal({ biz, setBiz, saving, setSaving, showTo
                 <button onClick={async () => {
                   setSaving(true);
                   try {
-                    const paymentData = { cbu: onboardingData.cbu, alias: onboardingData.alias, titular: "" };
+                    const paymentData = {
+                      country,
+                      clabe: onboardingData.clabe,
+                      bank: onboardingData.bank,
+                      cbu: onboardingData.cbu,
+                      alias: onboardingData.alias,
+                      titular: onboardingData.titular
+                    };
                     await fetch(`/api/businesses/${biz.id}`, {
                       method: "PUT",
                       headers: { "Content-Type": "application/json" },

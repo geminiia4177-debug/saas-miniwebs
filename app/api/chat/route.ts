@@ -92,6 +92,8 @@ export async function POST(req: Request) {
         timezone: true,
         layoutConfig: true,
         publishedConfig: true,
+        paymentData: true,
+        bankDetails: true,
         employees: {
           where: { isPublic: true },
           select: { name: true, role: true }
@@ -117,7 +119,7 @@ export async function POST(req: Request) {
     const address = layoutConfig.address || "No especificada";
     const phone = biz.phone || layoutConfig.whatsapp || "No especificado";
 
-    // Build services list
+    // Build services list from ALL possible catalog arrays
     const allServices: { id: string; name: string; price: string; duration?: number; desc?: string }[] = [];
     const sections = layoutConfig.sections || [];
     const servicesSection = sections.find((s: any) => s.type === "services");
@@ -139,25 +141,65 @@ export async function POST(req: Request) {
         });
       });
     }
+
     let extraSrvIdx = 1000;
-    [
+    const additionalCatalogs = [
+      ...(layoutConfig.services || []),
+      ...(layoutConfig.products || []),
       ...(layoutConfig.barberiaServices || []),
+      ...(layoutConfig.barberiaProducts || []),
       ...(layoutConfig.clinicaServices || []),
       ...(layoutConfig.tallerServices || []),
+      ...(layoutConfig.canchas || []),
       ...(layoutConfig.canchaTarifas || []),
-    ]
-      .filter((s: any) => s.active !== false)
+      ...(layoutConfig.planes || []),
+      ...(layoutConfig.gimnasioPlanes || []),
+      ...(layoutConfig.clases || []),
+      ...(layoutConfig.especialidades || []),
+      ...(layoutConfig.vehiculos || []),
+    ];
+
+    additionalCatalogs
+      .filter((s: any) => s && s.active !== false && (s.name || s.title))
       .forEach((s: any) => {
-        allServices.push({ id: s.id || getSafeId(s.name, extraSrvIdx++), name: s.name, price: s.price, duration: s.duration, desc: s.description || s.desc });
+        const name = s.name || s.title;
+        // avoid duplicate entries if already added
+        if (!allServices.some(existing => existing.name.toLowerCase() === name.toLowerCase())) {
+          allServices.push({
+            id: s.id || getSafeId(name, extraSrvIdx++),
+            name,
+            price: s.price || s.precio || "Consultar",
+            duration: s.duration || s.duracion,
+            desc: s.description || s.desc || s.descripcion,
+          });
+        }
       });
+
     if (layoutConfig.menuCategorias?.length > 0) {
       layoutConfig.menuCategorias.forEach((cat: any) => {
         cat.products
-          ?.filter((p: any) => p.disponible !== false)
+          ?.filter((p: any) => p && p.disponible !== false && (p.nombre || p.name))
           .forEach((p: any) => {
-            allServices.push({ id: p.id || getSafeId(p.nombre, extraSrvIdx++), name: p.nombre, price: p.precio, desc: p.descripcion });
+            const name = p.nombre || p.name;
+            allServices.push({
+              id: p.id || getSafeId(name, extraSrvIdx++),
+              name: `[${cat.nombre || "Menú"}] ${name}`,
+              price: p.precio || p.price || "Consultar",
+              desc: p.descripcion || p.desc,
+            });
           });
       });
+    }
+
+    // Build official bank details for payments
+    let bankInfoText = "";
+    const pd = (biz.paymentData || {}) as any;
+    if (pd.clabe) {
+      bankInfoText = `CLABE Interbancaria (México): ${pd.clabe}${pd.bank ? ` (Banco: ${pd.bank})` : ""}${pd.titular ? ` - Titular: ${pd.titular}` : ""}`;
+    } else if (pd.cbu) {
+      bankInfoText = `CBU/CVU (Argentina): ${pd.cbu}${pd.alias ? ` - Alias: ${pd.alias}` : ""}${pd.titular ? ` - Titular: ${pd.titular}` : ""}`;
+    } else if (layoutConfig.bankDetails) {
+      bankInfoText = String(layoutConfig.bankDetails);
     }
 
     // Build hours string
@@ -246,6 +288,10 @@ ${allServices.length > 0
 ${biz.employees?.length > 0
   ? biz.employees.map((e: any) => `- ${e.name} (${e.role || "Especialista"})`).join("\n")
   : "Equipo profesional"}
+
+💳 DATOS BANCARIOS PARA TRANSFERENCIAS:
+${bankInfoText || "Consultar directamente por WhatsApp"}
+(Si el cliente te pregunta cómo pagar o pide datos de transferencia o CLABE, responde exclusivamente con estos datos oficiales. NUNCA inventes cuentas o bancos).
 
 ════════════════════════════════════════════════════════════════════════════════
 ⚡ COMANDOS DEL SISTEMA (Formato JSON estricto)

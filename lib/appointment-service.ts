@@ -324,6 +324,7 @@ export class AppointmentService {
         publishedConfig: true,
         callMeBotApiKey: true,
         bankDetails: true,
+        paymentData: true,
       },
     });
 
@@ -574,8 +575,17 @@ export class AppointmentService {
         const templateToUse =
           nuevoTurno.paymentMethod === "TRANSFER" ? templateTransfer : templateConfirmed;
 
-        const bankDetails =
-          decryptSecret(business.bankDetails) || "nuestra cuenta bancaria";
+        let bankDetails = decryptSecret(business.bankDetails) || "";
+        if (!bankDetails) {
+          const pd = (business.paymentData || {}) as any;
+          if (pd.clabe) {
+            bankDetails = `CLABE: ${pd.clabe}${pd.bank ? ` (${pd.bank})` : ""}${pd.titular ? ` - Titular: ${pd.titular}` : ""}`;
+          } else if (pd.cbu) {
+            bankDetails = `CBU: ${pd.cbu}${pd.alias ? ` - Alias: ${pd.alias}` : ""}${pd.titular ? ` - Titular: ${pd.titular}` : ""}`;
+          } else {
+            bankDetails = "nuestra cuenta bancaria";
+          }
+        }
 
         const mensajeCliente = templateToUse
           .replace(/{{cliente}}/g, nuevoTurno.clientName)

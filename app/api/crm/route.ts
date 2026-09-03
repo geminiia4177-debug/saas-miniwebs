@@ -60,11 +60,113 @@ export async function GET(request: Request) {
   // P1-021: Require business ownership for all CRM reads
   const { error: authError } = await requireBusinessOwner(businessId);
   if (authError) return authError;
-
   try {
     if (type === "clients") {
-      // Placeholder — clients table not yet in schema
-      return NextResponse.json([]);
+      const appointments = await prisma.appointment.findMany({
+        where: { businessId },
+        select: {
+          id: true,
+          clientName: true,
+          clientPhone: true,
+          serviceName: true,
+          date: true,
+          status: true,
+        },
+        orderBy: { date: "desc" },
+        take: 3000,
+      });
+
+      const clientMap = new Map<string, {
+        id: string;
+        name: string;
+        phone: string;
+        visits: number;
+        completedVisits: number;
+        cancelledVisits: number;
+        lastVisit: string;
+        firstVisit: string;
+        services: Record<string, number>;
+      }>();
+
+      appointments.forEach((appt) => {
+        const phone = (appt.clientPhone || "").trim();
+        const key = phone || appt.clientName.trim().toLowerCase();
+        if (!key) return;
+
+        if (!clientMap.has(key)) {
+          clientMap.set(key, {
+            id: `client_${key.replace(/[^a-zA-Z0-9]/g, "_")}`,
+            name: appt.clientName,
+            phone: appt.clientPhone || "",
+            visits: 0,
+            completedVisits: 0,
+            cancelledVisits: 0,
+            lastVisit: appt.date.toISOString(),
+            firstVisit: appt.date.toISOString(),
+            services: {},
+          });
+        }
+
+        const c = clientMap.get(key)!;
+        c.visits += 1;
+        if (appt.status === "COMPLETED" || appt.status === "CONFIRMED") {
+          c.completedVisits += 1;
+        } else if (appt.status === "CANCELLED") {
+          c.cancelledVisits += 1;
+        }
+
+        if (new Date(appt.date) > new Date(c.lastVisit)) {
+          c.lastVisit = appt.date.toISOString();
+        }
+        if (new Date(appt.date) < new Date(c.firstVisit)) {
+          c.firstVisit = appt.date.toISOString();
+        }
+
+        if (appt.serviceName) {
+          c.services[appt.serviceName] = (c.services[appt.serviceName] || 0) + 1;
+        }
+      });
+
+      const now = new Date();
+      const clientList = Array.from(clientMap.values()).map((c) => {
+        let favoriteService = "Sin especificar";
+        let maxCount = 0;
+        for (const [srv, count] of Object.entries(c.services)) {
+          if (count > maxCount) {
+            maxCount = count;
+            favoriteService = srv;
+          }
+        }
+
+        const daysSinceLast = Math.max(
+          0,
+          Math.floor((now.getTime() - new Date(c.lastVisit).getTime()) / (1000 * 3600 * 24))
+        );
+
+        let status: "VIP" | "ACTIVE" | "INACTIVE" = "ACTIVE";
+        if (c.completedVisits >= 3) {
+          status = "VIP";
+        } else if (daysSinceLast > 45) {
+          status = "INACTIVE";
+        }
+
+        return {
+          id: c.id,
+          name: c.name,
+          phone: c.phone,
+          visits: c.visits,
+          completedVisits: c.completedVisits,
+          favoriteService,
+          lastVisit: c.lastVisit,
+          daysSinceLastVisit: daysSinceLast,
+          status,
+        };
+      });
+
+      // Sort by last visit descending
+      clientList.sort((a, b) => new Date(b.lastVisit).getTime() - new Date(a.lastVisit).getTime());
+
+      return NextResponse.json(clientList);
     }
 
     if (type === "sales") {

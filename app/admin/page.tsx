@@ -248,17 +248,28 @@ function ExpandedDetail({ negocio, onSave, onNoteAdd, toast }: any) {
               </div>
             </div>
 
+            <div className={`${styles['form-row']} ${styles.two}`} style={{ marginBottom: 16 }}>
+              <div className={styles.fgroup}>
+                <label className={styles.flabel}>CLABE Interbancaria (18 dígitos - México)</label>
+                <input className={styles.finput} value={form.paymentData?.clabe || ""} onChange={e => setForm((p: any) => ({ ...p, paymentData: { ...p.paymentData, clabe: e.target.value } }))} placeholder="012180001234567890" />
+              </div>
+              <div className={styles.fgroup}>
+                <label className={styles.flabel}>Banco Receptor (México)</label>
+                <input className={styles.finput} value={form.paymentData?.bank || ""} onChange={e => setForm((p: any) => ({ ...p, paymentData: { ...p.paymentData, bank: e.target.value } }))} placeholder="BBVA, Banorte, Santander..." />
+              </div>
+            </div>
+
             <div className={`${styles['form-row']} ${styles.three}`} style={{ marginBottom: 16 }}>
               <div className={styles.fgroup}>
-                <label className={styles.flabel}>CBU / CVU (Admin)</label>
+                <label className={styles.flabel}>CBU / CVU (Argentina)</label>
                 <input className={styles.finput} value={form.paymentData?.cbu || ""} onChange={e => setForm((p: any) => ({ ...p, paymentData: { ...p.paymentData, cbu: e.target.value } }))} placeholder="0000..." />
               </div>
               <div className={styles.fgroup}>
-                <label className={styles.flabel}>Alias (Admin)</label>
+                <label className={styles.flabel}>Alias (Argentina)</label>
                 <input className={styles.finput} value={form.paymentData?.alias || ""} onChange={e => setForm((p: any) => ({ ...p, paymentData: { ...p.paymentData, alias: e.target.value } }))} placeholder="MI.ALIAS" />
               </div>
               <div className={styles.fgroup}>
-                <label className={styles.flabel}>Titular (Admin)</label>
+                <label className={styles.flabel}>Titular / Beneficiario</label>
                 <input className={styles.finput} value={form.paymentData?.titular || ""} onChange={e => setForm((p: any) => ({ ...p, paymentData: { ...p.paymentData, titular: e.target.value } }))} placeholder="Nombre completo" />
               </div>
             </div>

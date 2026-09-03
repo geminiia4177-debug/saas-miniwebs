@@ -4,6 +4,7 @@ import React, { useState, useRef, useCallback } from "react";
 import { Biz, MediaItem, Appointment, Ico, DEFAULT_HOURS } from "@/lib/constants";
 import { DropZone } from "./editor/DropZone";
 import IntelligenceTab from "./IntelligenceTab";
+import HelpTooltip from "@/components/ui/HelpTooltip";
 
 // ─────────────────────────────────────────────
 // IMGBB UPLOAD (Aislado para el panel de gestión)
@@ -553,7 +554,7 @@ export default function ManagementTabs({
 
       {/* ── CONFIG ── */}
       {tab === "config" && (
-        <div className="p-8 max-w-2xl animate-fadeIn">
+        <div className="p-4 sm:p-8 max-w-2xl animate-fadeIn pb-[calc(env(safe-area-inset-bottom,0px)+6rem)]">
           <div className="mb-8">
             <h1 className="text-2xl font-extrabold text-white tracking-tight mb-1">Configuración General</h1>
             <p className="text-slate-500 text-sm">Identidad visual, logo, colores, datos de contacto y redes sociales.</p>
@@ -582,15 +583,22 @@ export default function ManagementTabs({
 
             {/* Info del negocio */}
             <div className="rounded-2xl p-5" style={{ background: "linear-gradient(135deg,#131929,#111825)", border: "1px solid rgba(255,255,255,0.06)" }}>
-              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-4">Información del Negocio</p>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Información del Negocio</p>
+                <HelpTooltip
+                  title="Información Básica del Negocio"
+                  description="Estos datos identifican tu negocio en la cabecera del sitio web, en las notificaciones a tus clientes y en el enlace público de tu página."
+                  tip="Tu 'Link de tu página' es el subdominio único con el que tus clientes acceden directamente."
+                />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {[
                   { key: "name", label: "Nombre del negocio", type: "text", colSpan: 1 },
                   { key: "tagline", label: "Slogan / Tagline", type: "text", colSpan: 1 },
-                  { key: "phone", label: "Teléfono", type: "tel", colSpan: 1 },
+                  { key: "phone", label: "Teléfono WhatsApp", type: "tel", colSpan: 1 },
                   { key: "subdomain", label: "Link de tu página (URL)", type: "text", colSpan: 1 },
                 ].map(({ key, label, type, colSpan }) => (
-                  <div key={key} className={colSpan === 2 ? "col-span-2" : ""}>
+                  <div key={key} className={colSpan === 2 ? "sm:col-span-2" : ""}>
                     <label className="block text-[10px] text-slate-500 mb-1.5 font-semibold uppercase tracking-wide">{label}</label>
                     <input type={type} value={(biz as any)[key] || ""}
                       onChange={e => setBiz((prev: any) => prev ? { ...prev, [key]: e.target.value } : prev)}
@@ -600,27 +608,220 @@ export default function ManagementTabs({
               </div>
             </div>
 
-            {/* Configuración de Mensaje de WhatsApp */}
-            <div className="rounded-2xl p-5" style={{ background: "linear-gradient(135deg,#131929,#111825)", border: "1px solid rgba(255,255,255,0.06)" }}>
-              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-4">Plantilla de WhatsApp (Confirmación)</p>
-              <p className="text-xs text-slate-500 mb-3">Usa los siguientes botones para insertar variables mágicas en el mensaje.</p>
-              
-              <div className="flex flex-wrap gap-2 mb-3">
-                {["{{cliente}}", "{{fecha}}", "{{hora}}", "{{servicio}}", "{{negocio}}", "{{referencia}}", "{{datos_bancarios}}"].map(tag => (
-                  <button key={tag} onClick={() => {
-                    const current = biz.layoutConfig?.waTemplateConfirmed || `¡Hola! {{cliente}} tu turno en {{negocio}} quedó confirmado para {{fecha}} a las {{hora}} hs. ¡Te esperamos!`;
-                    setBiz((prev: any) => ({...prev, layoutConfig: {...prev.layoutConfig, waTemplateConfirmed: current + " " + tag}}));
-                  }} className="px-2 py-1 bg-white/5 hover:bg-white/10 text-indigo-300 rounded text-[10px] font-mono transition-colors border border-indigo-500/20">
-                    {tag}
-                  </button>
-                ))}
+            {/* Datos Bancarios y Cobros por Transferencia */}
+            <div className="rounded-2xl p-5 border border-indigo-500/20" style={{ background: "linear-gradient(135deg,#131929,#111825)" }}>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-base">💳</span>
+                  <p className="text-[11px] font-bold text-indigo-300 uppercase tracking-widest">Datos Bancarios para Transferencias</p>
+                </div>
+                <HelpTooltip
+                  title="¿Cómo funcionan los Datos Bancarios?"
+                  description="Configura los datos de tu cuenta bancaria donde recibirás los pagos de tus clientes. En México se utiliza tu CLABE Interbancaria de 18 dígitos y nombre de Banco. En Argentina se utiliza CBU/CVU y Alias."
+                  tip="Estos datos se insertarán automáticamente en la plantilla de WhatsApp cuando un cliente elija abonar por transferencia bancaria."
+                />
               </div>
 
-              <textarea 
-                value={biz.layoutConfig?.waTemplateConfirmed || `¡Hola! {{cliente}} tu turno en {{negocio}} quedó confirmado para {{fecha}} a las {{hora}} hs. ¡Te esperamos!`}
-                onChange={e => setBiz((prev: any) => ({ ...prev, layoutConfig: { ...prev.layoutConfig, waTemplateConfirmed: e.target.value } }))}
-                className="w-full px-3.5 py-3 rounded-xl text-sm text-white bg-white/5 border border-white/10 focus:border-indigo-500/50 focus:outline-none transition-colors min-h-[100px] resize-y font-mono"
-              />
+              {/* Selector de País / Formato */}
+              <div className="flex gap-2 mb-4 p-1 rounded-xl bg-white/5 border border-white/10">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const currentPd = biz.paymentData || {};
+                    setBiz((prev: any) => ({
+                      ...prev,
+                      paymentData: { ...currentPd, country: "MX" }
+                    }));
+                  }}
+                  className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                    (biz.paymentData?.country || "MX") === "MX"
+                      ? "bg-indigo-600 text-white shadow"
+                      : "text-slate-400 hover:text-white"
+                  }`}
+                >
+                  🇲🇽 México (CLABE)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const currentPd = biz.paymentData || {};
+                    setBiz((prev: any) => ({
+                      ...prev,
+                      paymentData: { ...currentPd, country: "AR" }
+                    }));
+                  }}
+                  className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                    biz.paymentData?.country === "AR"
+                      ? "bg-indigo-600 text-white shadow"
+                      : "text-slate-400 hover:text-white"
+                  }`}
+                >
+                  🇦🇷 Argentina (CBU / Alias)
+                </button>
+              </div>
+
+              {/* Formulario México */}
+              {(biz.paymentData?.country || "MX") === "MX" ? (
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-[10px] text-slate-400 mb-1 font-semibold uppercase tracking-wide">
+                      CLABE Interbancaria (18 dígitos numéricos)
+                    </label>
+                    <input
+                      type="text"
+                      maxLength={18}
+                      placeholder="012180001234567890"
+                      value={biz.paymentData?.clabe || ""}
+                      onChange={e => {
+                        const val = e.target.value.replace(/\D/g, "").slice(0, 18);
+                        const pd = { ...(biz.paymentData || {}), clabe: val, country: "MX" };
+                        setBiz((prev: any) => ({ ...prev, paymentData: pd }));
+                      }}
+                      className="w-full px-3.5 py-2.5 rounded-xl text-sm font-mono text-white bg-white/5 border border-white/10 focus:border-indigo-500/50 focus:outline-none transition-colors"
+                    />
+                    <p className="text-[10px] text-slate-500 mt-1">
+                      {biz.paymentData?.clabe?.length || 0}/18 dígitos
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[10px] text-slate-400 mb-1 font-semibold uppercase tracking-wide">
+                        Banco Receptor
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="BBVA, Santander, Banorte, Nu..."
+                        value={biz.paymentData?.bank || ""}
+                        onChange={e => {
+                          const pd = { ...(biz.paymentData || {}), bank: e.target.value, country: "MX" };
+                          setBiz((prev: any) => ({ ...prev, paymentData: pd }));
+                        }}
+                        className="w-full px-3.5 py-2.5 rounded-xl text-sm text-white bg-white/5 border border-white/10 focus:border-indigo-500/50 focus:outline-none transition-colors"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] text-slate-400 mb-1 font-semibold uppercase tracking-wide">
+                        Titular de la cuenta
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Nombre completo o razón social"
+                        value={biz.paymentData?.titular || ""}
+                        onChange={e => {
+                          const pd = { ...(biz.paymentData || {}), titular: e.target.value };
+                          setBiz((prev: any) => ({ ...prev, paymentData: pd }));
+                        }}
+                        className="w-full px-3.5 py-2.5 rounded-xl text-sm text-white bg-white/5 border border-white/10 focus:border-indigo-500/50 focus:outline-none transition-colors"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* Formulario Argentina */
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-[10px] text-slate-400 mb-1 font-semibold uppercase tracking-wide">
+                      CBU / CVU (22 dígitos)
+                    </label>
+                    <input
+                      type="text"
+                      maxLength={22}
+                      placeholder="0000003100010000000000"
+                      value={biz.paymentData?.cbu || ""}
+                      onChange={e => {
+                        const val = e.target.value.replace(/\D/g, "").slice(0, 22);
+                        const pd = { ...(biz.paymentData || {}), cbu: val, country: "AR" };
+                        setBiz((prev: any) => ({ ...prev, paymentData: pd }));
+                      }}
+                      className="w-full px-3.5 py-2.5 rounded-xl text-sm font-mono text-white bg-white/5 border border-white/10 focus:border-indigo-500/50 focus:outline-none transition-colors"
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[10px] text-slate-400 mb-1 font-semibold uppercase tracking-wide">
+                        Alias
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="MI.NEGOCIO.PAGOS"
+                        value={biz.paymentData?.alias || ""}
+                        onChange={e => {
+                          const pd = { ...(biz.paymentData || {}), alias: e.target.value.toUpperCase(), country: "AR" };
+                          setBiz((prev: any) => ({ ...prev, paymentData: pd }));
+                        }}
+                        className="w-full px-3.5 py-2.5 rounded-xl text-sm font-mono text-white bg-white/5 border border-white/10 focus:border-indigo-500/50 focus:outline-none transition-colors"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] text-slate-400 mb-1 font-semibold uppercase tracking-wide">
+                        Titular de la cuenta
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Nombre y apellido"
+                        value={biz.paymentData?.titular || ""}
+                        onChange={e => {
+                          const pd = { ...(biz.paymentData || {}), titular: e.target.value };
+                          setBiz((prev: any) => ({ ...prev, paymentData: pd }));
+                        }}
+                        className="w-full px-3.5 py-2.5 rounded-xl text-sm text-white bg-white/5 border border-white/10 focus:border-indigo-500/50 focus:outline-none transition-colors"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Configuración de Plantillas de WhatsApp */}
+            <div className="rounded-2xl p-5" style={{ background: "linear-gradient(135deg,#131929,#111825)", border: "1px solid rgba(255,255,255,0.06)" }}>
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Plantillas de WhatsApp</p>
+                <HelpTooltip
+                  title="Plantillas Automáticas de WhatsApp"
+                  description="Personaliza los mensajes que se envían a los clientes cuando reservan turnos. Las variables mágicas entre llaves {{...}} se reemplazan automáticamente con los datos del turno y tu cuenta."
+                  tip="La variable {{datos_bancarios}} se reemplaza por tu CLABE/Banco o CBU/Alias configurados arriba."
+                />
+              </div>
+
+              {/* Mensaje de Confirmación General */}
+              <div className="mb-5">
+                <p className="text-xs font-bold text-slate-300 mb-2">Mensaje al Confirmar Turno:</p>
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {["{{cliente}}", "{{fecha}}", "{{hora}}", "{{servicio}}", "{{negocio}}"].map(tag => (
+                    <button key={tag} type="button" onClick={() => {
+                      const current = biz.layoutConfig?.waTemplateConfirmed || `¡Hola! {{cliente}} tu turno en {{negocio}} quedó confirmado para {{fecha}} a las {{hora}} hs. ¡Te esperamos!`;
+                      setBiz((prev: any) => ({...prev, layoutConfig: {...prev.layoutConfig, waTemplateConfirmed: current + " " + tag}}));
+                    }} className="px-2 py-0.5 bg-white/5 hover:bg-white/10 text-indigo-300 rounded text-[10px] font-mono transition-colors border border-indigo-500/20">
+                      {tag}
+                    </button>
+                  ))}
+                </div>
+                <textarea 
+                  value={biz.layoutConfig?.waTemplateConfirmed || `¡Hola! {{cliente}} tu turno en {{negocio}} quedó confirmado para {{fecha}} a las {{hora}} hs. ¡Te esperamos!`}
+                  onChange={e => setBiz((prev: any) => ({ ...prev, layoutConfig: { ...prev.layoutConfig, waTemplateConfirmed: e.target.value } }))}
+                  className="w-full px-3.5 py-2.5 rounded-xl text-xs sm:text-sm text-white bg-white/5 border border-white/10 focus:border-indigo-500/50 focus:outline-none transition-colors min-h-[75px] resize-y font-mono"
+                />
+              </div>
+
+              {/* Mensaje de Pago por Transferencia */}
+              <div>
+                <p className="text-xs font-bold text-indigo-300 mb-2">Mensaje cuando el cliente elige Transferencia:</p>
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {["{{cliente}}", "{{datos_bancarios}}", "{{referencia}}", "{{servicio}}"].map(tag => (
+                    <button key={tag} type="button" onClick={() => {
+                      const current = biz.layoutConfig?.waTemplateTransfer || `¡Hola! {{cliente}} para confirmar tu turno, transfiere a {{datos_bancarios}} y pon el código {{referencia}} en el concepto.`;
+                      setBiz((prev: any) => ({...prev, layoutConfig: {...prev.layoutConfig, waTemplateTransfer: current + " " + tag}}));
+                    }} className="px-2 py-0.5 bg-white/5 hover:bg-white/10 text-indigo-300 rounded text-[10px] font-mono transition-colors border border-indigo-500/20">
+                      {tag}
+                    </button>
+                  ))}
+                </div>
+                <textarea 
+                  value={biz.layoutConfig?.waTemplateTransfer || `¡Hola! {{cliente}} para confirmar tu turno, transfiere a {{datos_bancarios}} y pon el código {{referencia}} en el concepto.`}
+                  onChange={e => setBiz((prev: any) => ({ ...prev, layoutConfig: { ...prev.layoutConfig, waTemplateTransfer: e.target.value } }))}
+                  className="w-full px-3.5 py-2.5 rounded-xl text-xs sm:text-sm text-white bg-white/5 border border-white/10 focus:border-indigo-500/50 focus:outline-none transition-colors min-h-[75px] resize-y font-mono"
+                />
+              </div>
             </div>
 
             {/* Configuración de Contraseña */}
@@ -651,7 +852,14 @@ export default function ManagementTabs({
 
             {/* Horarios de Atención */}
             <div className="rounded-2xl p-5" style={{ background: "linear-gradient(135deg,#131929,#111825)", border: "1px solid rgba(255,255,255,0.06)" }}>
-              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-4">Horarios de Atención</p>
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Horarios de Atención</p>
+                <HelpTooltip
+                  title="Horarios Comerciales de Atención"
+                  description="Define qué días abre tu negocio y en qué horarios. Los clientes solo podrán agendar turnos dentro de estos horarios disponibles."
+                  tip="Puedes apagar el interruptor de los días que permanezca cerrado (por ejemplo, domingos o feriados)."
+                />
+              </div>
               <div className="space-y-3">
                 {["lunes","martes","miercoles","jueves","viernes","sabado","domingo"].map(day => {
                   const hours = (biz.layoutConfig?.hours || DEFAULT_HOURS)[day] || DEFAULT_HOURS[day];
@@ -719,7 +927,14 @@ export default function ManagementTabs({
 
             {/* Integraciones */}
             <div className="rounded-2xl p-5" style={{ background: "linear-gradient(135deg,#131929,#111825)", border: "1px solid rgba(255,255,255,0.06)" }}>
-              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-4">Integraciones (Opcional)</p>
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Integraciones (Opcional)</p>
+                <HelpTooltip
+                  title="Avisos a tu WhatsApp con CallMeBot"
+                  description="CallMeBot es un servicio opcional que te envía un mensaje automático a tu propio WhatsApp cada vez que un cliente reserva un turno en tu web."
+                  tip="Si no tienes una API Key de CallMeBot, puedes dejar este campo vacío y gestionar tus turnos directamente desde el panel."
+                />
+              </div>
               <div className="space-y-4">
                 <div>
                   <label className="block text-[10px] text-slate-500 mb-1.5 font-semibold uppercase tracking-wide">CallMeBot - API Key (WhatsApp Notifications)</label>
@@ -737,49 +952,25 @@ export default function ManagementTabs({
               </div>
             </div>
 
-            {/* Colores */}
-            <div className="rounded-2xl p-5" style={{ background: "linear-gradient(135deg,#131929,#111825)", border: "1px solid rgba(255,255,255,0.06)" }}>
-              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-4">Colores de Marca</p>
-              <div className="grid grid-cols-3 gap-4">
-                {[
-                  { key: "primaryColor", label: "Principal" },
-                  { key: "secondaryColor", label: "Secundario" },
-                  { key: "accentColor", label: "Acento" },
-                ].map(({ key, label }) => (
-                  <div key={key}>
-                    <label className="block text-[10px] text-slate-500 mb-2 font-semibold">{label}</label>
-                    <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
-                      <input type="color" value={(biz as any)[key] || "#000000"}
-                        onChange={e => setBiz((prev: any) => prev ? { ...prev, [key]: e.target.value } : prev)}
-                        className="w-8 h-8 rounded-lg flex-shrink-0" />
-                      <span className="text-xs font-mono text-slate-400">{(biz as any)[key] || "#000000"}</span>
-                    </div>
-                  </div>
-                ))}
+            {/* Diseño Visual Centralizado en EditorTab */}
+            <div className="rounded-2xl p-5 border border-indigo-500/20" style={{ background: "linear-gradient(135deg,rgba(99,102,241,0.06),rgba(168,85,247,0.06))" }}>
+              <div className="flex items-start justify-between gap-3 mb-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-base">🎨</span>
+                  <p className="text-[11px] font-bold text-indigo-300 uppercase tracking-widest">Personalización de Diseño y Colores</p>
+                </div>
+                <HelpTooltip
+                  title="Diseño y Estética Visual"
+                  description="Para mantener una experiencia fluida e intuitiva sin configuraciones duplicadas, todos los colores de marca, tipografías Google Fonts, temas visuales, portadas y efectos se configuran directamente en el Editor Visual con vista previa en vivo."
+                  tip="Ve a la pestaña 'Editor Visual' en el menú lateral para ver cómo queda tu página en tiempo real tanto en celular como en computadora."
+                />
               </div>
-              <div className="mt-4 flex items-center gap-2">
-                <div className="h-8 rounded-xl flex-1" style={{ background: `linear-gradient(135deg,${biz.primaryColor},${biz.secondaryColor})` }} />
-                <div className="w-8 h-8 rounded-xl flex-shrink-0" style={{ background: biz.accentColor }} />
-              </div>
-            </div>
-
-            {/* Tipografía */}
-            <div className="rounded-2xl p-5" style={{ background: "linear-gradient(135deg,#131929,#111825)", border: "1px solid rgba(255,255,255,0.06)" }}>
-              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-4">Tipografía</p>
-              <div className="grid grid-cols-4 gap-3">
-                {[
-                  { val: "sans", label: "Moderna", sample: "Aa", fontStyle: "system-ui" },
-                  { val: "serif", label: "Clásica", sample: "Aa", fontStyle: "Georgia,serif" },
-                  { val: "mono", label: "Tech", sample: "Aa", fontStyle: "monospace" },
-                  { val: "rounded", label: "Redonda", sample: "Aa", fontStyle: "'Nunito',system-ui" },
-                ].map(f => (
-                  <button key={f.val} onClick={() => setBiz((prev: any) => prev ? { ...prev, fontFamily: f.val } : prev)}
-                    className="p-4 rounded-xl text-center transition-all"
-                    style={biz.fontFamily === f.val ? { background: "rgba(99,102,241,0.15)", border: "1px solid rgba(99,102,241,0.4)" } : { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                    <p className="text-xl font-bold text-white mb-1" style={{ fontFamily: f.fontStyle }}>{f.sample}</p>
-                    <p className="text-[10px] font-semibold" style={{ color: biz.fontFamily === f.val ? "#818cf8" : "#64748b" }}>{f.label}</p>
-                  </button>
-                ))}
+              <p className="text-xs text-slate-400 leading-relaxed mb-4">
+                Personaliza los colores de tu marca, tipografía Google Fonts, temas visuales, intensidad de animación y estilos de botones desde el <strong>Editor Visual</strong> con vista previa interactiva.
+              </p>
+              <div className="flex items-center gap-3">
+                <div className="h-6 rounded-lg flex-1" style={{ background: `linear-gradient(135deg,${biz.primaryColor || "#4f46e5"},${biz.secondaryColor || "#9333ea"})` }} />
+                <span className="text-xs font-mono text-slate-300 font-bold bg-white/5 px-2.5 py-1 rounded-md border border-white/10">{biz.fontFamily || "Inter"}</span>
               </div>
             </div>
 
