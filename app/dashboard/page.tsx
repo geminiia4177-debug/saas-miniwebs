@@ -417,9 +417,9 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-3 sm:p-4 md:p-6 pb-[calc(env(safe-area-inset-bottom)+5rem)] md:pb-6 relative" style={{ background: "radial-gradient(ellipse at 50% -20%, rgba(99,102,241,0.05), transparent 60%)" }}>
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-3 sm:p-4 md:p-6 pb-[calc(env(safe-area-inset-bottom)+7rem)] md:pb-8 relative" style={{ background: "radial-gradient(ellipse at 50% -20%, rgba(99,102,241,0.05), transparent 60%)" }}>
 
-          <div className="max-w-[1400px] mx-auto h-full flex flex-col">
+          <div className="max-w-[1400px] mx-auto min-h-full flex flex-col">
             {/* ── HOME (Overview) ── */}
             {tab === "home" && (
               <HomeTab

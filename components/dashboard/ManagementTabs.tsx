@@ -5,6 +5,7 @@ import { Biz, MediaItem, Appointment, Ico, DEFAULT_HOURS } from "@/lib/constants
 import { DropZone } from "./editor/DropZone";
 import IntelligenceTab from "./IntelligenceTab";
 import HelpTooltip from "@/components/ui/HelpTooltip";
+import { QRCodeSVG } from "qrcode.react";
 
 // ─────────────────────────────────────────────
 // IMGBB UPLOAD (Aislado para el panel de gestión)
@@ -554,16 +555,58 @@ export default function ManagementTabs({
 
       {/* ── CONFIG ── */}
       {tab === "config" && (
-        <div className="p-4 sm:p-8 max-w-2xl animate-fadeIn pb-[calc(env(safe-area-inset-bottom,0px)+6rem)]">
-          <div className="mb-8">
-            <h1 className="text-2xl font-extrabold text-white tracking-tight mb-1">Configuración General</h1>
-            <p className="text-slate-500 text-sm">Identidad visual, logo, colores, datos de contacto y redes sociales.</p>
+        <div className="p-4 sm:p-8 max-w-3xl animate-fadeIn pb-36">
+          {/* Cabecera Sticky de Ajustes Generales con Guardar Rápido */}
+          <div className="sticky top-0 z-20 -mx-4 sm:-mx-8 px-4 sm:px-8 py-3 mb-6 bg-[#080a10]/90 backdrop-blur-xl border-b border-white/5 flex flex-col gap-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h1 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight">Ajustes Generales</h1>
+                <p className="text-slate-400 text-xs hidden sm:block">Identidad visual, cobros bancarios, WhatsApp, horarios y redes.</p>
+              </div>
+              <button
+                disabled={saving}
+                onClick={saveAll}
+                className="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold text-white transition-all flex items-center gap-2 shadow-lg shadow-indigo-500/25 disabled:opacity-50 flex-shrink-0"
+                style={{ background: "linear-gradient(135deg,#6366f1,#a855f7)" }}
+              >
+                {saving ? (
+                  <><Ico n="loader" s={14} c="animate-spin" /> Guardando...</>
+                ) : (
+                  <><Ico n="check" s={14} /> Guardar Ajustes</>
+                )}
+              </button>
+            </div>
+
+            {/* Píldoras de Navegación Rápida */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar text-xs">
+              {[
+                { id: "cfg-info", label: "Información" },
+                { id: "cfg-bank", label: "Datos Bancarios" },
+                { id: "cfg-wa", label: "WhatsApp" },
+                { id: "cfg-hours", label: "Horarios" },
+                { id: "cfg-social", label: "Redes" },
+                { id: "cfg-qr", label: "Código QR" },
+                { id: "cfg-security", label: "Seguridad" },
+              ].map((chip) => (
+                <button
+                  key={chip.id}
+                  type="button"
+                  onClick={() => {
+                    const el = document.getElementById(chip.id);
+                    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }}
+                  className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/5 whitespace-nowrap transition-colors text-[11px] font-medium"
+                >
+                  {chip.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="space-y-4">
             {/* Logo */}
-            <div className="rounded-2xl p-5" style={{ background: "linear-gradient(135deg,#131929,#111825)", border: "1px solid rgba(255,255,255,0.06)" }}>
-              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-4">Logo</p>
+            <div id="cfg-logo" className="rounded-2xl p-5" style={{ background: "linear-gradient(135deg,#131929,#111825)", border: "1px solid rgba(255,255,255,0.06)" }}>
+              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-4">Logo de tu Marca</p>
               <div className="flex items-center gap-5">
                 {biz.logoUrl
                   ? <img src={biz.logoUrl} className="w-20 h-20 rounded-2xl object-cover" alt="logo" />
@@ -582,7 +625,7 @@ export default function ManagementTabs({
             </div>
 
             {/* Info del negocio */}
-            <div className="rounded-2xl p-5" style={{ background: "linear-gradient(135deg,#131929,#111825)", border: "1px solid rgba(255,255,255,0.06)" }}>
+            <div id="cfg-info" className="rounded-2xl p-5" style={{ background: "linear-gradient(135deg,#131929,#111825)", border: "1px solid rgba(255,255,255,0.06)" }}>
               <div className="flex items-center justify-between mb-4">
                 <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Información del Negocio</p>
                 <HelpTooltip
@@ -609,7 +652,7 @@ export default function ManagementTabs({
             </div>
 
             {/* Datos Bancarios y Cobros por Transferencia */}
-            <div className="rounded-2xl p-5 border border-indigo-500/20" style={{ background: "linear-gradient(135deg,#131929,#111825)" }}>
+            <div id="cfg-bank" className="rounded-2xl p-5 border border-indigo-500/20" style={{ background: "linear-gradient(135deg,#131929,#111825)" }}>
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <span className="text-base">💳</span>
@@ -773,7 +816,7 @@ export default function ManagementTabs({
             </div>
 
             {/* Configuración de Plantillas de WhatsApp */}
-            <div className="rounded-2xl p-5" style={{ background: "linear-gradient(135deg,#131929,#111825)", border: "1px solid rgba(255,255,255,0.06)" }}>
+            <div id="cfg-wa" className="rounded-2xl p-5" style={{ background: "linear-gradient(135deg,#131929,#111825)", border: "1px solid rgba(255,255,255,0.06)" }}>
               <div className="flex items-center justify-between mb-4">
                 <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Plantillas de WhatsApp</p>
                 <HelpTooltip
@@ -784,7 +827,7 @@ export default function ManagementTabs({
               </div>
 
               {/* Mensaje de Confirmación General */}
-              <div className="mb-5">
+              <div className="mb-6">
                 <p className="text-xs font-bold text-slate-300 mb-2">Mensaje al Confirmar Turno:</p>
                 <div className="flex flex-wrap gap-1.5 mb-2">
                   {["{{cliente}}", "{{fecha}}", "{{hora}}", "{{servicio}}", "{{negocio}}"].map(tag => (
@@ -801,6 +844,27 @@ export default function ManagementTabs({
                   onChange={e => setBiz((prev: any) => ({ ...prev, layoutConfig: { ...prev.layoutConfig, waTemplateConfirmed: e.target.value } }))}
                   className="w-full px-3.5 py-2.5 rounded-xl text-xs sm:text-sm text-white bg-white/5 border border-white/10 focus:border-indigo-500/50 focus:outline-none transition-colors min-h-[75px] resize-y font-mono"
                 />
+
+                {/* Vista previa en vivo simulador WhatsApp */}
+                <div className="mt-2.5 p-3 rounded-xl bg-[#0b141b] border border-emerald-500/20">
+                  <div className="flex items-center gap-1.5 mb-2 text-[10px] font-bold text-emerald-400 uppercase tracking-wider">
+                    <Ico n="message-circle" s={12} /> Vista Previa del Cliente en WhatsApp
+                  </div>
+                  <div className="bg-[#005c4b] text-white p-3 rounded-2xl rounded-tr-none text-xs shadow-md leading-relaxed max-w-sm ml-auto font-sans relative">
+                    <p className="whitespace-pre-line text-emerald-50">
+                      {(biz.layoutConfig?.waTemplateConfirmed || `¡Hola! {{cliente}} tu turno en {{negocio}} quedó confirmado para {{fecha}} a las {{hora}} hs. ¡Te esperamos!`)
+                        .replace(/\{\{cliente\}\}/g, "Carlos García")
+                        .replace(/\{\{fecha\}\}/g, "15 de Octubre")
+                        .replace(/\{\{hora\}\}/g, "17:30")
+                        .replace(/\{\{servicio\}\}/g, "Corte y Barba")
+                        .replace(/\{\{negocio\}\}/g, biz.name || "Mi Negocio")}
+                    </p>
+                    <div className="text-[9px] text-emerald-200/60 text-right mt-1 flex items-center justify-end gap-1">
+                      <span>17:31</span>
+                      <span className="text-emerald-300">✓✓</span>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* Mensaje de Pago por Transferencia */}
@@ -821,11 +885,33 @@ export default function ManagementTabs({
                   onChange={e => setBiz((prev: any) => ({ ...prev, layoutConfig: { ...prev.layoutConfig, waTemplateTransfer: e.target.value } }))}
                   className="w-full px-3.5 py-2.5 rounded-xl text-xs sm:text-sm text-white bg-white/5 border border-white/10 focus:border-indigo-500/50 focus:outline-none transition-colors min-h-[75px] resize-y font-mono"
                 />
+
+                {/* Vista previa en vivo transferencia WhatsApp */}
+                <div className="mt-2.5 p-3 rounded-xl bg-[#0b141b] border border-emerald-500/20">
+                  <div className="flex items-center gap-1.5 mb-2 text-[10px] font-bold text-emerald-400 uppercase tracking-wider">
+                    <Ico n="message-circle" s={12} /> Vista Previa con Datos Bancarios
+                  </div>
+                  <div className="bg-[#005c4b] text-white p-3 rounded-2xl rounded-tr-none text-xs shadow-md leading-relaxed max-w-sm ml-auto font-sans relative">
+                    <p className="whitespace-pre-line text-emerald-50">
+                      {(biz.layoutConfig?.waTemplateTransfer || `¡Hola! {{cliente}} para confirmar tu turno, transfiere a {{datos_bancarios}} y pon el código {{referencia}} en el concepto.`)
+                        .replace(/\{\{cliente\}\}/g, "Carlos García")
+                        .replace(/\{\{referencia\}\}/g, "REF-8942")
+                        .replace(/\{\{servicio\}\}/g, "Corte y Barba")
+                        .replace(/\{\{datos_bancarios\}\}/g, (biz.paymentData?.country || "MX") === "MX" 
+                          ? `CLABE: ${biz.paymentData?.clabe || "012180001234567890"} (${biz.paymentData?.bank || "BBVA"})` 
+                          : `CBU: ${biz.paymentData?.cbu || "0000003100010000000000"} (Alias: ${biz.paymentData?.alias || "MI.NEGOCIO"})`)}
+                    </p>
+                    <div className="text-[9px] text-emerald-200/60 text-right mt-1 flex items-center justify-end gap-1">
+                      <span>17:31</span>
+                      <span className="text-emerald-300">✓✓</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
             {/* Configuración de Contraseña */}
-            <div className="rounded-2xl p-5" style={{ background: "linear-gradient(135deg,#131929,#111825)", border: "1px solid rgba(255,255,255,0.06)" }}>
+            <div id="cfg-security" className="rounded-2xl p-5" style={{ background: "linear-gradient(135deg,#131929,#111825)", border: "1px solid rgba(255,255,255,0.06)" }}>
               <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
                 <Ico n="lock" s={14}/> Seguridad y Contraseña
               </p>
@@ -851,7 +937,7 @@ export default function ManagementTabs({
             </div>
 
             {/* Horarios de Atención */}
-            <div className="rounded-2xl p-5" style={{ background: "linear-gradient(135deg,#131929,#111825)", border: "1px solid rgba(255,255,255,0.06)" }}>
+            <div id="cfg-hours" className="rounded-2xl p-5" style={{ background: "linear-gradient(135deg,#131929,#111825)", border: "1px solid rgba(255,255,255,0.06)" }}>
               <div className="flex items-center justify-between mb-4">
                 <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Horarios de Atención</p>
                 <HelpTooltip
@@ -900,7 +986,7 @@ export default function ManagementTabs({
             </div>
 
             {/* Redes sociales */}
-            <div className="rounded-2xl p-5" style={{ background: "linear-gradient(135deg,#131929,#111825)", border: "1px solid rgba(255,255,255,0.06)" }}>
+            <div id="cfg-social" className="rounded-2xl p-5" style={{ background: "linear-gradient(135deg,#131929,#111825)", border: "1px solid rgba(255,255,255,0.06)" }}>
               <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-4">Redes Sociales</p>
               <div className="space-y-3">
                 {[
@@ -925,8 +1011,79 @@ export default function ManagementTabs({
               </div>
             </div>
 
+            {/* Código QR para Mostrador y Vidriera */}
+            <div id="cfg-qr" className="rounded-2xl p-5 border border-indigo-500/20" style={{ background: "linear-gradient(135deg,#131929,#111825)" }}>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-base">🔳</span>
+                  <p className="text-[11px] font-bold text-indigo-300 uppercase tracking-widest">Código QR para tu Local</p>
+                </div>
+                <HelpTooltip
+                  title="Código QR para tus Clientes"
+                  description="Imprime este código QR y colócalo en tu mostrador, recepción o vidriera. Los clientes escanean con su celular y acceden al instante para sacar turno."
+                  tip="Tus clientes no necesitan instalar ninguna app adicional."
+                />
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-center gap-5 p-4 rounded-xl bg-white/[0.02] border border-white/5">
+                <div className="p-3 bg-white rounded-2xl shadow-xl flex-shrink-0 flex items-center justify-center">
+                  <QRCodeSVG
+                    id="store-qr-code"
+                    value={biz.customDomain ? `https://${biz.customDomain}` : `https://${biz.subdomain}.saas-miniwebs.vercel.app`}
+                    size={120}
+                    level="H"
+                    includeMargin={false}
+                  />
+                </div>
+                <div className="flex-1 space-y-2.5 text-center sm:text-left">
+                  <div>
+                    <h4 className="text-sm font-bold text-white mb-0.5">Cartel de Reservas Online</h4>
+                    <p className="text-xs text-indigo-300 font-mono break-all select-all">
+                      {biz.customDomain ? `https://${biz.customDomain}` : `https://${biz.subdomain}.saas-miniwebs.vercel.app`}
+                    </p>
+                  </div>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    Ideal para colocar en tu mostrador o vidriera. Tus clientes escanean el código y agendan su turno solos 24/7.
+                  </p>
+                  <div className="flex flex-wrap gap-2 justify-center sm:justify-start pt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const url = biz.customDomain ? `https://${biz.customDomain}` : `https://${biz.subdomain}.saas-miniwebs.vercel.app`;
+                        navigator.clipboard.writeText(url);
+                        showToast("Link copiado al portapapeles ✓", "success");
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors border border-white/10"
+                    >
+                      <Ico n="copy" s={13} /> Copiar Link
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const svg = document.getElementById("store-qr-code");
+                        if (!svg) return;
+                        const svgData = new XMLSerializer().serializeToString(svg);
+                        const svgBlob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
+                        const svgUrl = URL.createObjectURL(svgBlob);
+                        const downloadLink = document.createElement("a");
+                        downloadLink.href = svgUrl;
+                        downloadLink.download = `QR-${biz.subdomain || "negocio"}.svg`;
+                        document.body.appendChild(downloadLink);
+                        downloadLink.click();
+                        document.body.removeChild(downloadLink);
+                        showToast("Código QR descargado en alta calidad ✓", "success");
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors shadow"
+                    >
+                      <Ico n="download" s={13} /> Descargar QR Imprimible
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Integraciones */}
-            <div className="rounded-2xl p-5" style={{ background: "linear-gradient(135deg,#131929,#111825)", border: "1px solid rgba(255,255,255,0.06)" }}>
+            <div id="cfg-integrations" className="rounded-2xl p-5" style={{ background: "linear-gradient(135deg,#131929,#111825)", border: "1px solid rgba(255,255,255,0.06)" }}>
               <div className="flex items-center justify-between mb-4">
                 <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Integraciones (Opcional)</p>
                 <HelpTooltip
@@ -953,7 +1110,7 @@ export default function ManagementTabs({
             </div>
 
             {/* Diseño Visual Centralizado en EditorTab */}
-            <div className="rounded-2xl p-5 border border-indigo-500/20" style={{ background: "linear-gradient(135deg,rgba(99,102,241,0.06),rgba(168,85,247,0.06))" }}>
+            <div id="cfg-design" className="rounded-2xl p-5 border border-indigo-500/20" style={{ background: "linear-gradient(135deg,rgba(99,102,241,0.06),rgba(168,85,247,0.06))" }}>
               <div className="flex items-start justify-between gap-3 mb-2">
                 <div className="flex items-center gap-2">
                   <span className="text-base">🎨</span>
@@ -974,12 +1131,12 @@ export default function ManagementTabs({
               </div>
             </div>
 
-            <button disabled={saving} onClick={saveAll} className="w-full py-3 rounded-xl text-sm font-bold text-white transition-opacity flex items-center justify-center gap-2 disabled:opacity-50" style={{ background: "linear-gradient(135deg,#6366f1,#a855f7)" }}>
+            <button disabled={saving} onClick={saveAll} className="w-full py-3 rounded-xl text-sm font-bold text-white transition-opacity flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg shadow-indigo-500/20" style={{ background: "linear-gradient(135deg,#6366f1,#a855f7)" }}>
               {saving ? <><Ico n="loader" s={14} c="animate-spin" /> Guardando...</> : <><Ico n="check" s={14} /> Guardar toda la configuración</>}
             </button>
 
             {/* Zona de Peligro (Abajo de todo) */}
-            <div className="rounded-2xl p-5 mt-6 border border-red-500/20" style={{ background: "linear-gradient(135deg,rgba(239,68,68,0.04),rgba(239,68,68,0.08))" }}>
+            <div id="cfg-danger" className="rounded-2xl p-5 mt-6 border border-red-500/20" style={{ background: "linear-gradient(135deg,rgba(239,68,68,0.04),rgba(239,68,68,0.08))" }}>
               <p className="text-[11px] font-bold text-red-400 uppercase tracking-widest mb-2 flex items-center gap-2">
                 <Ico n="alert-triangle" s={14}/> Zona de Peligro
               </p>

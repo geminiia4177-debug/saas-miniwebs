@@ -943,16 +943,10 @@ export default function EditorTab({
           </div>
         </div>
 
-        <div className="flex-1 overflow-auto p-2 sm:p-4 md:p-10 flex items-start justify-center"
+        <div className="flex-1 overflow-auto p-2 sm:p-4 md:p-6 flex items-start justify-center"
           style={{ background: "radial-gradient(ellipse at 50% 0%,rgba(99,102,241,0.06) 0%,transparent 70%), #050810" }}>
-          <div className={`transition-all duration-300 ${previewDevice === "mobile" ? "w-full max-w-[390px]" : "w-full"}`}>
-            <div className="relative" style={{ transform: 'translateZ(0)' }}>
-              {previewDevice === "mobile" && (
-                <div className="hidden sm:block absolute -inset-4 rounded-[48px] pointer-events-none z-50"
-                  style={{ border: "8px solid rgba(255,255,255,0.08)", boxShadow: "0 0 0 1px rgba(255,255,255,0.04)" }} />
-              )}
-              <LandingPreview biz={biz} sections={sections} media={media} />
-            </div>
+          <div className="w-full flex items-center justify-center">
+            <LandingPreview biz={biz} sections={sections} media={media} previewDevice={previewDevice} />
           </div>
         </div>
       </div>

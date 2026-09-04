@@ -97,7 +97,7 @@ export default function SupportWidget({ biz }: SupportWidgetProps) {
   };
 
   return (
-    <div className="fixed bottom-6 right-4 sm:right-6 z-[9990] flex flex-col items-end pb-[env(safe-area-inset-bottom)]">
+    <div className="fixed bottom-20 sm:bottom-6 right-4 sm:right-6 z-[9990] flex flex-col items-end pb-[env(safe-area-inset-bottom)]">
       {supportOpen && (
         <div className="mb-3 w-[calc(100vw-32px)] sm:w-80 max-w-sm bg-[#131929] border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-slideUp" style={{ height: "420px", maxHeight: "calc(100vh - 120px)" }}>
           <div className="p-4 text-black flex justify-between items-center" style={{ background: biz?.primaryColor || "#6366f1" }}>

@@ -1,15 +1,21 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { Download, Share, PlusSquare, X } from "lucide-react";
 
 export default function PwaInstallPrompt() {
+  const pathname = usePathname();
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showPrompt, setShowPrompt] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
 
   useEffect(() => {
+    if (pathname?.startsWith("/dashboard") || pathname?.startsWith("/admin")) {
+      return;
+    }
+
     // Check if already in standalone / installed mode
     const isRunningStandalone =
       window.matchMedia("(display-mode: standalone)").matches ||
