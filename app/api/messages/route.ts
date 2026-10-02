@@ -557,6 +557,24 @@ REGLAS GENERALES:
                 });
               }
 
+              // Ensure heroTitle, heroSubtitle, and ctaText are also synced into the hero section in sections
+              if (mergedLayout.sections && Array.isArray(mergedLayout.sections)) {
+                mergedLayout.sections = mergedLayout.sections.map((sec: any) => {
+                  if (sec.id === "hero") {
+                    return {
+                      ...sec,
+                      config: {
+                        ...(sec.config || {}),
+                        ...(mergedLayout.heroTitle ? { title: mergedLayout.heroTitle } : {}),
+                        ...(mergedLayout.heroSubtitle ? { subtitle: mergedLayout.heroSubtitle } : {}),
+                        ...(mergedLayout.ctaText ? { ctaText: mergedLayout.ctaText } : {})
+                      }
+                    };
+                  }
+                  return sec;
+                });
+              }
+
               updatePayload.layoutConfig = mergedLayout;
 
               // P0-001/SYNC: Si el negocio ya tiene publishedConfig (ya fue publicado),

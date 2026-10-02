@@ -135,7 +135,17 @@ export default async function PublicLandingPage({ params, searchParams }: { para
 
   // SEC-033 / P1-012 Fix: Create a strict PublicBusinessDTO to avoid data leakage
   const safeLayoutConfig = {
-    sections: Array.isArray(activeConfig.sections) ? activeConfig.sections : [],
+    sections: Array.isArray(activeConfig.sections)
+      ? activeConfig.sections.map((sec: any) => {
+          if (sec.id === "hero" && activeConfig.heroTitle) {
+            return {
+              ...sec,
+              config: { ...(sec.config || {}), title: activeConfig.heroTitle }
+            };
+          }
+          return sec;
+        })
+      : [],
     media: Array.isArray(activeConfig.media) ? activeConfig.media : [],
     templateLevel: typeof activeConfig.templateLevel === "string" ? activeConfig.templateLevel : undefined,
     themeVariant: typeof activeConfig.themeVariant === "string" ? activeConfig.themeVariant : "classic",
@@ -154,6 +164,22 @@ export default async function PublicLandingPage({ params, searchParams }: { para
     buttonStyle: typeof activeConfig.buttonStyle === "string" ? activeConfig.buttonStyle : undefined,
     backgroundType: typeof activeConfig.backgroundType === "string" ? activeConfig.backgroundType : undefined,
     backgroundImageUrl: typeof activeConfig.backgroundImageUrl === "string" ? activeConfig.backgroundImageUrl : undefined,
+    heroTitle: typeof activeConfig.heroTitle === "string" ? activeConfig.heroTitle : undefined,
+    heroTitleColor: typeof activeConfig.heroTitleColor === "string" ? activeConfig.heroTitleColor : undefined,
+    heroSubtitle: typeof activeConfig.heroSubtitle === "string" ? activeConfig.heroSubtitle : undefined,
+    heroText: typeof activeConfig.heroText === "string" ? activeConfig.heroText : undefined,
+    heroBadge: typeof activeConfig.heroBadge === "string" ? activeConfig.heroBadge : undefined,
+    ctaText: typeof activeConfig.ctaText === "string" ? activeConfig.ctaText : undefined,
+    ctaSecondary: typeof activeConfig.ctaSecondary === "string" ? activeConfig.ctaSecondary : undefined,
+    backgroundColor: typeof activeConfig.backgroundColor === "string" ? activeConfig.backgroundColor : undefined,
+    footerBgColor: typeof activeConfig.footerBgColor === "string" ? activeConfig.footerBgColor : undefined,
+    footerTextColor: typeof activeConfig.footerTextColor === "string" ? activeConfig.footerTextColor : undefined,
+    bookingBgColor: typeof activeConfig.bookingBgColor === "string" ? activeConfig.bookingBgColor : undefined,
+    bookingTitle: typeof activeConfig.bookingTitle === "string" ? activeConfig.bookingTitle : undefined,
+    bookingSubtitle: typeof activeConfig.bookingSubtitle === "string" ? activeConfig.bookingSubtitle : undefined,
+    slotDuration: typeof activeConfig.slotDuration === "number" ? activeConfig.slotDuration : undefined,
+    bannerOpacity: typeof activeConfig.bannerOpacity === "number" ? activeConfig.bannerOpacity : undefined,
+    tagline: typeof activeConfig.tagline === "string" ? activeConfig.tagline : undefined,
   };
 
   const biz = {
