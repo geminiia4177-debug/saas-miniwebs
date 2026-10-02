@@ -35,6 +35,9 @@ export interface BusinessBranding {
   textColor: string;
   font: string;
   buttonStyle: "rounded" | "square" | "pill";
+  footerBgColor?: string;
+  footerTextColor?: string;
+  bookingBgColor?: string;
 }
 
 export interface BusinessHero {
@@ -175,10 +178,13 @@ export function normalizeBusinessData(
   // 3. Branding & Colors
   const primaryColor = biz?.primaryColor || config.primaryColor || biz?.accentColor || "#3b82f6";
   const secondaryColor = biz?.secondaryColor || config.secondaryColor || "#db2777";
-  const backgroundColor = biz?.backgroundColor || config.backgroundColor || "#0f172a";
+  const backgroundColor = biz?.backgroundColor || config.backgroundColor || "";
   const textColor = biz?.textColor || config.textColor || "#f8fafc";
   const font = biz?.fontFamily || config.fontFamily || "'Inter', sans-serif";
   const buttonStyle = (biz?.buttonStyle || config.buttonStyle || "rounded") as "rounded" | "square" | "pill";
+  const footerBgColor = config.footerBgColor || undefined;
+  const footerTextColor = config.footerTextColor || undefined;
+  const bookingBgColor = config.bookingBgColor || undefined;
 
   // 4. Hero
   const heroSection = sections.find((s) => s.id === "hero");
@@ -370,7 +376,7 @@ export function normalizeBusinessData(
   return {
     identity: { name, logo, description, tagline },
     contact: { phone, whatsapp, email, address, location, mapUrl },
-    branding: { primaryColor, secondaryColor, backgroundColor, textColor, font, buttonStyle },
+    branding: { primaryColor, secondaryColor, backgroundColor, textColor, font, buttonStyle, footerBgColor, footerTextColor, bookingBgColor },
     hero: {
       title: heroTitle,
       subtitle: heroSubtitle,

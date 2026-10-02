@@ -211,6 +211,7 @@ export const LayoutConfigSchema = z.object({
   footerBgColor: z.union([z.string().regex(/^#[0-9a-fA-F]{3,8}$/).max(9), z.literal("")]).optional().nullable(),
   footerTextColor: z.union([z.string().regex(/^#[0-9a-fA-F]{3,8}$/).max(9), z.literal("")]).optional().nullable(),
   bookingBgColor: z.union([z.string().regex(/^#[0-9a-fA-F]{3,8}$/).max(9), z.literal("")]).optional().nullable(),
+  backgroundColor: z.union([z.string().regex(/^#[0-9a-fA-F]{3,8}$/).max(9), z.literal("")]).optional().nullable(),
   buttonStyle: z.string().max(50).optional().nullable(),
   backgroundType: z.string().max(50).optional().nullable(),
   backgroundImageUrl: z.string().max(500).optional().nullable(),

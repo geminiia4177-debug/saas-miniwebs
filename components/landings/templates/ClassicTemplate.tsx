@@ -60,7 +60,11 @@ export default function ClassicTemplate({ data, bookingElement }: TemplateProps)
   return (
     <div
       className={`min-h-screen font-sans ${isDark ? "bg-zinc-950 text-zinc-100" : "bg-white text-zinc-900"}`}
-      style={{ ...themeVars, fontFamily: branding.font }}
+      style={{
+        ...themeVars,
+        fontFamily: branding.font,
+        ...(branding.backgroundColor ? { backgroundColor: branding.backgroundColor } : {})
+      }}
     >
       {/* ── HEADER / NAVBAR ── */}
       <header className={`sticky top-0 z-40 border-b ${isDark ? "bg-zinc-950/90 border-zinc-800/80" : "bg-white/90 border-zinc-200/80"} backdrop-blur-md transition-colors`}>
@@ -364,7 +368,10 @@ export default function ClassicTemplate({ data, bookingElement }: TemplateProps)
 
       {/* ── BOOKING SECTION ── */}
       <section id="reservar" className="py-16 px-4 sm:px-6 max-w-3xl mx-auto">
-        <div className={`p-6 sm:p-10 rounded-3xl border shadow-xl ${isDark ? "bg-zinc-900/90 border-zinc-800" : "bg-white border-zinc-200"}`}>
+        <div
+          className={`p-6 sm:p-10 rounded-3xl border shadow-xl ${isDark ? "bg-zinc-900/90 border-zinc-800" : "bg-white border-zinc-200"}`}
+          style={branding.bookingBgColor ? { backgroundColor: branding.bookingBgColor } : undefined}
+        >
           <div className="text-center max-w-md mx-auto mb-8 space-y-2">
             <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
               {booking.title || "Reservá tu turno"}
@@ -407,7 +414,13 @@ export default function ClassicTemplate({ data, bookingElement }: TemplateProps)
       </section>
 
       {/* ── FOOTER ── */}
-      <footer className={`py-12 px-4 sm:px-6 border-t text-center text-xs text-zinc-500 ${isDark ? "border-zinc-900 bg-zinc-950" : "border-zinc-100 bg-white"}`}>
+      <footer
+        className={`py-12 px-4 sm:px-6 border-t text-center text-xs ${isDark ? "border-zinc-900 bg-zinc-950 text-zinc-500" : "border-zinc-100 bg-white text-zinc-500"}`}
+        style={{
+          ...(branding.footerBgColor ? { backgroundColor: branding.footerBgColor } : {}),
+          ...(branding.footerTextColor ? { color: branding.footerTextColor } : {})
+        }}
+      >
         <div className="max-w-6xl mx-auto space-y-4">
           <div className="flex items-center justify-center gap-4">
             {social.instagram && (

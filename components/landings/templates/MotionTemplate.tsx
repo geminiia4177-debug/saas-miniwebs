@@ -474,7 +474,10 @@ export default function MotionTemplate({ data, bookingElement }: TemplateProps) 
 
       {/* ── BOOKING CARD ── */}
       <section id="reservar" className="relative py-20 px-4 sm:px-6 z-10">
-        <div className="max-w-3xl mx-auto p-8 sm:p-12 rounded-3xl bg-gradient-to-b from-white/[0.07] to-white/[0.02] border border-white/15 backdrop-blur-2xl shadow-2xl">
+        <div
+          className="max-w-3xl mx-auto p-8 sm:p-12 rounded-3xl bg-gradient-to-b from-white/[0.07] to-white/[0.02] border border-white/15 backdrop-blur-2xl shadow-2xl"
+          style={branding.bookingBgColor ? { backgroundColor: branding.bookingBgColor } : undefined}
+        >
           <div className="text-center max-w-md mx-auto mb-8 space-y-2">
             <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-white">
               {booking.title || "Reservá tu turno"}
@@ -514,7 +517,13 @@ export default function MotionTemplate({ data, bookingElement }: TemplateProps) 
       </section>
 
       {/* ── FOOTER ── */}
-      <footer className="relative py-12 px-4 sm:px-6 border-t border-white/10 text-center text-xs text-slate-500 z-10">
+      <footer
+        className="relative py-12 px-4 sm:px-6 border-t border-white/10 text-center text-xs text-slate-500 z-10"
+        style={{
+          ...(branding.footerBgColor ? { backgroundColor: branding.footerBgColor } : {}),
+          ...(branding.footerTextColor ? { color: branding.footerTextColor } : {})
+        }}
+      >
         <div className="max-w-6xl mx-auto space-y-4">
           <div className="flex items-center justify-center gap-6 text-slate-400">
             {social.instagram && <a href={social.instagram} target="_blank" rel="noopener noreferrer" className="hover:text-white">Instagram</a>}

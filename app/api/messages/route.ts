@@ -202,6 +202,7 @@ export async function POST(req: Request) {
                 description: true,
                 phone: true,
                 layoutConfig: true,
+                publishedConfig: true,
                 _count: {
                   select: {
                     appointments: true,
@@ -272,15 +273,18 @@ ${todayAppointments.length > 0 ? todayAppointments.map(a => `  • ${a.date.toLo
 ════════════════════════════════════════════════════════════════════════════════
 ⚡ CAPACIDAD DE ACCIÓN DIRECTA (MODIFICAR EL SISTEMA Y WEB):
 ════════════════════════════════════════════════════════════════════════════════
-Si el usuario solicita realizar un cambio en su página o diseño (por ejemplo: "cambiar color del texto del titulo por rojo", "cambia el color primario a azul", "pon de titulo Barbería Royale", "cambia la tipografía a Montserrat", "oculta la sección de video", "cambia el whatsapp a..."):
+Si el usuario solicita realizar un cambio en su página o diseño (por ejemplo: "cambiar color del texto del titulo por rojo", "cambia el color a rojo", "cambiar fondo a rojo", "pon de titulo Barbería Royale", "cambia la tipografía a Montserrat", "oculta la sección de video", "cambia el whatsapp a...", o dice "no se aplicó el cambio"):
 
-DEBES INCLUIR EN TU RESPUESTA EL SIGUIENTE COMANDO ESTRUCTURADO:
+DEBES INCLUIR OBLIGATORIAMENTE EN TU RESPUESTA EL SIGUIENTE COMANDO ESTRUCTURADO:
 |||APPLY_CHANGE:{"changes":{ ... }}|||
 
+¡REGLA ABSOLUTA: NUNCA DIGAS QUE HICISTE O APLICASTE UN CAMBIO SI NO INCLUYES EL BLOQUE |||APPLY_CHANGE:...|||!
+
 Campos permitidos dentro de "changes":
-- "primaryColor": "#HEX" (color principal de marca y botones)
+- "primaryColor": "#HEX" (¡EL MÁS IMPORTANTE! Color principal de marca, BOTONES, CTA "Reservar Turno", insignias y acentos de toda la web. Si el usuario pide cambiar el color de la web, o pide "color rojo", "pon botones rojos" o "cambia a rojo", DEBES poner "primaryColor": "#EF4444" aquí).
 - "secondaryColor": "#HEX" (color secundario)
 - "accentColor": "#HEX" (color de acento)
+- "themeVariant": "clean" | "essential" | "modern" | "dark" | "luxury" | "flow" | "particles" (Si el usuario pide modo oscuro usa "dark" o "essential"; si pide diseño claro usa "clean"; si pide animaciones usa "modern").
 - "fontFamily": "'Inter', sans-serif" | "'Roboto', sans-serif" | "'Playfair Display', serif" | "'Montserrat', sans-serif" | "'Oswald', sans-serif" | "sans"
 - "name": "Nuevo nombre del negocio"
 - "description": "Nueva descripción general"
@@ -288,12 +292,13 @@ Campos permitidos dentro de "changes":
 - "buttonStyle": "rounded" | "pill" | "square"
 - "layoutConfig": {
     "heroTitle": "nuevo título",
-    "heroTitleColor": "#HEX" (¡Usa esto cuando pidan cambiar el color del título o texto principal! Ej: rojo = "#EF4444" o "#DC2626"),
+    "heroTitleColor": "#HEX" (¡Usa esto cuando pidan cambiar el color del título o texto principal! Ej: rojo = "#EF4444"),
     "heroSubtitle": "nuevo subtítulo o slogan",
     "heroText": "texto descriptivo",
-    "footerBgColor": "#HEX",
-    "footerTextColor": "#HEX",
-    "bookingBgColor": "#HEX",
+    "backgroundColor": "#HEX" (Usa esto si piden cambiar el color de fondo general de la web),
+    "footerBgColor": "#HEX" (Color de fondo del pie de página),
+    "footerTextColor": "#HEX" (Color de texto del pie de página),
+    "bookingBgColor": "#HEX" (Color de fondo de la caja de reservas/turnos),
     "instagram": "@usuario",
     "facebook": "enlace_o_usuario",
     "whatsapp": "numero_telefono",
@@ -315,10 +320,11 @@ REGLAS DE COLORES:
   * "gris" -> "#6B7280"
 
 REGLAS GENERALES:
-1. Cuando apliques un cambio con |||APPLY_CHANGE:...|||, confirma en lenguaje natural qué cambio realizaste (ej: "¡Listo! He cambiado el color del texto del título por rojo (#EF4444). Los cambios ya se reflejan en tu web.").
-2. Si el usuario solo hace una pregunta informativa sobre cómo usar el sistema, guíalo amablemente sin generar |||APPLY_CHANGE|||.
-3. Si el usuario pide soporte humano exclusivo, responde: "|||TRANSFERIR_ASESOR||| Te estoy transfiriendo con un asesor humano del equipo."
-4. Mantén un tono ejecutivo, servicial y conciso (máximo 2 a 4 oraciones). No generes código de programación.
+1. Cuando apliques un cambio con |||APPLY_CHANGE:...|||, confirma en lenguaje natural qué cambio realizaste (ej: "¡Listo! He aplicado el color rojo (#EF4444) en los botones y diseño de tu web. Ya puedes verlo reflejado.").
+2. Si el usuario dice "no se aplicó el cambio", vuelve a aplicar el comando |||APPLY_CHANGE:...||| asignando tanto "primaryColor" como los campos de layoutConfig relevantes.
+3. Si el usuario solo hace una pregunta informativa sobre cómo usar el sistema, guíalo amablemente sin generar |||APPLY_CHANGE|||.
+4. Si el usuario pide soporte humano exclusivo, responde: "|||TRANSFERIR_ASESOR||| Te estoy transfiriendo con un asesor humano del equipo."
+5. Mantén un tono ejecutivo, servicial y conciso (máximo 2 a 4 oraciones). No generes código de programación.
 `;
 
           // Build structured conversation history
@@ -422,6 +428,8 @@ REGLAS GENERALES:
                 "buttonStyle",
                 "backgroundType",
                 "backgroundImageUrl",
+                "backgroundColor",
+                "themeVariant",
                 "footerBgColor",
                 "footerTextColor",
                 "bookingBgColor",
@@ -441,6 +449,10 @@ REGLAS GENERALES:
               if (incomingLayout.heroTitleColor) {
                 const norm = normalizeHexColor(incomingLayout.heroTitleColor);
                 if (norm) incomingLayout.heroTitleColor = norm;
+              }
+              if (incomingLayout.backgroundColor) {
+                const norm = normalizeHexColor(incomingLayout.backgroundColor);
+                if (norm) incomingLayout.backgroundColor = norm;
               }
               if (incomingLayout.footerBgColor) {
                 const norm = normalizeHexColor(incomingLayout.footerBgColor);
@@ -490,6 +502,13 @@ REGLAS GENERALES:
               }
 
               updatePayload.layoutConfig = mergedLayout;
+
+              // P0-001/SYNC: Si el negocio ya tiene publishedConfig (ya fue publicado),
+              // sincronizamos los cambios visuales para que la web pública (ej: /horcus)
+              // se actualice de inmediato en vivo sin requerir clic manual en Publicar.
+              if (bizInfo.publishedConfig) {
+                updatePayload.publishedConfig = mergedLayout;
+              }
 
               // Apply update to business in database
               updatedBusiness = await prisma.business.update({
