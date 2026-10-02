@@ -113,8 +113,11 @@ export default function DefaultTemplate({ negocio, media, sections }: { negocio:
                   <span className='text-xs font-semibold text-emerald-700 tracking-wide uppercase'>Reservas abiertas</span>
                 </div>
 
-                <h1 className={`text-5xl md:text-7xl font-black mb-6 tracking-tight leading-tight ${heroImage ? "text-white" : "text-slate-900"}`}>
-                  {section.config?.title || "Bienvenido"}
+                <h1 
+                  className={`text-5xl md:text-7xl font-black mb-6 tracking-tight leading-tight ${heroImage && !negocio.layoutConfig?.heroTitleColor ? "text-white" : ""}`}
+                  style={{ color: negocio.layoutConfig?.heroTitleColor || (heroImage ? "#ffffff" : "#0f172a") }}
+                >
+                  {negocio.layoutConfig?.heroTitle || section.config?.title || "Bienvenido"}
                 </h1>
                 
                 <p className={`text-lg md:text-2xl mb-10 max-w-2xl mx-auto leading-relaxed ${heroImage ? "text-white/90" : "text-slate-600"}`}>

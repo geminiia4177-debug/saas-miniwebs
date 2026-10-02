@@ -330,7 +330,7 @@ export const ownerBusinessUpdateSchema = z.object({
   accentColor: z.union([z.string().regex(/^#[0-9a-fA-F]{3,8}$/).max(9), z.literal("")]).optional().nullable(),
   primaryColor: z.union([z.string().regex(/^#[0-9a-fA-F]{3,8}$/).max(9), z.literal("")]).optional().nullable(),
   secondaryColor: z.union([z.string().regex(/^#[0-9a-fA-F]{3,8}$/).max(9), z.literal("")]).optional().nullable(),
-  fontFamily: z.enum(["sans", "serif", "mono", "display"]).optional().nullable(),
+  fontFamily: z.string().max(100).optional().nullable(),
   logoUrl: z.union([z.string().url().max(500), z.literal("")]).optional().nullable(),
   bannerUrl: z.union([z.string().url().max(500), z.literal("")]).optional().nullable(),
   buttonStyle: z.string().max(50).optional().nullable(),

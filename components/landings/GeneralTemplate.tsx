@@ -138,7 +138,10 @@ export default function GeneralTemplate(props: { negocio?: any; media?: any[]; b
               Disponible para nuevos clientes
             </div>
             
-            <h1 className="font-outfit text-5xl md:text-7xl font-extrabold tracking-tight mb-8 leading-[1.1] text-[#111827]">
+            <h1 
+              className="font-outfit text-5xl md:text-7xl font-extrabold tracking-tight mb-8 leading-[1.1]"
+              style={{ color: negocio?.layoutConfig?.heroTitleColor || "#111827" }}
+            >
               {negocio?.layoutConfig?.heroTitle || "Llevamos tu experiencia al siguiente nivel"}
             </h1>
             

@@ -11,6 +11,50 @@ import { checkRateLimit, getRateLimitRetryAfterMs } from "@/lib/rate-limit";
 const MSG_RATE_WINDOW_MS = 60_000;
 const MSG_RATE_MAX = 10;
 
+// Color normalization map: Translates colloquial Spanish/English names and hex variations to clean HEX codes
+const COLOR_MAP: Record<string, string> = {
+  "rojo": "#EF4444",
+  "red": "#EF4444",
+  "carmesí": "#DC2626",
+  "carmesi": "#DC2626",
+  "azul": "#3B82F6",
+  "blue": "#3B82F6",
+  "azul marino": "#1E3A8A",
+  "verde": "#10B981",
+  "green": "#10B981",
+  "esmeralda": "#059669",
+  "amarillo": "#FACC15",
+  "yellow": "#FACC15",
+  "dorado": "#F59E0B",
+  "oro": "#D97706",
+  "gold": "#D97706",
+  "naranja": "#F97316",
+  "orange": "#F97316",
+  "morado": "#8B5CF6",
+  "violeta": "#8B5CF6",
+  "purple": "#8B5CF6",
+  "rosa": "#EC4899",
+  "pink": "#EC4899",
+  "negro": "#111827",
+  "black": "#111827",
+  "blanco": "#FFFFFF",
+  "white": "#FFFFFF",
+  "gris": "#6B7280",
+  "gray": "#6B7280",
+  "grey": "#6B7280"
+};
+
+function normalizeHexColor(val: unknown): string | undefined {
+  if (typeof val !== "string") return undefined;
+  const str = val.trim().toLowerCase();
+  if (COLOR_MAP[str]) return COLOR_MAP[str];
+  const hexCandidate = str.startsWith("#") ? str : `#${str}`;
+  if (/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(hexCandidate)) {
+    return hexCandidate.toUpperCase();
+  }
+  return undefined;
+}
+
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -117,8 +161,22 @@ export async function POST(req: Request) {
       if (!hasHumanIntervention) {
         if (!process.env.GEMINI_API_KEY) {
           console.error("Gemini API key not configured");
-        } else {
-          const { GoogleGenAI, ThinkingLevel } = await import("@google/genai");
+          const fallbackMsg = await prisma.message.create({
+            data: {
+              businessId,
+              content: "El asistente de IA no está configurado (falta GEMINI_API_KEY en variables de entorno). Por favor contacta al administrador.",
+              senderType: "AI",
+              isRead: false
+            }
+          });
+          return NextResponse.json({
+            userMsg: msg,
+            aiMsg: fallbackMsg
+          });
+        }
+
+        try {
+          const { GoogleGenAI } = await import("@google/genai");
           const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
           const startOfDay = new Date();
@@ -131,11 +189,19 @@ export async function POST(req: Request) {
             prisma.business.findUnique({
               where: { id: businessId },
               select: {
+                id: true,
                 name: true,
                 type: true,
                 subdomain: true,
                 customDomain: true,
                 status: true,
+                primaryColor: true,
+                secondaryColor: true,
+                accentColor: true,
+                fontFamily: true,
+                description: true,
+                phone: true,
+                layoutConfig: true,
                 _count: {
                   select: {
                     appointments: true,
@@ -164,78 +230,99 @@ export async function POST(req: Request) {
             })
           ]);
           
+          const currentLayout = (bizInfo?.layoutConfig as Record<string, any>) || {};
+          const heroTitle = currentLayout.heroTitle || bizInfo?.name || "Mi Negocio";
+          const heroTitleColor = currentLayout.heroTitleColor || "#ffffff";
+          const heroSubtitle = currentLayout.heroSubtitle || bizInfo?.description || "";
+          const primaryColor = bizInfo?.primaryColor || "#6366f1";
+          const secondaryColor = bizInfo?.secondaryColor || "#a855f7";
+          const accentColor = bizInfo?.accentColor || "#f59e0b";
+          const fontFamily = bizInfo?.fontFamily || "sans";
+          const currentSections = Array.isArray(currentLayout.sections)
+            ? currentLayout.sections.map((s: any) => `${s.label || s.id} (${s.visible !== false ? "visible" : "oculta"})`).join(", ")
+            : "hero, servicios, reservas, contacto";
+
           const systemPrompt = `
-Eres el Asistente Inteligente del Panel de Control de SaaS MiniWebs.
-Tu misión exclusiva es guiar con total precisión y veracidad al dueño de "${bizInfo?.name || "tu negocio"}" en el uso, administración, configuración de su sitio web y gestión diaria de turnos/ventas.
+Eres el Asistente Inteligente y Copiloto Oficial del Panel de Control de SaaS MiniWebs para "${bizInfo?.name || "tu negocio"}".
+Tu misión tiene dos propósitos:
+1. Guiar y resolver consultas sobre el panel, turnos y ventas.
+2. EJECUTAR MODIFICACIONES DIRECTAS en el sitio web del negocio cuando el usuario te lo pida en el chat (por ejemplo, cambiar colores de textos, fondos, títulos, tipografías, WhatsApp, etc.).
 
 FECHA Y HORA ACTUAL: ${new Date().toLocaleDateString("es-MX", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}.
 
 ════════════════════════════════════════════════════════════════════════════════
-📊 ESTADO ACTUAL DEL NEGOCIO EN EL PANEL:
+📊 ESTADO ACTUAL DEL NEGOCIO Y CONFIGURACIÓN VISUAL:
 ════════════════════════════════════════════════════════════════════════════════
 - Negocio: ${bizInfo?.name} (${bizInfo?.type})
 - Subdominio: ${bizInfo?.subdomain}.miniwebs.lat ${bizInfo?.customDomain ? `| Dominio: ${bizInfo.customDomain}` : ""}
 - Estado de cuenta: ${bizInfo?.status}
-- Empleados registrados: ${bizInfo?._count.employees || 0}
-- Turnos agendados para HOY: ${todayAppointments.length}
+- Título principal del Hero: "${heroTitle}"
+- Color del Texto del Título: ${heroTitleColor}
+- Subtítulo / Slogan: "${heroSubtitle}"
+- Colores de Marca:
+  * Principal (P): ${primaryColor}
+  * Secundario (S): ${secondaryColor}
+  * Acento (A): ${accentColor}
+- Tipografía Google Fonts: ${fontFamily}
+- WhatsApp / Teléfono: ${bizInfo?.phone || currentLayout.whatsapp || "No configurado"}
+- Secciones actuales: ${currentSections}
+- Turnos para HOY: ${todayAppointments.length}
 ${todayAppointments.length > 0 ? todayAppointments.map(a => `  • ${a.date.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })} - ${a.clientName} (${a.serviceName || "Servicio"}) [${a.status}]`).join("\n") : "  (No hay turnos registrados para hoy)"}
 
 ════════════════════════════════════════════════════════════════════════════════
-🧭 MAPA DE NAVEGACIÓN Y CONFIGURACIONES REALES DEL PANEL:
+⚡ CAPACIDAD DE ACCIÓN DIRECTA (MODIFICAR EL SISTEMA Y WEB):
 ════════════════════════════════════════════════════════════════════════════════
-El menú lateral (Sidebar) se divide en las siguientes secciones oficiales:
+Si el usuario solicita realizar un cambio en su página o diseño (por ejemplo: "cambiar color del texto del titulo por rojo", "cambia el color primario a azul", "pon de titulo Barbería Royale", "cambia la tipografía a Montserrat", "oculta la sección de video", "cambia el whatsapp a..."):
 
-1. SECCIÓN "PRINCIPAL":
-   - "Resumen" (tab: 'home'): Métricas rápidas del negocio, turnos pendientes de confirmación y accesos directos.
+DEBES INCLUIR EN TU RESPUESTA EL SIGUIENTE COMANDO ESTRUCTURADO:
+|||APPLY_CHANGE:{"changes":{ ... }}|||
 
-2. SECCIÓN "CREAR Y EDITAR":
-   - "Editor Visual" (tab: 'editor'):
-     * Pestaña 'Diseño': Título principal, colores de marca, tipografía Google Fonts, sombreado de portada, foto de portada, estilo de fondo, Niveles de Plantilla (Clásico, Motion, Premium, Inmersivo), temas visuales, animación y estilo de botones.
-     * Pestañas de Catálogo según tu rubro ('Servicios', 'Productos', 'Canchas', 'Menú', 'Planes'): Administrar servicios, precios, duración y fotos.
-     * Pestaña 'Video': Incrustar URL de YouTube para que aparezca en tu página.
-     * Pestaña 'Config. / Secciones': Reordenar las secciones de tu página y activar/ocultar cada bloque.
-     * Botones superiores: 'Guardar Borrador' y 'Publicar Web'.
-   - "Galería de Fotos" (tab: 'gallery'): Subir, ver y eliminar fotos de tus trabajos, local o catálogo.
+Campos permitidos dentro de "changes":
+- "primaryColor": "#HEX" (color principal de marca y botones)
+- "secondaryColor": "#HEX" (color secundario)
+- "accentColor": "#HEX" (color de acento)
+- "fontFamily": "'Inter', sans-serif" | "'Roboto', sans-serif" | "'Playfair Display', serif" | "'Montserrat', sans-serif" | "'Oswald', sans-serif" | "sans"
+- "name": "Nuevo nombre del negocio"
+- "description": "Nueva descripción general"
+- "phone": "Nuevo teléfono"
+- "buttonStyle": "rounded" | "pill" | "square"
+- "layoutConfig": {
+    "heroTitle": "nuevo título",
+    "heroTitleColor": "#HEX" (¡Usa esto cuando pidan cambiar el color del título o texto principal! Ej: rojo = "#EF4444" o "#DC2626"),
+    "heroSubtitle": "nuevo subtítulo o slogan",
+    "heroText": "texto descriptivo",
+    "footerBgColor": "#HEX",
+    "footerTextColor": "#HEX",
+    "bookingBgColor": "#HEX",
+    "instagram": "@usuario",
+    "facebook": "enlace_o_usuario",
+    "whatsapp": "numero_telefono",
+    "tiktok": "@usuario",
+    "sections": [{ "id": "video", "visible": false }, { "id": "gallery", "visible": true }]
+  }
 
-3. SECCIÓN "CONTENIDO":
-   - "Turnos" (tab: 'appointments'): Calendario y lista de reservas, cambio de estado (Confirmar, Cancelar, Completar) y botón para 'Agregar Turno Manual'.
-   - "Pedidos / Mesas" (tab: 'orders', disponible en gastronomía): Control de pedidos y mesas.
+REGLAS DE COLORES:
+- Siempre traduce nombres de colores en español a códigos HEX modernos y atractivos:
+  * "rojo" -> "#EF4444" (o carmesí: "#DC2626")
+  * "azul" -> "#3B82F6" (o azul marino: "#1E3A8A")
+  * "verde" -> "#10B981" (o esmeralda: "#059669")
+  * "dorado" -> "#F59E0B" (o oro: "#D97706")
+  * "amarillo" -> "#FACC15"
+  * "violeta / morado" -> "#8B5CF6"
+  * "rosa / fucsia" -> "#EC4899"
+  * "negro" -> "#111827"
+  * "blanco" -> "#FFFFFF"
+  * "gris" -> "#6B7280"
 
-4. SECCIÓN "HERRAMIENTAS":
-   - "Asesor Inteligente" (tab: 'intelligence'): Detección de clientes inactivos (+45 días) y clientes VIP, día más débil y generación de mensajes WhatsApp con IA para ventas.
-   - "BioLinks" (tab: 'biolinks'): Configurar tu página de enlaces para Instagram o TikTok.
-   - "CRM y Finanzas" (tab: 'crm'):
-     * Subpestaña 'Clientes': Base de todos tus clientes con historial de visitas, servicio favorito, estado (VIP / Activo / Inactivo) y botón para contactar por WhatsApp.
-     * Subpestaña 'Ingresos y Caja': Registro de cobros y ventas con gráfico mensual.
-     * Subpestaña 'Empleados / Staff': Control de personal y comisiones.
-     * Subpestaña 'Proveedores': Lista de proveedores y pedidos por WhatsApp.
-
-5. SECCIÓN "CONFIGURACIÓN":
-   - "Ajustes Generales" (tab: 'config'):
-     * Logo del negocio (subir o eliminar).
-     * Información del Negocio: Nombre, Slogan/Tagline, Teléfono de WhatsApp, enlace (subdominio).
-     * Datos Bancarios y Cobros por Transferencia: Configurar CLABE interbancaria (18 dígitos - México), Banco y Titular, o CBU/CVU y Alias (Argentina).
-     * Plantillas de WhatsApp: Mensajes automáticos de confirmación y para transferencias bancarias.
-     * Horarios de Atención: Días y franjas horarias de apertura.
-     * Redes Sociales: WhatsApp, Instagram, Facebook, TikTok.
-     * Integraciones: Notificaciones internas a tu WhatsApp con CallMeBot.
-     * Seguridad y Contraseña: Cambiar la contraseña del panel.
-
-════════════════════════════════════════════════════════════════════════════════
-🚨 REGLAS ESTRICTAS DE RESPUESTA (NO MENTIR NI INVENTAR RUTAS):
-════════════════════════════════════════════════════════════════════════════════
-1. Responde de forma clara, directa y paso a paso indicando la ruta exacta y real usando el mapa oficial de arriba. NUNCA inventes nombres de pestañas que no existan.
-2. Si el usuario pregunta por transferencias bancarias o CLABE, indícale que vaya a Configuración > Ajustes Generales > sección "Datos Bancarios y Cobros por Transferencia".
-3. Si el usuario te pregunta por los turnos del día o la actividad del negocio, dale el resumen de los turnos de hoy que tienes listados arriba.
-4. Si el usuario pide soporte humano, un problema con su facturación/plan o algo fuera de tu alcance, responde EXACTAMENTE con:
-   "|||TRANSFERIR_ASESOR||| Entiendo, te estoy transfiriendo con un asesor humano del equipo. Te responderemos a la brevedad."
-5. Mantén un tono ejecutivo, servicial, cálido y profesional (máximo 2 a 4 oraciones). No generes código de programación.
+REGLAS GENERALES:
+1. Cuando apliques un cambio con |||APPLY_CHANGE:...|||, confirma en lenguaje natural qué cambio realizaste (ej: "¡Listo! He cambiado el color del texto del título por rojo (#EF4444). Los cambios ya se reflejan en tu web.").
+2. Si el usuario solo hace una pregunta informativa sobre cómo usar el sistema, guíalo amablemente sin generar |||APPLY_CHANGE|||.
+3. Si el usuario pide soporte humano exclusivo, responde: "|||TRANSFERIR_ASESOR||| Te estoy transfiriendo con un asesor humano del equipo."
+4. Mantén un tono ejecutivo, servicial y conciso (máximo 2 a 4 oraciones). No generes código de programación.
 `;
 
-          // P1-012: Build structured conversation history.
-          // User messages are enclosed in literal markers to prevent prompt injection.
+          // Build structured conversation history
           const conversationHistory = [...recentMsgs].reverse().map((m) => {
-            // Sanitize by slicing to a safe length
             const safeContent = String(m.content).substring(0, 500);
             if (m.senderType === "USER") {
               return `[USER_MSG]${safeContent}[/USER_MSG]`;
@@ -245,25 +332,193 @@ El menú lateral (Sidebar) se divide en las siguientes secciones oficiales:
 
           const fullPrompt = systemPrompt + "\n\n## CONVERSACIÓN (más reciente al final):\n" + conversationHistory + "\n\n[AI_MSG]";
 
-          const modelName = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
-          const aiResponse = await ai.models.generateContent({
-            model: modelName,
-            contents: fullPrompt,
-            config: {
-              temperature: 0.2,
-              maxOutputTokens: 350,
-              thinkingConfig: {
-                thinkingLevel: ThinkingLevel.MINIMAL,
-              },
+          // Preferred model with dynamic fallback in case of high demand / model version changes
+          const preferredModel = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
+          const candidateModels = [
+            preferredModel,
+            "gemini-3.5-flash",
+            "gemini-3.8-flash"
+          ].filter((v, i, a) => a.indexOf(v) === i);
+
+          let responseText = "";
+          let lastModelError: any = null;
+
+          for (const m of candidateModels) {
+            try {
+              const aiResponse = await ai.models.generateContent({
+                model: m,
+                contents: fullPrompt,
+                config: {
+                  temperature: 0.2,
+                  maxOutputTokens: 500,
+                }
+              });
+              if (aiResponse?.text) {
+                responseText = aiResponse.text;
+                break;
+              }
+            } catch (err: any) {
+              console.warn(`Gemini model ${m} failed:`, err?.message || err);
+              lastModelError = err;
             }
-          });
+          }
 
-          let responseText = aiResponse.text || "Hubo un error de conexión con la IA.";
+          if (!responseText) {
+            console.error("All Gemini models failed. Last error:", lastModelError?.message || lastModelError);
+            responseText = "Lo siento, tuve un problema temporal al procesar tu solicitud con el asistente. Por favor intenta nuevamente.";
+          }
 
-          if (responseText.includes("|||TRANSFERIR_ASESOR|||")) {
-            responseText = responseText.replace("|||TRANSFERIR_ASESOR|||", "").trim();
-            // We append a special tag so the system knows it's transferred
-            responseText = `[TRANSFERIDO DESDE IA]\n\n${responseText}`;
+          // ─── PARSE & EXECUTE ACTIONS (P0-AI-ACTIONS) ─────────────────────────
+          let actionApplied = false;
+          let appliedChanges: any = null;
+          let updatedBusiness: any = null;
+
+          // Robust regex matching both bounded ||| and trailing boundary
+          const changeMatch = responseText.match(/\|\|\|APPLY_CHANGE:([\s\S]*?)(?:\|\|\||$)/);
+          if (changeMatch && bizInfo) {
+            try {
+              let rawJson = changeMatch[1].trim();
+              // Strip markdown code fences if Gemini included them (e.g. ```json ... ```)
+              rawJson = rawJson.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+              rawJson = rawJson.replace(/^`+|`+$/g, "").trim();
+
+              const parsed = JSON.parse(rawJson);
+              const changes = parsed.changes || parsed;
+
+              const updatePayload: Prisma.BusinessUpdateInput = {};
+
+              // Top level safe properties with color sanitization
+              const normPrimary = normalizeHexColor(changes.primaryColor);
+              if (normPrimary) updatePayload.primaryColor = normPrimary;
+
+              const normSecondary = normalizeHexColor(changes.secondaryColor);
+              if (normSecondary) updatePayload.secondaryColor = normSecondary;
+
+              const normAccent = normalizeHexColor(changes.accentColor);
+              if (normAccent) updatePayload.accentColor = normAccent;
+
+              if (changes.fontFamily && typeof changes.fontFamily === "string") {
+                updatePayload.fontFamily = changes.fontFamily.trim();
+              }
+              if (changes.name && typeof changes.name === "string" && changes.name.trim().length > 0) {
+                updatePayload.name = changes.name.trim();
+              }
+              if (changes.description && typeof changes.description === "string") {
+                updatePayload.description = changes.description.trim();
+              }
+              if (changes.phone && typeof changes.phone === "string") {
+                updatePayload.phone = changes.phone.trim();
+              }
+
+              // Merge layoutConfig safely: supports both nested changes.layoutConfig and top-level shorthand properties
+              const existingLayout = (bizInfo.layoutConfig as Record<string, any>) || {};
+              const incomingLayout = (changes.layoutConfig as Record<string, any>) || {};
+
+              const layoutDirectKeys = [
+                "heroTitle",
+                "heroTitleColor",
+                "heroSubtitle",
+                "heroText",
+                "buttonStyle",
+                "backgroundType",
+                "backgroundImageUrl",
+                "footerBgColor",
+                "footerTextColor",
+                "bookingBgColor",
+                "instagram",
+                "facebook",
+                "whatsapp",
+                "tiktok",
+                "sections"
+              ];
+              for (const key of layoutDirectKeys) {
+                if (changes[key] !== undefined && incomingLayout[key] === undefined) {
+                  incomingLayout[key] = changes[key];
+                }
+              }
+
+              // Color sanitization in layout
+              if (incomingLayout.heroTitleColor) {
+                const norm = normalizeHexColor(incomingLayout.heroTitleColor);
+                if (norm) incomingLayout.heroTitleColor = norm;
+              }
+              if (incomingLayout.footerBgColor) {
+                const norm = normalizeHexColor(incomingLayout.footerBgColor);
+                if (norm) incomingLayout.footerBgColor = norm;
+              }
+              if (incomingLayout.footerTextColor) {
+                const norm = normalizeHexColor(incomingLayout.footerTextColor);
+                if (norm) incomingLayout.footerTextColor = norm;
+              }
+              if (incomingLayout.bookingBgColor) {
+                const norm = normalizeHexColor(incomingLayout.bookingBgColor);
+                if (norm) incomingLayout.bookingBgColor = norm;
+              }
+
+              const mergedLayout: Record<string, any> = {
+                ...existingLayout,
+                ...incomingLayout,
+              };
+
+              // Merge sections array safely
+              const defaultSections = [
+                { id: "hero", label: "Hero / Portada", visible: true },
+                { id: "gallery", label: "Galería de Fotos", visible: true },
+                { id: "services", label: "Servicios", visible: true },
+                { id: "video", label: "Video Destacado", visible: false },
+                { id: "booking", label: "Reservas / Turnos", visible: true },
+                { id: "reviews", label: "Reseñas", visible: true },
+                { id: "contact", label: "Contacto", visible: true },
+                { id: "hours", label: "Horarios", visible: true }
+              ];
+              const baseSections = Array.isArray(existingLayout.sections) && existingLayout.sections.length > 0
+                ? existingLayout.sections
+                : defaultSections;
+
+              if (Array.isArray(incomingLayout.sections)) {
+                mergedLayout.sections = baseSections.map((sec: any) => {
+                  const override = incomingLayout.sections.find((s: any) => s.id === sec.id);
+                  if (override) {
+                    return {
+                      ...sec,
+                      ...(override.visible !== undefined ? { visible: Boolean(override.visible) } : {}),
+                      config: { ...(sec.config || {}), ...(override.config || {}) }
+                    };
+                  }
+                  return sec;
+                });
+              }
+
+              updatePayload.layoutConfig = mergedLayout;
+
+              // Apply update to business in database
+              updatedBusiness = await prisma.business.update({
+                where: { id: businessId },
+                data: updatePayload
+              });
+
+              actionApplied = true;
+              appliedChanges = changes;
+            } catch (cmdErr) {
+              console.error("Error executing AI change on business:", cmdErr);
+            }
+          }
+
+          // Strip commands from user-facing text
+          responseText = responseText
+            .replace(/\|\|\|APPLY_CHANGE:[\s\S]*?\|\|\|/g, "")
+            .replace(/\|\|\|APPLY_CHANGE:[\s\S]*/g, "")
+            .replace(/\|\|\|/g, "")
+            .trim();
+
+          if (!responseText) {
+            responseText = actionApplied
+              ? "¡Listo! He aplicado los cambios solicitados en tu sitio web. Ya puedes verlos reflejados."
+              : "Entendido, solicitud procesada.";
+          }
+
+          if (responseText.includes("[TRANSFERIDO DESDE IA]") || responseText.includes("TRANSFERIR_ASESOR")) {
+            responseText = `[TRANSFERIDO DESDE IA]\n\n${responseText.replace("TRANSFERIR_ASESOR", "").trim()}`;
           }
 
           const aiMsg = await prisma.message.create({
@@ -275,7 +530,27 @@ El menú lateral (Sidebar) se divide en las siguientes secciones oficiales:
             }
           });
           
-          return NextResponse.json({ userMsg: msg, aiMsg: aiMsg });
+          return NextResponse.json({
+            userMsg: msg,
+            aiMsg: aiMsg,
+            actionApplied,
+            changes: appliedChanges || undefined,
+            updatedBusiness: updatedBusiness || undefined
+          });
+        } catch (aiBlockError) {
+          console.error("Critical error in AI assistant execution:", aiBlockError);
+          const errorMsg = await prisma.message.create({
+            data: {
+              businessId,
+              content: "Ocurrió un inconveniente temporal con el copiloto IA. Tu mensaje quedó guardado. Por favor intenta de nuevo en unos momentos.",
+              senderType: "AI",
+              isRead: false
+            }
+          });
+          return NextResponse.json({
+            userMsg: msg,
+            aiMsg: errorMsg
+          });
         }
       }
     }

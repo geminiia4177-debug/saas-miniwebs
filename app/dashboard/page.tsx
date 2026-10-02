@@ -159,6 +159,39 @@ export default function Dashboard() {
     else setSidebarCollapsed(false);
   }, [tab]);
 
+  // ── ESCUCHAR ACTUALIZACIONES EN VIVO DE LA IA (DESDE EL COPILOTO/CHATBOT) ──
+  useEffect(() => {
+    const handleAiUpdate = (e: any) => {
+      const updated = e?.detail;
+      if (!updated) return;
+      setBiz((prev: any) => {
+        if (!prev) return updated;
+        const newBiz = {
+          ...prev,
+          ...updated,
+          primaryColor: updated.primaryColor || prev.primaryColor,
+          secondaryColor: updated.secondaryColor || prev.secondaryColor,
+          accentColor: updated.accentColor || prev.accentColor,
+          fontFamily: updated.fontFamily || prev.fontFamily,
+          layoutConfig: {
+            ...(prev.layoutConfig || {}),
+            ...(updated.layoutConfig || {})
+          }
+        };
+        return newBiz;
+      });
+
+      if (updated.layoutConfig?.sections) {
+        setSections(updated.layoutConfig.sections);
+      }
+      setHasUnsavedChanges(false);
+      pushToast("✨ ¡La IA actualizó tu web en vivo!", "success");
+    };
+
+    window.addEventListener("saas-business-updated", handleAiUpdate as EventListener);
+    return () => window.removeEventListener("saas-business-updated", handleAiUpdate as EventListener);
+  }, []);
+
   // â”€â”€ AUTOSAVE (UX-011) â”€â”€
   useEffect(() => {
     if (hasUnsavedChanges && !saving) {
