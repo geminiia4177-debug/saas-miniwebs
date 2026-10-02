@@ -83,6 +83,7 @@ export default function EditorTab({
   const [history, setHistory] = useState<{ biz: any, sections: any }[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [isUndoing, setIsUndoing] = useState(false);
+  const [isEditorCollapsed, setIsEditorCollapsed] = useState(false);
 
   useEffect(() => {
     if (!biz || !sections) return;
@@ -279,7 +280,7 @@ export default function EditorTab({
       </div>
 
       {/* ──────────── LEFT PANEL ──────────── */}
-      <div className={`w-full md:w-72 flex-shrink-0 flex-col border-r overflow-hidden ${mobileView === "edit" ? "flex" : "hidden md:flex"}`}
+      <div className={`w-full md:w-72 flex-shrink-0 flex-col border-r overflow-hidden ${isEditorCollapsed ? "hidden" : (mobileView === "edit" ? "flex" : "hidden md:flex")}`}
         style={{ borderColor: "rgba(255,255,255,0.05)", background: "rgba(255,255,255,0.01)" }}>
 
         {/* TOP TABS */}
@@ -925,6 +926,16 @@ export default function EditorTab({
               </button>
             ))}
           </div>
+
+          <button
+            onClick={() => setIsEditorCollapsed(!isEditorCollapsed)}
+            className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white transition-all ml-1"
+            style={{ background: isEditorCollapsed ? "rgba(99,102,241,0.25)" : "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}
+            title={isEditorCollapsed ? "Mostrar panel del editor" : "Ver sitio en pantalla completa"}
+          >
+            <Ico n={isEditorCollapsed ? "sidebar" : "maximize"} s={12} />
+            <span>{isEditorCollapsed ? "Ver Editor" : "Expandir"}</span>
+          </button>
           <div className="flex items-center gap-2 flex-shrink-0">
             <button onClick={undo} disabled={historyIndex <= 0} className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-white disabled:opacity-30" style={{ background: "rgba(255,255,255,0.05)" }}><Ico n="undo" s={14} /></button>
             <button onClick={redo} disabled={historyIndex >= history.length - 1} className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-white disabled:opacity-30" style={{ background: "rgba(255,255,255,0.05)" }}><Ico n="redo" s={14} /></button>

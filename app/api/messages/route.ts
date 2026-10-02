@@ -55,6 +55,33 @@ function normalizeHexColor(val: unknown): string | undefined {
   return undefined;
 }
 
+function inferColorFromText(text: string): { primary: string; bg?: string } | null {
+  if (!text || typeof text !== "string") return null;
+  const t = text.toLowerCase();
+  if (t.includes("azul") || t.includes("blue") || t.includes("celeste")) {
+    return { primary: "#2563EB", bg: t.includes("fondo") ? "#0B132B" : undefined };
+  }
+  if (t.includes("rojo") || t.includes("red") || t.includes("carmesí") || t.includes("carmesi")) {
+    return { primary: "#EF4444", bg: t.includes("fondo") ? "#180606" : undefined };
+  }
+  if (t.includes("verde") || t.includes("green") || t.includes("esmeralda")) {
+    return { primary: "#10B981", bg: t.includes("fondo") ? "#04140D" : undefined };
+  }
+  if (t.includes("morado") || t.includes("violeta") || t.includes("púrpura") || t.includes("purpura") || t.includes("purple")) {
+    return { primary: "#8B5CF6", bg: t.includes("fondo") ? "#11091F" : undefined };
+  }
+  if (t.includes("dorado") || t.includes("oro") || t.includes("gold") || t.includes("amarillo") || t.includes("yellow")) {
+    return { primary: "#F59E0B", bg: t.includes("fondo") ? "#171206" : undefined };
+  }
+  if (t.includes("rosa") || t.includes("rosado") || t.includes("fucsia") || t.includes("pink")) {
+    return { primary: "#EC4899", bg: t.includes("fondo") ? "#1C0813" : undefined };
+  }
+  if (t.includes("negro") || t.includes("black") || t.includes("oscuro") || t.includes("dark")) {
+    return { primary: "#3B82F6", bg: "#09090B" };
+  }
+  return null;
+}
+
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -273,15 +300,26 @@ ${todayAppointments.length > 0 ? todayAppointments.map(a => `  • ${a.date.toLo
 ════════════════════════════════════════════════════════════════════════════════
 ⚡ CAPACIDAD DE ACCIÓN DIRECTA (MODIFICAR EL SISTEMA Y WEB):
 ════════════════════════════════════════════════════════════════════════════════
-Si el usuario solicita realizar un cambio en su página o diseño (por ejemplo: "cambiar color del texto del titulo por rojo", "cambia el color a rojo", "cambiar fondo a rojo", "pon de titulo Barbería Royale", "cambia la tipografía a Montserrat", "oculta la sección de video", "cambia el whatsapp a...", o dice "no se aplicó el cambio"):
+Si el usuario solicita realizar un cambio en su página o diseño (por ejemplo: "cambiar color del texto del titulo por rojo", "cambia el color a rojo", "cambiar fondo a rojo", "pon color azul", "cambia el color de fondo por azul", "pon de titulo Barbería Royale", "cambia la tipografía a Montserrat", "oculta la sección de video", "cambia el whatsapp a...", o dice "no se aplicó el cambio"):
 
 DEBES INCLUIR OBLIGATORIAMENTE EN TU RESPUESTA EL SIGUIENTE COMANDO ESTRUCTURADO:
 |||APPLY_CHANGE:{"changes":{ ... }}|||
 
 ¡REGLA ABSOLUTA: NUNCA DIGAS QUE HICISTE O APLICASTE UN CAMBIO SI NO INCLUYES EL BLOQUE |||APPLY_CHANGE:...|||!
 
+¡REGLA FUNDAMENTAL DE COLORES!:
+1. Si el usuario pide cambiar el color de la web, botones o color general (ej: "pon color azul", "cambia a azul", "color azul"):
+   DEBES asignar SIEMPRE "primaryColor": "#HEX" (ej: "#2563EB" para azul).
+2. Si el usuario pide cambiar el color de FONDO (ej: "cambia el color de fondo por azul", "fondo azul", "pon fondo negro"):
+   DEBES asignar SIEMPRE:
+   - "primaryColor": "#HEX" (ej: "#2563EB" para que los botones, insignias y detalles de toda la web armonicen con el color solicitado)
+   - "backgroundColor": "#HEX" (en layoutConfig: ej: "#0B132B" para fondo azul elegante, o "#09090B" para fondo negro)
+   - "bookingBgColor": "#HEX" (un tono complementario para la tarjeta de turnos)
+   - "footerBgColor": "#HEX" (un tono complementario para el pie de página)
+   ¡NUNCA limites el cambio a solo "secondaryColor" o "footerBgColor" cuando te pidan cambiar el color de fondo o el color de la web!
+
 Campos permitidos dentro de "changes":
-- "primaryColor": "#HEX" (¡EL MÁS IMPORTANTE! Color principal de marca, BOTONES, CTA "Reservar Turno", insignias y acentos de toda la web. Si el usuario pide cambiar el color de la web, o pide "color rojo", "pon botones rojos" o "cambia a rojo", DEBES poner "primaryColor": "#EF4444" aquí).
+- "primaryColor": "#HEX" (¡EL MÁS IMPORTANTE! Color principal de marca, BOTONES, CTA "Reservar Turno", insignias y acentos de toda la web. Si el usuario pide cambiar el color de la web, o pide "color azul", "color rojo", "pon botones rojos" o "cambia a azul", DEBES poner "primaryColor" aquí).
 - "secondaryColor": "#HEX" (color secundario)
 - "accentColor": "#HEX" (color de acento)
 - "themeVariant": "clean" | "essential" | "modern" | "dark" | "luxury" | "flow" | "particles" (Si el usuario pide modo oscuro usa "dark" o "essential"; si pide diseño claro usa "clean"; si pide animaciones usa "modern").
@@ -309,19 +347,19 @@ Campos permitidos dentro de "changes":
 REGLAS DE COLORES:
 - Siempre traduce nombres de colores en español a códigos HEX modernos y atractivos:
   * "rojo" -> "#EF4444" (o carmesí: "#DC2626")
-  * "azul" -> "#3B82F6" (o azul marino: "#1E3A8A")
+  * "azul" -> "#2563EB" (o azul profundo: "#0B132B" para fondo)
   * "verde" -> "#10B981" (o esmeralda: "#059669")
   * "dorado" -> "#F59E0B" (o oro: "#D97706")
   * "amarillo" -> "#FACC15"
   * "violeta / morado" -> "#8B5CF6"
   * "rosa / fucsia" -> "#EC4899"
-  * "negro" -> "#111827"
+  * "negro" -> "#09090B"
   * "blanco" -> "#FFFFFF"
   * "gris" -> "#6B7280"
 
 REGLAS GENERALES:
-1. Cuando apliques un cambio con |||APPLY_CHANGE:...|||, confirma en lenguaje natural qué cambio realizaste (ej: "¡Listo! He aplicado el color rojo (#EF4444) en los botones y diseño de tu web. Ya puedes verlo reflejado.").
-2. Si el usuario dice "no se aplicó el cambio", vuelve a aplicar el comando |||APPLY_CHANGE:...||| asignando tanto "primaryColor" como los campos de layoutConfig relevantes.
+1. Cuando apliques un cambio con |||APPLY_CHANGE:...|||, confirma en lenguaje natural qué cambio realizaste (ej: "¡Listo! He aplicado el color azul (#2563EB) en los botones, fondo y diseño de tu web. Ya puedes verlo reflejado.").
+2. Si el usuario dice "no se aplicó el cambio" o "continúa el problema", vuelve a aplicar el comando |||APPLY_CHANGE:...||| asignando tanto "primaryColor" como los campos de layoutConfig relevantes.
 3. Si el usuario solo hace una pregunta informativa sobre cómo usar el sistema, guíalo amablemente sin generar |||APPLY_CHANGE|||.
 4. Si el usuario pide soporte humano exclusivo, responde: "|||TRANSFERIR_ASESOR||| Te estoy transfiriendo con un asesor humano del equipo."
 5. Mantén un tono ejecutivo, servicial y conciso (máximo 2 a 4 oraciones). No generes código de programación.
@@ -394,13 +432,29 @@ REGLAS GENERALES:
               const updatePayload: Prisma.BusinessUpdateInput = {};
 
               // Top level safe properties with color sanitization
-              const normPrimary = normalizeHexColor(changes.primaryColor);
+              let normPrimary = normalizeHexColor(changes.primaryColor);
+              let normSecondary = normalizeHexColor(changes.secondaryColor);
+              let normAccent = normalizeHexColor(changes.accentColor);
+
+              // Contextual color inference from prompt
+              const promptColor = inferColorFromText(content);
+
+              // Auto-sync primaryColor if missing but a color change was intended
+              if (!normPrimary) {
+                if (promptColor?.primary) {
+                  normPrimary = promptColor.primary;
+                } else if (normSecondary) {
+                  normPrimary = normSecondary;
+                } else if (changes.backgroundColor) {
+                  const normBg = normalizeHexColor(changes.backgroundColor);
+                  if (normBg && normBg !== "#FFFFFF" && normBg !== "#000000") {
+                    normPrimary = normBg;
+                  }
+                }
+              }
+
               if (normPrimary) updatePayload.primaryColor = normPrimary;
-
-              const normSecondary = normalizeHexColor(changes.secondaryColor);
               if (normSecondary) updatePayload.secondaryColor = normSecondary;
-
-              const normAccent = normalizeHexColor(changes.accentColor);
               if (normAccent) updatePayload.accentColor = normAccent;
 
               if (changes.fontFamily && typeof changes.fontFamily === "string") {
@@ -453,6 +507,8 @@ REGLAS GENERALES:
               if (incomingLayout.backgroundColor) {
                 const norm = normalizeHexColor(incomingLayout.backgroundColor);
                 if (norm) incomingLayout.backgroundColor = norm;
+              } else if (promptColor?.bg) {
+                incomingLayout.backgroundColor = promptColor.bg;
               }
               if (incomingLayout.footerBgColor) {
                 const norm = normalizeHexColor(incomingLayout.footerBgColor);
@@ -520,6 +576,45 @@ REGLAS GENERALES:
               appliedChanges = changes;
             } catch (cmdErr) {
               console.error("Error executing AI change on business:", cmdErr);
+            }
+          }
+
+          // Fallback: If no structured command was output by the LLM, but user explicitly asked to change color/theme
+          if (!actionApplied && bizInfo) {
+            const promptColor = inferColorFromText(content);
+            const lowerContent = content.toLowerCase();
+            const isChangeIntent =
+              lowerContent.includes("cambia") ||
+              lowerContent.includes("pon") ||
+              lowerContent.includes("color") ||
+              lowerContent.includes("fondo");
+            if (promptColor && isChangeIntent) {
+              try {
+                const updatePayload: Prisma.BusinessUpdateInput = {
+                  primaryColor: promptColor.primary,
+                  secondaryColor: promptColor.primary,
+                };
+                const existingLayout = (bizInfo.layoutConfig as Record<string, any>) || {};
+                const mergedLayout: Record<string, any> = {
+                  ...existingLayout,
+                  ...(promptColor.bg ? { backgroundColor: promptColor.bg, footerBgColor: promptColor.bg } : {})
+                };
+                updatePayload.layoutConfig = mergedLayout;
+                if (bizInfo.publishedConfig) {
+                  updatePayload.publishedConfig = mergedLayout;
+                }
+                updatedBusiness = await prisma.business.update({
+                  where: { id: businessId },
+                  data: updatePayload
+                });
+                actionApplied = true;
+                appliedChanges = {
+                  primaryColor: promptColor.primary,
+                  ...(promptColor.bg ? { backgroundColor: promptColor.bg } : {})
+                };
+              } catch (fallbackErr) {
+                console.error("Error in fallback color change:", fallbackErr);
+              }
             }
           }
 

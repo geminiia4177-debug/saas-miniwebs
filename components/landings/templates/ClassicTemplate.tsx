@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { BusinessDataContract } from "@/lib/templates/contract";
-import { getThemeDefinition, generateThemeVariables } from "@/lib/templates/themes";
+import { getThemeDefinition, generateThemeVariables, getOptimalTextColor } from "@/lib/templates/themes";
 
 export interface TemplateProps {
   data: BusinessDataContract;
@@ -18,7 +18,8 @@ export default function ClassicTemplate({ data, bookingElement }: TemplateProps)
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
 
   const primary = branding.primaryColor || theme.visuals.defaultPrimary;
-  const isDark = theme.visuals.isDark;
+  const isCustomBgDark = branding.backgroundColor ? getOptimalTextColor(branding.backgroundColor) === "#ffffff" : false;
+  const isDark = theme.visuals.isDark || isCustomBgDark;
 
   // WhatsApp helper
   const getWhatsAppLink = (serviceName?: string) => {
@@ -63,11 +64,20 @@ export default function ClassicTemplate({ data, bookingElement }: TemplateProps)
       style={{
         ...themeVars,
         fontFamily: branding.font,
-        ...(branding.backgroundColor ? { backgroundColor: branding.backgroundColor } : {})
+        backgroundColor: branding.backgroundColor || (isDark ? "#09090b" : "#ffffff")
       }}
     >
       {/* ── HEADER / NAVBAR ── */}
-      <header className={`sticky top-0 z-40 border-b ${isDark ? "bg-zinc-950/90 border-zinc-800/80" : "bg-white/90 border-zinc-200/80"} backdrop-blur-md transition-colors`}>
+      <header
+        className={`sticky top-0 z-40 border-b backdrop-blur-md transition-colors ${isDark ? "border-white/10" : "border-zinc-200/80"}`}
+        style={{
+          backgroundColor: branding.backgroundColor
+            ? `${branding.backgroundColor}ee`
+            : isDark
+            ? "rgba(9, 9, 11, 0.9)"
+            : "rgba(255, 255, 255, 0.9)"
+        }}
+      >
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between">
           <a href="#hero" className="flex items-center gap-3 group">
             {identity.logo ? (
@@ -215,11 +225,25 @@ export default function ClassicTemplate({ data, bookingElement }: TemplateProps)
       </section>
 
       {/* ── SERVICES SECTION ── */}
-      <section id="servicios" className={`py-16 px-4 sm:px-6 border-t ${isDark ? "border-zinc-900 bg-zinc-900/40" : "border-zinc-100 bg-zinc-50"}`}>
+      <section
+        id="servicios"
+        className={`py-16 px-4 sm:px-6 border-t ${
+          branding.backgroundColor
+            ? "bg-black/10"
+            : isDark
+            ? "border-white/10 bg-zinc-900/40"
+            : "border-zinc-100 bg-zinc-50"
+        }`}
+        style={branding.backgroundColor ? { borderColor: "rgba(255,255,255,0.08)" } : undefined}
+      >
         <div className="max-w-6xl mx-auto">
           <div className="text-center max-w-xl mx-auto mb-12 space-y-2">
-            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Nuestros Servicios</h2>
-            <p className="text-sm text-zinc-500">Seleccioná tu servicio y reservá tu lugar en minutos</p>
+            <h2 className={`text-2xl sm:text-3xl font-bold tracking-tight ${isDark ? "text-white" : "text-zinc-900"}`}>
+              Nuestros Servicios
+            </h2>
+            <p className={`text-sm ${isDark ? "text-zinc-400" : "text-zinc-500"}`}>
+              Seleccioná tu servicio y reservá tu lugar en minutos
+            </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -227,7 +251,11 @@ export default function ClassicTemplate({ data, bookingElement }: TemplateProps)
               <div
                 key={srv.id}
                 onClick={() => setSelectedService(srv.name)}
-                className={`p-6 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between ${isDark ? "bg-zinc-900/80 border-zinc-800 hover:border-zinc-700" : "bg-white border-zinc-200/80 hover:border-zinc-300"} hover:shadow-md`}
+                className={`p-6 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between ${
+                  isDark
+                    ? "bg-zinc-900/80 border-white/10 hover:border-white/20 text-zinc-100"
+                    : "bg-white border-zinc-200/80 hover:border-zinc-300 text-zinc-900"
+                } hover:shadow-md`}
               >
                 <div>
                   <div className="flex items-start justify-between gap-3 mb-3">
@@ -240,12 +268,12 @@ export default function ClassicTemplate({ data, bookingElement }: TemplateProps)
                     </span>
                   </div>
                   <h3 className="text-lg font-bold mb-1">{srv.name}</h3>
-                  <p className="text-xs text-zinc-500 mb-4 leading-relaxed line-clamp-3">
+                  <p className={`text-xs mb-4 leading-relaxed line-clamp-3 ${isDark ? "text-zinc-400" : "text-zinc-500"}`}>
                     {srv.description || "Servicio profesional de máxima calidad."}
                   </p>
                 </div>
 
-                <div className="pt-4 border-t border-zinc-100 dark:border-zinc-800/60 flex items-center justify-between text-xs text-zinc-400">
+                <div className={`pt-4 border-t flex items-center justify-between text-xs ${isDark ? "border-white/10 text-zinc-400" : "border-zinc-100 text-zinc-500"}`}>
                   <span className="flex items-center gap-1">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <circle cx="12" cy="12" r="10" />
@@ -271,8 +299,12 @@ export default function ClassicTemplate({ data, bookingElement }: TemplateProps)
       {gallery.length > 0 && (
         <section id="galeria" className="py-16 px-4 sm:px-6 max-w-6xl mx-auto">
           <div className="text-center max-w-xl mx-auto mb-12 space-y-2">
-            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Galería de Trabajos</h2>
-            <p className="text-sm text-zinc-500">Conocé la calidad y el detalle que nos define</p>
+            <h2 className={`text-2xl sm:text-3xl font-bold tracking-tight ${isDark ? "text-white" : "text-zinc-900"}`}>
+              Galería de Trabajos
+            </h2>
+            <p className={`text-sm ${isDark ? "text-zinc-400" : "text-zinc-500"}`}>
+              Conocé la calidad y el detalle que nos define
+            </p>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -290,10 +322,20 @@ export default function ClassicTemplate({ data, bookingElement }: TemplateProps)
       )}
 
       {/* ── SCHEDULE & LOCATION ── */}
-      <section id="horarios" className={`py-16 px-4 sm:px-6 border-t ${isDark ? "border-zinc-900 bg-zinc-900/30" : "border-zinc-100 bg-zinc-50"}`}>
+      <section
+        id="horarios"
+        className={`py-16 px-4 sm:px-6 border-t ${
+          branding.backgroundColor
+            ? "bg-black/10"
+            : isDark
+            ? "border-white/10 bg-zinc-900/30"
+            : "border-zinc-100 bg-zinc-50"
+        }`}
+        style={branding.backgroundColor ? { borderColor: "rgba(255,255,255,0.08)" } : undefined}
+      >
         <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* Horarios */}
-          <div className={`p-6 sm:p-8 rounded-2xl border ${isDark ? "bg-zinc-900 border-zinc-800" : "bg-white border-zinc-200"}`}>
+          <div className={`p-6 sm:p-8 rounded-2xl border ${isDark ? "bg-zinc-900/90 border-white/10 text-zinc-100" : "bg-white border-zinc-200 text-zinc-900"}`}>
             <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={primary} strokeWidth="2">
                 <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
@@ -305,10 +347,10 @@ export default function ClassicTemplate({ data, bookingElement }: TemplateProps)
             </h3>
             <div className="space-y-2.5 text-sm">
               {schedule.map((day) => (
-                <div key={day.day} className="flex items-center justify-between py-1 border-b border-zinc-100 dark:border-zinc-800/60 last:border-0">
-                  <span className="font-medium text-zinc-700 dark:text-zinc-300">{day.label}</span>
+                <div key={day.day} className={`flex items-center justify-between py-1 border-b last:border-0 ${isDark ? "border-white/10" : "border-zinc-100"}`}>
+                  <span className={`font-medium ${isDark ? "text-zinc-300" : "text-zinc-700"}`}>{day.label}</span>
                   {day.enabled ? (
-                    <span className="font-semibold text-zinc-900 dark:text-zinc-100">{day.open} - {day.close} hs</span>
+                    <span className={`font-semibold ${isDark ? "text-white" : "text-zinc-900"}`}>{day.open} - {day.close} hs</span>
                   ) : (
                     <span className="text-xs text-zinc-400 font-medium">Cerrado</span>
                   )}
@@ -318,7 +360,7 @@ export default function ClassicTemplate({ data, bookingElement }: TemplateProps)
           </div>
 
           {/* Contacto & Ubicación */}
-          <div className={`p-6 sm:p-8 rounded-2xl border flex flex-col justify-between ${isDark ? "bg-zinc-900 border-zinc-800" : "bg-white border-zinc-200"}`}>
+          <div className={`p-6 sm:p-8 rounded-2xl border flex flex-col justify-between ${isDark ? "bg-zinc-900/90 border-white/10 text-zinc-100" : "bg-white border-zinc-200 text-zinc-900"}`}>
             <div>
               <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={primary} strokeWidth="2">
@@ -327,22 +369,22 @@ export default function ClassicTemplate({ data, bookingElement }: TemplateProps)
                 </svg>
                 Ubicación & Contacto
               </h3>
-              <div className="space-y-3 text-sm text-zinc-600 dark:text-zinc-300">
+              <div className={`space-y-3 text-sm ${isDark ? "text-zinc-300" : "text-zinc-600"}`}>
                 {contact.address && (
                   <p className="flex items-start gap-2">
-                    <span className="font-semibold text-zinc-900 dark:text-zinc-100 shrink-0">Dirección:</span>
+                    <span className={`font-semibold shrink-0 ${isDark ? "text-white" : "text-zinc-900"}`}>Dirección:</span>
                     <span>{contact.address}</span>
                   </p>
                 )}
                 {contact.phone && (
                   <p className="flex items-center gap-2">
-                    <span className="font-semibold text-zinc-900 dark:text-zinc-100">Teléfono:</span>
+                    <span className={`font-semibold ${isDark ? "text-white" : "text-zinc-900"}`}>Teléfono:</span>
                     <a href={`tel:${contact.phone}`} className="hover:underline">{contact.phone}</a>
                   </p>
                 )}
                 {contact.email && (
                   <p className="flex items-center gap-2">
-                    <span className="font-semibold text-zinc-900 dark:text-zinc-100">Email:</span>
+                    <span className={`font-semibold ${isDark ? "text-white" : "text-zinc-900"}`}>Email:</span>
                     <a href={`mailto:${contact.email}`} className="hover:underline">{contact.email}</a>
                   </p>
                 )}
@@ -415,7 +457,13 @@ export default function ClassicTemplate({ data, bookingElement }: TemplateProps)
 
       {/* ── FOOTER ── */}
       <footer
-        className={`py-12 px-4 sm:px-6 border-t text-center text-xs ${isDark ? "border-zinc-900 bg-zinc-950 text-zinc-500" : "border-zinc-100 bg-white text-zinc-500"}`}
+        className={`py-12 px-4 sm:px-6 border-t text-center text-xs ${
+          branding.footerBgColor
+            ? ""
+            : isDark
+            ? "border-white/10 bg-black/40 text-zinc-400"
+            : "border-zinc-100 bg-white text-zinc-500"
+        }`}
         style={{
           ...(branding.footerBgColor ? { backgroundColor: branding.footerBgColor } : {}),
           ...(branding.footerTextColor ? { color: branding.footerTextColor } : {})

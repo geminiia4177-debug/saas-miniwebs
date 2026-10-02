@@ -40,11 +40,39 @@ export const IframePreview = forwardRef<HTMLIFrameElement, IframePreviewProps>(
           head.appendChild(el.cloneNode(true));
         });
 
-        // Configuración de body y estilo base
+        // Configuración de scrollbar y estilos base
+        const scrollStyle = doc.createElement("style");
+        scrollStyle.textContent = `
+          html, body {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(99, 102, 241, 0.5) rgba(0, 0, 0, 0.2);
+          }
+          ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+          }
+          ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.25);
+          }
+          ::-webkit-scrollbar-thumb {
+            background: rgba(99, 102, 241, 0.5);
+            border-radius: 4px;
+          }
+          ::-webkit-scrollbar-thumb:hover {
+            background: rgba(99, 102, 241, 0.8);
+          }
+        `;
+        head.appendChild(scrollStyle);
+
+        // Configuración de html, body y estilo base
+        doc.documentElement.style.height = "100%";
+        doc.documentElement.style.overflowY = "auto";
+        doc.documentElement.style.overflowX = "hidden";
         doc.body.className = "bg-transparent overflow-x-hidden antialiased";
         doc.body.style.margin = "0";
         doc.body.style.padding = "0";
         doc.body.style.minHeight = "100%";
+        doc.body.style.overflowY = "visible";
         doc.body.style.fontFamily = "var(--font-sans), 'Plus Jakarta Sans', system-ui, sans-serif";
 
         // Reenviar mensajes de postMessage desde el iframe hacia la ventana principal

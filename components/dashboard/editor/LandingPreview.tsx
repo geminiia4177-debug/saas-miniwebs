@@ -84,6 +84,41 @@ export const LandingPreview = ({
     ? `https://${biz.customDomain}` 
     : `https://${biz.subdomain || "demo"}.miniwebs.lat`;
 
+  // Control de escala adaptable para que la vista de escritorio nunca se corte
+  const [fitScale, setFitScale] = React.useState<boolean>(true);
+  const previewRef = React.useRef<HTMLDivElement>(null);
+  const [scale, setScale] = React.useState<number>(1);
+
+  React.useEffect(() => {
+    if (previewDevice !== "desktop") {
+      setScale(1);
+      return;
+    }
+
+    const updateScale = () => {
+      if (!previewRef.current) return;
+      const width = previewRef.current.clientWidth;
+      if (width > 0 && width < 1180 && fitScale) {
+        setScale(Math.max(0.4, Math.min(1, width / 1180)));
+      } else {
+        setScale(1);
+      }
+    };
+
+    updateScale();
+    window.addEventListener("resize", updateScale);
+    let ro: ResizeObserver | null = null;
+    if (previewRef.current) {
+      ro = new ResizeObserver(updateScale);
+      ro.observe(previewRef.current);
+    }
+
+    return () => {
+      window.removeEventListener("resize", updateScale);
+      ro?.disconnect();
+    };
+  }, [previewDevice, fitScale]);
+
   // ── MODO MÓVIL (Smartphone Mockup de Alta Precisión) ──
   if (previewDevice === "mobile") {
     return (
@@ -134,19 +169,45 @@ export const LandingPreview = ({
           <span className="truncate">{currentUrl}</span>
         </div>
 
-        <div className="w-12 text-right">
-          <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Escritorio</span>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setFitScale(!fitScale)}
+            className="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors flex items-center gap-1.5"
+            style={{
+              background: fitScale ? "rgba(99,102,241,0.2)" : "rgba(255,255,255,0.06)",
+              color: fitScale ? "#a5b4fc" : "#94a3b8",
+              border: fitScale ? "1px solid rgba(99,102,241,0.35)" : "1px solid rgba(255,255,255,0.1)",
+            }}
+            title={fitScale ? "Ver en píxeles reales (100%)" : "Ajustar al ancho disponible para ver todo el sitio"}
+          >
+            <span>{fitScale ? `Ajustado (${Math.round(scale * 100)}%)` : "100% Real"}</span>
+          </button>
+          <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider hidden sm:inline">Escritorio</span>
         </div>
       </div>
 
-      {/* Pantalla de escritorio con IframePreview */}
-      <div className="relative w-full flex-1 overflow-hidden bg-black">
-        <IframePreview title="Vista Previa Escritorio" className="w-full h-full">
-          <div className="w-full min-h-screen bg-transparent select-text">
-            {renderContent()}
-            <EditModeWrapper />
-          </div>
-        </IframePreview>
+      {/* Pantalla de escritorio con IframePreview y escalado proporcional */}
+      <div className="relative w-full flex-1 overflow-hidden bg-black" ref={previewRef}>
+        <div
+          className="h-full"
+          style={
+            fitScale && scale < 1
+              ? {
+                  width: "1180px",
+                  height: `${100 / scale}%`,
+                  transform: `scale(${scale})`,
+                  transformOrigin: "top left",
+                }
+              : { width: "100%", height: "100%" }
+          }
+        >
+          <IframePreview title="Vista Previa Escritorio" className="w-full h-full">
+            <div className="w-full min-h-screen bg-transparent select-text">
+              {renderContent()}
+              <EditModeWrapper />
+            </div>
+          </IframePreview>
+        </div>
       </div>
     </div>
   );
