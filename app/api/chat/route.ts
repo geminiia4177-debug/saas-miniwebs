@@ -306,6 +306,8 @@ Para crear una reserva confirmada cuando tengas servicio, fecha, hora, nombre y 
 `;
 
     let responseText = "";
+    let groqErrorMsg = "";
+    let geminiErrorMsg = "";
 
     // 1. Inferencia ultrarrápida con Groq (Primaria - openai/gpt-oss-120b)
     if (process.env.GROQ_API_KEY) {
@@ -341,7 +343,8 @@ Para crear una reserva confirmada cuando tengas servicio, fecha, hora, nombre y 
           responseText = fallbackCompletion.choices[0]?.message?.content || "";
         }
       } catch (groqErr: any) {
-        console.error("Groq execution failed, attempting Gemini fallback:", groqErr instanceof Error ? groqErr.message : groqErr);
+        groqErrorMsg = groqErr instanceof Error ? groqErr.message : String(groqErr);
+        console.error("Groq execution failed, attempting Gemini fallback:", groqErrorMsg);
       }
     }
 
@@ -353,7 +356,7 @@ Para crear una reserva confirmada cuando tengas servicio, fecha, hora, nombre y 
           role: msg.role === "user" ? "user" : "model",
           parts: [{ text: String(msg.content || "").substring(0, 500) }],
         }));
-        const modelName = process.env.GEMINI_MODEL || "gemini-2.0-flash-lite";
+        const modelName = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
         const aiResponse = await ai.models.generateContent({
           model: modelName,
           contents: formattedMessages,
@@ -368,7 +371,8 @@ Para crear una reserva confirmada cuando tengas servicio, fecha, hora, nombre y 
         });
         responseText = aiResponse.text || "";
       } catch (geminiErr: any) {
-        console.error("Gemini fallback error:", geminiErr instanceof Error ? geminiErr.message : geminiErr);
+        geminiErrorMsg = geminiErr instanceof Error ? geminiErr.message : String(geminiErr);
+        console.error("Gemini fallback error:", geminiErrorMsg);
       }
     }
 
@@ -474,7 +478,13 @@ Para crear una reserva confirmada cuando tengas servicio, fecha, hora, nombre y 
       }
     }
 
-    return NextResponse.json({ message: responseText });
+    const resHeaders: Record<string, string> = {
+      "X-AI-Provider": `${process.env.GROQ_API_KEY ? "groq" : "nogroq"}_${process.env.GEMINI_API_KEY ? "gemini" : "nogemini"}`,
+    };
+    if (groqErrorMsg) resHeaders["X-Groq-Error"] = groqErrorMsg.substring(0, 100);
+    if (geminiErrorMsg) resHeaders["X-Gemini-Error"] = geminiErrorMsg.substring(0, 100);
+
+    return NextResponse.json({ message: responseText }, { headers: resHeaders });
   } catch (error: any) {
     console.error("Error in Chat API:", error instanceof Error ? error.message : "unknown");
     return NextResponse.json({ error: "Error procesando tu consulta" }, { status: 500 });
