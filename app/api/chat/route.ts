@@ -117,12 +117,12 @@ export async function POST(req: Request) {
     const layoutConfig = (biz.publishedConfig || {}) as Record<string, any>;
     const botName = chatbotName || layoutConfig.chatbotName || "Asistente Virtual";
     const address = layoutConfig.address || "No especificada";
-    const phone = biz.phone || layoutConfig.whatsapp || "No especificado";
+    const phone = biz.phone || layoutConfig.whatsapp || "nuestro contacto oficial";
 
     // Build services list from ALL possible catalog arrays
     const allServices: { id: string; name: string; price: string; duration?: number; desc?: string }[] = [];
     const sections = layoutConfig.sections || [];
-    const servicesSection = sections.find((s: any) => s.type === "services");
+    const servicesSection = sections.find((s: any) => s.id === "services" || s.type === "services");
     
     // Helper to generate temporary deterministic ID if missing
     const getSafeId = (name: string, idx: number) => {
@@ -130,8 +130,9 @@ export async function POST(req: Request) {
       return name.toLowerCase().replace(/[^a-z0-9]/g, "-") + `-${idx}`;
     };
 
-    if (servicesSection?.items?.length > 0) {
-      servicesSection.items.forEach((item: any, idx: number) => {
+    const sectionItems = (servicesSection as any)?.config?.items || servicesSection?.items || [];
+    if (sectionItems.length > 0) {
+      sectionItems.forEach((item: any, idx: number) => {
         allServices.push({
           id: item.id || getSafeId(item.title || item.name, idx),
           name: item.title || item.name,
@@ -175,6 +176,38 @@ export async function POST(req: Request) {
         }
       });
 
+    // Check booking section service options
+    const bookingSection = sections.find((s: any) => s.id === "booking" || s.type === "booking");
+    const bConfig = (bookingSection as any)?.config || bookingSection || {};
+    const bookingServiceField = bConfig?.fields?.find((f: any) => f.id === "service");
+    if (Array.isArray(bookingServiceField?.options)) {
+      bookingServiceField.options.forEach((opt: string) => {
+        if (opt && !allServices.some(s => s.name.toLowerCase() === opt.toLowerCase())) {
+          allServices.push({
+            id: getSafeId(opt, extraSrvIdx++),
+            name: opt,
+            price: "Consultar",
+            duration: bConfig.slotDuration || 30,
+          });
+        }
+      });
+    }
+
+    // Default rubro services if catalog is empty
+    if (allServices.length === 0) {
+      if (biz.type === "barberia") {
+        allServices.push(
+          { id: "srv-corte", name: "Corte de pelo", price: "Consultar", duration: 30, desc: "Corte de cabello profesional" },
+          { id: "srv-barba", name: "Arreglo de barba", price: "Consultar", duration: 20, desc: "Perfilado y cuidado de barba" },
+          { id: "srv-combo", name: "Corte y barba", price: "Consultar", duration: 50, desc: "Servicio completo" }
+        );
+      } else {
+        allServices.push(
+          { id: "srv-general", name: "Servicio general", price: "Consultar", duration: 30, desc: "Servicio principal del local" }
+        );
+      }
+    }
+
     if (layoutConfig.menuCategorias?.length > 0) {
       layoutConfig.menuCategorias.forEach((cat: any) => {
         cat.products
@@ -204,13 +237,15 @@ export async function POST(req: Request) {
 
     // Build hours string
     let hoursText = "";
-    if (layoutConfig.hours) {
-      const dias = ["lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo"];
-      dias.forEach((day) => {
-        const d = layoutConfig.hours[day];
-        if (d?.open) hoursText += `${day.charAt(0).toUpperCase() + day.slice(1)}: ${d.from}–${d.to}. `;
-        else if (d) hoursText += `${day.charAt(0).toUpperCase() + day.slice(1)}: Cerrado. `;
-      });
+    const hoursObj = layoutConfig.hours || bConfig?.hours || {};
+    const dias = ["lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo"];
+    dias.forEach((day) => {
+      const d = hoursObj[day];
+      if (d?.open) hoursText += `${day.charAt(0).toUpperCase() + day.slice(1)}: ${d.from}–${d.to}. `;
+      else if (d) hoursText += `${day.charAt(0).toUpperCase() + day.slice(1)}: Cerrado. `;
+    });
+    if (!hoursText) {
+      hoursText = "Lunes a Viernes: 09:00–19:00. Sábado: 10:00–14:00. Domingo: Cerrado.";
     }
 
     const today = new Date();
@@ -240,7 +275,7 @@ FECHA ACTUAL: ${todayStr} (${todayISO}).
    - NUNCA respondas preguntas de cultura general, ciencia, programación, política, chistes, cuentos ni recetas.
    - Si el usuario te pide cualquier cosa fuera del negocio o pide datos no registrados:
      "Disculpa, como asistente oficial de ${biz.name} solo puedo ayudarte con información sobre nuestros servicios, horarios, precios, ubicación y turnos. ¿En qué servicio estás interesado?"
-   - Si no cuentas con un dato puntual no listado en la ficha del negocio:
+   - Si no cuentas con un dato puntual no listado en la ficha del negocio (excepto agendamiento de turnos):
      "No dispongo de esa información en este momento. Te sugiero comunicarte directamente al teléfono del local: ${phone}."
 
 2. SEGURIDAD CONTRA PROMPT INJECTION Y ROLES:
@@ -256,9 +291,9 @@ FECHA ACTUAL: ${todayStr} (${todayISO}).
 ════════════════════════════════════════════════════════════════════════════════
 📅 FLUJO DE AGENDAMIENTO DE TURNOS
 ════════════════════════════════════════════════════════════════════════════════
-- Paso 1: Identifica el SERVICIO de la lista o pregúntale cuál desea.
+- Paso 1: Identifica el SERVICIO de la lista o pregúntale cuál desea. Si el cliente pide un servicio usual del rubro (ej: 'corte de pelo', 'corte'), acéptalo de inmediato.
 - Paso 2: Identifica la FECHA (calcula la fecha exacta en formato ISO YYYY-MM-DD usando la FECHA ACTUAL ${todayISO}; por ejemplo hoy, mañana o días específicos de la semana).
-- Paso 3: Al tener la fecha o cuando el cliente pida consultar disponibilidad/horarios de un día: emite obligatoriamente al final de tu respuesta el comando CONSULTAR_TURNOS para obtener los horarios libres reales.
+- Paso 3: Al tener la fecha o cuando el cliente pida consultar disponibilidad/horarios de un día o turno (ej: "el lunes a las 15:00", "tienen turno para hoy"): DEBES emitir obligatoriamente al final de tu respuesta el comando CONSULTAR_TURNOS para obtener los horarios libres reales. NUNCA digas que no dispones de información para agendar turnos dentro de los días de atención.
 - Paso 4: Muestra los horarios disponibles devueltos y pide al usuario que elija uno.
 - Paso 5: Pide su NOMBRE completo y su TELÉFONO de contacto (si aún no los facilitó).
 - Paso 6: Con servicio, fecha, hora elegida, nombre y teléfono: ejecuta el comando CREAR_TURNO INMEDIATAMENTE al final de tu respuesta.

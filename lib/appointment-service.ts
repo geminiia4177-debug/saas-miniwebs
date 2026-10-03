@@ -134,9 +134,10 @@ export function resolveServiceFromLayout(
 
   // 5. Sections -> services
   const sections = Array.isArray(rawConfig.sections) ? rawConfig.sections : [];
-  const srvSection = sections.find((s) => s.type === "services");
-  if (Array.isArray(srvSection?.items)) {
-    srvSection.items.forEach((s) => {
+  const srvSection = sections.find((s: any) => s.id === "services" || s.type === "services");
+  const srvItems = (srvSection as any)?.config?.items || srvSection?.items;
+  if (Array.isArray(srvItems)) {
+    srvItems.forEach((s: any) => {
       allServices.push({
         id: String(s.id || s.name || s.title || s.nombre),
         name: s.nombre || s.name || s.title || "Servicio",
@@ -150,10 +151,33 @@ export function resolveServiceFromLayout(
   const matchById = allServices.find((s) => s.id.toLowerCase() === query);
   if (matchById) return matchById;
 
-  const matchByName = allServices.find((s) => s.name.toLowerCase() === query);
+  const matchByName = allServices.find((s) => s.name.toLowerCase() === query || query.includes(s.name.toLowerCase()));
   if (matchByName) return matchByName;
 
-  return null;
+  // Fallback default service when not explicitly defined in custom catalog
+  const bookingSection = sections.find((s: any) => s.id === "booking" || s.type === "booking");
+  const slotDuration = (bookingSection as any)?.config?.slotDuration || 30;
+  return {
+    id: serviceIdOrName.trim(),
+    name: serviceIdOrName.trim(),
+    price: 0,
+    duration: slotDuration,
+  };
+}
+
+function extractHoursFromConfig(rawConfig: RawLayoutConfig): Record<string, { open?: boolean; from?: string; to?: string }> {
+  if (rawConfig.hours && Object.keys(rawConfig.hours).length > 0) {
+    return rawConfig.hours;
+  }
+  const sections = Array.isArray(rawConfig.sections) ? rawConfig.sections : [];
+  const bookingSection = sections.find((s: any) => s.id === "booking" || s.type === "booking");
+  if (bookingSection) {
+    const bConfig = (bookingSection as any).config || bookingSection;
+    if (bConfig.hours && Object.keys(bConfig.hours).length > 0) {
+      return bConfig.hours;
+    }
+  }
+  return defaultPublicConfig.hours || {};
 }
 
 const defaultPublicConfig: RawLayoutConfig = {
@@ -212,7 +236,7 @@ export class AppointmentService {
     // Determine day config in local business timezone
     const noonUTC = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
     const dayName = getBusinessDayName(noonUTC, timezone);
-    const hours = rawConfig.hours || {};
+    const hours = extractHoursFromConfig(rawConfig);
     const dayConfig = hours[dayName];
 
     if (!dayConfig || !dayConfig.open) {
@@ -382,7 +406,7 @@ export class AppointmentService {
     }
 
     const dayName = getBusinessDayName(date, timezone);
-    const hours = rawConfig.hours;
+    const hours = extractHoursFromConfig(rawConfig);
     if (hours) {
       const dayConfig = hours[dayName];
       if (!dayConfig || !dayConfig.open) {
