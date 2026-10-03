@@ -256,12 +256,12 @@ FECHA ACTUAL: ${todayStr} (${todayISO}).
 ════════════════════════════════════════════════════════════════════════════════
 📅 FLUJO DE AGENDAMIENTO DE TURNOS
 ════════════════════════════════════════════════════════════════════════════════
-- Paso 1: Pregunta qué SERVICIO desea de la lista.
-- Paso 2: Pregunta qué FECHA prefiere (o si prefiere hoy / mañana).
-- Paso 3: Al tener la fecha → emite el comando CONSULTAR_TURNOS para obtener los horarios libres reales.
+- Paso 1: Identifica el SERVICIO de la lista o pregúntale cuál desea.
+- Paso 2: Identifica la FECHA (calcula la fecha exacta en formato ISO YYYY-MM-DD usando la FECHA ACTUAL ${todayISO}; por ejemplo hoy, mañana o días específicos de la semana).
+- Paso 3: Al tener la fecha o cuando el cliente pida consultar disponibilidad/horarios de un día: emite obligatoriamente al final de tu respuesta el comando CONSULTAR_TURNOS para obtener los horarios libres reales.
 - Paso 4: Muestra los horarios disponibles devueltos y pide al usuario que elija uno.
-- Paso 5: Pide su NOMBRE completo y su TELÉFONO de contacto.
-- Paso 6: Con servicio, fecha, hora, nombre y teléfono → ejecuta el comando CREAR_TURNO INMEDIATAMENTE.
+- Paso 5: Pide su NOMBRE completo y su TELÉFONO de contacto (si aún no los facilitó).
+- Paso 6: Con servicio, fecha, hora elegida, nombre y teléfono: ejecuta el comando CREAR_TURNO INMEDIATAMENTE al final de tu respuesta.
 
 ════════════════════════════════════════════════════════════════════════════════
 🏢 INFORMACIÓN OFICIAL DE ${biz.name.toUpperCase()}
@@ -296,18 +296,18 @@ ${bankInfoText || "Consultar directamente por WhatsApp"}
 (Si el cliente te pregunta cómo pagar o pide datos de transferencia o CLABE, responde exclusivamente con estos datos oficiales. NUNCA inventes cuentas o bancos).
 
 ════════════════════════════════════════════════════════════════════════════════
-⚡ COMANDOS DEL SISTEMA (Formato JSON estricto)
+⚡ COMANDOS DEL SISTEMA (Formato JSON estricto en una sola línea)
 ════════════════════════════════════════════════════════════════════════════════
-Para consultar disponibilidad de turnos:
+Para consultar disponibilidad de turnos en una fecha:
 |||JSON_CMD:{"action":"CONSULTAR_TURNOS","businessId":"${businessId}","date":"YYYY-MM-DD","serviceId":"id-del-servicio"}|||
 
-Para crear una reserva confirmada:
+Para crear una reserva confirmada cuando tengas servicio, fecha, hora, nombre y teléfono:
 |||JSON_CMD:{"action":"CREAR_TURNO","businessId":"${businessId}","clientName":"Nombre","clientPhone":"Telefono","serviceId":"id-del-servicio","date":"YYYY-MM-DD","time":"HH:MM"}|||
 `;
 
     let responseText = "";
 
-    // 1. Inferencia ultrarrápida con Groq (Primaria)
+    // 1. Inferencia ultrarrápida con Groq (Primaria - openai/gpt-oss-120b)
     if (process.env.GROQ_API_KEY) {
       try {
         const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
@@ -326,7 +326,7 @@ Para crear una reserva confirmada:
             model: primaryModel,
             messages: groqMessages,
             temperature: 0.1,
-            max_tokens: 350,
+            max_tokens: 650,
           });
           responseText = completion.choices[0]?.message?.content || "";
         } catch (groqModelErr: any) {
@@ -336,7 +336,7 @@ Para crear una reserva confirmada:
             model: fallbackModel,
             messages: groqMessages,
             temperature: 0.1,
-            max_tokens: 350,
+            max_tokens: 650,
           });
           responseText = fallbackCompletion.choices[0]?.message?.content || "";
         }
@@ -392,8 +392,10 @@ Para crear una reserva confirmada:
       }
     }
 
-    // ALWAYS strip all command markers so raw tokens are NEVER displayed to the client
+    // ALWAYS strip reasoning tags and all command markers so raw tokens are NEVER displayed to the client
     responseText = responseText
+      .replace(/<think>[\s\S]*?<\/think>/gi, "")
+      .replace(/<think>[\s\S]*/gi, "")
       .replace(/\|\|\|JSON_CMD:[\s\S]*?\|\|\|/g, "")
       .replace(/\|\|\|JSON_CMD:[\s\S]*/g, "")
       .replace(/\|\|\|/g, "")
