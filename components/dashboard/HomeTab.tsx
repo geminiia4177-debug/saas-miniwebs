@@ -24,10 +24,16 @@ export default function HomeTab({ biz, media, sections, pending, appointments, s
       </div>
 
       {(() => {
+        const isTienda = biz.type === "tienda";
         const progressItems = [
           { label: "Información básica", completed: !!biz.name && !!biz.tagline, weight: 20, tab: "config" },
           { label: "Logo subido", completed: !!biz.logoUrl, weight: 20, tab: "config" },
-          { label: "Servicios cargados", completed: ((biz.layoutConfig?.services || []).length > 0) || ((biz.layoutConfig?.products || []).length > 0) || ((biz.layoutConfig?.menuCategorias || []).length > 0) || ((biz.layoutConfig?.canchas || []).length > 0) || ((biz.layoutConfig?.tallerServices || []).length > 0), weight: 20, tab: "editor" },
+          { 
+            label: isTienda ? "Productos cargados" : "Servicios cargados", 
+            completed: ((biz.layoutConfig?.services || []).length > 0) || ((biz.layoutConfig?.products || []).length > 0) || ((biz.layoutConfig?.menuCategorias || []).length > 0) || ((biz.layoutConfig?.canchas || []).length > 0) || ((biz.layoutConfig?.tallerServices || []).length > 0) || ((biz.layoutConfig?.tiendaProductos || []).length > 0), 
+            weight: 20, 
+            tab: "editor" 
+          },
           { label: "Fotos en galería", completed: media.length > 0, weight: 20, tab: "gallery" },
           { label: "Horarios configurados", completed: !!biz.layoutConfig?.hours, weight: 20, tab: "config" },
         ];
@@ -65,10 +71,12 @@ export default function HomeTab({ biz, media, sections, pending, appointments, s
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
         {[
-          { label: "Turnos pendientes", val: pending.length, icon: "calendar", color: "#f59e0b", bg: "#f59e0b15", tab: "appointments" },
+          biz.type === "tienda"
+            ? { label: "Productos tienda", val: (biz.layoutConfig?.tiendaProductos?.length || 0), icon: "shopping-bag", color: "#6366f1", bg: "#6366f115", tab: "editor" }
+            : { label: "Turnos pendientes", val: pending.length, icon: "calendar", color: "#f59e0b", bg: "#f59e0b15", tab: "appointments" },
           { label: "Fotos en galería", val: media.length, icon: "image", color: "#10b981", bg: "#10b98115", tab: "gallery" },
-          { label: "Secciones activas", val: sections.filter((s: Section) => s.visible).length, icon: "eye", color: "#6366f1", bg: "#6366f115", tab: "editor" },
-          { label: "Estado", val: "Activo", icon: "zap", color: "#a855f7", bg: "#a855f715", tab: "config" },
+          { label: "Secciones activas", val: sections.filter((s: Section) => s.visible).length, icon: "eye", color: "#a855f7", bg: "#a855f715", tab: "editor" },
+          { label: "Estado", val: "Activo", icon: "zap", color: "#ec4899", bg: "#ec489915", tab: "config" },
         ].map((s) => (
           <div key={s.label} onClick={() => setTab(s.tab)} className="group rounded-2xl p-5 flex flex-col justify-between cursor-pointer hover:shadow-2xl transition-all duration-300 relative overflow-hidden" style={{ background: "linear-gradient(135deg,#131929,#111825)", border: "1px solid rgba(255,255,255,0.05)" }}>
             <div className="flex items-center justify-between mb-4 relative z-10">
@@ -87,7 +95,9 @@ export default function HomeTab({ biz, media, sections, pending, appointments, s
           <div className="flex items-start justify-between mb-4">
             <div>
               <p className="text-white font-bold mb-1">Tu página pública</p>
-              <p className="text-sm text-slate-400">Compartí este link para recibir reservas.</p>
+              <p className="text-sm text-slate-400">
+                {biz.type === "tienda" ? "Compartí este link para recibir pedidos y compras." : "Compartí este link para recibir reservas."}
+              </p>
             </div>
             <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: `${biz.primaryColor}25` }}>
               <Ico n="globe" s={18} c="text-indigo-400" />

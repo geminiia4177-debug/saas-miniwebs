@@ -15,6 +15,7 @@ import GimnasioTemplate from "@/components/landings/GimnasioTemplate";
 import TallerTemplate from "@/components/landings/TallerTemplate";
 import LavaderoTemplate from "@/components/landings/LavaderoTemplate";
 import GeneralTemplate from "@/components/landings/GeneralTemplate";
+import TiendaTemplate from "@/components/landings/TiendaTemplate";
 
 interface LandingPreviewProps {
   biz: Biz;
@@ -33,6 +34,11 @@ export const LandingPreview = ({
   const themeVariant = biz.layoutConfig?.themeVariant || "classic";
 
   const renderContent = () => {
+    // Tienda virtual
+    if (biz.type === "tienda" || themeVariant === "tienda") {
+      return <TiendaTemplate negocio={biz as any} businessId={biz.id} />;
+    }
+
     // Multi-level template or modern universal theme
     const isMultiLevel =
       !!templateLevel ||

@@ -5,7 +5,9 @@ import { Ico } from "@/lib/constants";
 import { QRCodeCanvas } from "qrcode.react";
 
 export default function OrdersTablesTab({ biz, showToast }: { biz: any; showToast: (msg: string, type?: "success" | "error" | "info") => void }) {
+  const isTienda = biz?.type === "tienda";
   const [activeTab, setActiveTab] = useState<"orders" | "tables">("orders");
+  const [orderFilter, setOrderFilter] = useState<"ALL" | "PENDING" | "CONFIRMED" | "COMPLETED" | "CANCELLED">("ALL");
   const [orders, setOrders] = useState<any[]>([]);
   const [tables, setTables] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -24,26 +26,34 @@ export default function OrdersTablesTab({ biz, showToast }: { biz: any; showToas
       }
     } catch(e) {}
     setStatsLoading(false);
-  }
+  };
 
   const openTableDetails = (table: any) => {
     setSelectedTable(table);
     setPaymentMethod("Efectivo");
     setTableStats(null);
     fetchTableStats(table.id);
-  }
+  };
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [ordRes, tabRes] = await Promise.all([
-        fetch(`/api/orders`),
-        fetch(`/api/tables`),
-      ]);
-      const ordData = await ordRes.json();
-      const tabData = await tabRes.json();
-      setOrders(ordData);
-      setTables(tabData);
+      if (isTienda) {
+        const ordRes = await fetch(`/api/orders`);
+        if (ordRes.ok) {
+          const ordData = await ordRes.json();
+          setOrders(Array.isArray(ordData) ? ordData : []);
+        }
+      } else {
+        const [ordRes, tabRes] = await Promise.all([
+          fetch(`/api/orders`),
+          fetch(`/api/tables`),
+        ]);
+        const ordData = await ordRes.json();
+        const tabData = await tabRes.json();
+        setOrders(Array.isArray(ordData) ? ordData : []);
+        setTables(Array.isArray(tabData) ? tabData : []);
+      }
     } catch (e) {
       showToast("Error al cargar datos", "error");
     }
@@ -117,10 +127,23 @@ export default function OrdersTablesTab({ biz, showToast }: { biz: any; showToas
   };
 
   const copyEmployeeLink = () => {
-    // We generate a secure link using the business ID as token (in a real app this would be a hash or JWT)
     const link = biz.customDomain ? `https://${biz.customDomain}/pedidos?token=${biz.id}` : `https://${biz.subdomain}.saas-miniwebs.vercel.app/pedidos?token=${biz.id}`;
     navigator.clipboard.writeText(link);
     showToast("Link copiado al portapapeles", "success");
+  };
+
+  const filteredOrders = orders.filter(o => {
+    if (orderFilter === "ALL") return true;
+    return o.status === orderFilter;
+  });
+
+  const paymentLabels: Record<string, { label: string; icon: string; cls: string }> = {
+    acordar: { label: "A acordar con vendedor", icon: "💵", cls: "bg-amber-500/10 text-amber-300 border-amber-500/20" },
+    mercadopago: { label: "Mercado Pago", icon: "💙", cls: "bg-sky-500/10 text-sky-300 border-sky-500/20" },
+    stripe: { label: "Stripe", icon: "💳", cls: "bg-indigo-500/10 text-indigo-300 border-indigo-500/20" },
+    paypal: { label: "PayPal", icon: "🅿️", cls: "bg-blue-500/10 text-blue-300 border-blue-500/20" },
+    efectivo: { label: "Efectivo", icon: "💵", cls: "bg-emerald-500/10 text-emerald-300 border-emerald-500/20" },
+    transferencia: { label: "Transferencia", icon: "🏦", cls: "bg-purple-500/10 text-purple-300 border-purple-500/20" },
   };
 
   if (loading) {
@@ -132,107 +155,268 @@ export default function OrdersTablesTab({ biz, showToast }: { biz: any; showToas
   }
 
   return (
-    <div className="p-8 animate-fadeIn max-w-6xl mx-auto">
-      <div className="flex justify-between items-end mb-8 border-b border-white/10 pb-6">
+    <div className="p-4 sm:p-8 animate-fadeIn max-w-6xl mx-auto space-y-6">
+      {/* HEADER */}
+      <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-4 border-b border-white/10 pb-6">
         <div>
-          <h1 className="text-2xl font-extrabold text-white tracking-tight mb-1">Pedidos y Mesas</h1>
-          <p className="text-slate-500 text-sm">Gestiona tus pedidos en tiempo real y el estado de tus mesas.</p>
+          <div className="flex items-center gap-2">
+            <span className="text-2xl">{isTienda ? "🛍️" : "🍽️"}</span>
+            <h1 className="text-2xl font-black text-white tracking-tight">
+              {isTienda ? "Pedidos de la Tienda" : "Pedidos y Mesas"}
+            </h1>
+          </div>
+          <p className="text-slate-400 text-sm mt-1">
+            {isTienda
+              ? "Gestiona las compras, clientes, pagos y envíos de tu tienda virtual en tiempo real."
+              : "Gestiona tus pedidos en tiempo real y el estado de tus mesas."}
+          </p>
         </div>
-        <div className="flex gap-2">
-          <button 
-            onClick={() => setActiveTab("orders")}
-            className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === "orders" ? "bg-indigo-500 text-white shadow-[0_0_15px_rgba(99,102,241,0.3)]" : "bg-white/5 text-slate-400 hover:text-white"}`}
+
+        {!isTienda ? (
+          <div className="flex gap-2">
+            <button 
+              onClick={() => setActiveTab("orders")}
+              className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === "orders" ? "bg-indigo-500 text-white shadow-[0_0_15px_rgba(99,102,241,0.3)]" : "bg-white/5 text-slate-400 hover:text-white"}`}
+            >
+              Pedidos Activos
+            </button>
+            <button 
+              onClick={() => setActiveTab("tables")}
+              className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === "tables" ? "bg-indigo-500 text-white shadow-[0_0_15px_rgba(99,102,241,0.3)]" : "bg-white/5 text-slate-400 hover:text-white"}`}
+            >
+              Gestión de Mesas
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={fetchData}
+            className="self-start sm:self-auto px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-white text-xs font-bold transition-colors flex items-center gap-1.5"
           >
-            Pedidos Activos
+            <Ico n="refresh-cw" s={14} c="text-indigo-400" /> Actualizar
           </button>
-          <button 
-            onClick={() => setActiveTab("tables")}
-            className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === "tables" ? "bg-indigo-500 text-white shadow-[0_0_15px_rgba(99,102,241,0.3)]" : "bg-white/5 text-slate-400 hover:text-white"}`}
-          >
-            Gestión de Mesas
-          </button>
-        </div>
+        )}
       </div>
 
       {activeTab === "orders" && (
         <div className="space-y-6">
-          <div className="flex justify-between items-center p-4 rounded-xl" style={{ background: "linear-gradient(135deg,rgba(99,102,241,0.1),rgba(168,85,247,0.1))", border: "1px solid rgba(99,102,241,0.2)" }}>
+          {/* ACCESS LINK BAR */}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 p-4 rounded-xl" style={{ background: "linear-gradient(135deg,rgba(99,102,241,0.1),rgba(168,85,247,0.1))", border: "1px solid rgba(99,102,241,0.2)" }}>
             <div>
-              <h3 className="font-bold text-white mb-1">Acceso para Empleados</h3>
-              <p className="text-xs text-slate-400">Tus empleados pueden usar este link para ver y confirmar pedidos sin acceder a este panel.</p>
+              <h3 className="font-bold text-white text-sm mb-0.5">Acceso para Despacho / Empleados</h3>
+              <p className="text-xs text-slate-400">
+                {isTienda 
+                  ? "Tu equipo puede ver los pedidos entrantes y despacharlos en vivo desde este link protegido."
+                  : "Tus empleados pueden usar este link para ver y confirmar pedidos sin acceder a este panel."}
+              </p>
             </div>
-            <button onClick={copyEmployeeLink} className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white font-bold text-xs rounded-lg transition-colors">
+            <button onClick={copyEmployeeLink} className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white font-bold text-xs rounded-lg transition-colors whitespace-nowrap">
               Copiar Link
             </button>
           </div>
 
+          {/* STATUS FILTERS */}
+          <div className="flex flex-wrap items-center gap-2">
+            {[
+              { id: "ALL", label: "Todos", count: orders.length },
+              { id: "PENDING", label: "Pendientes", count: orders.filter(o => o.status === "PENDING").length },
+              { id: "CONFIRMED", label: "En Preparación", count: orders.filter(o => o.status === "CONFIRMED").length },
+              { id: "COMPLETED", label: "Entregados", count: orders.filter(o => o.status === "COMPLETED").length },
+              { id: "CANCELLED", label: "Cancelados", count: orders.filter(o => o.status === "CANCELLED").length },
+            ].map((f) => (
+              <button
+                key={f.id}
+                onClick={() => setOrderFilter(f.id as any)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                  orderFilter === f.id
+                    ? "bg-indigo-500 text-white shadow-[0_0_12px_rgba(99,102,241,0.3)]"
+                    : "bg-[#131929] text-slate-400 hover:text-white border border-white/5"
+                }`}
+              >
+                <span>{f.label}</span>
+                <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${orderFilter === f.id ? "bg-white/20 text-white" : "bg-white/5 text-slate-400"}`}>
+                  {f.count}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          {/* ORDERS LIST */}
           <div className="grid gap-4">
-            {orders.length === 0 ? (
-              <div className="text-center py-20 px-6 border-2 border-dashed border-white/5 rounded-3xl bg-[#131929]/50">
+            {filteredOrders.length === 0 ? (
+              <div className="text-center py-16 px-6 border-2 border-dashed border-white/5 rounded-3xl bg-[#131929]/50">
                 <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: "linear-gradient(135deg, rgba(99,102,241,0.2), rgba(236,72,153,0.2))" }}>
-                  <span className="text-2xl">🍽️</span>
+                  <span className="text-2xl">{isTienda ? "🛍️" : "🍽️"}</span>
                 </div>
-                <h3 className="text-lg font-bold text-white mb-2">Sin pedidos por ahora</h3>
-                <p className="text-slate-400 max-w-xs mx-auto text-sm">
-                  Los pedidos que hagan tus clientes desde el menú digital o escaneando los QR de las mesas aparecerán aquí automáticamente.
+                <h3 className="text-lg font-bold text-white mb-2">
+                  {orderFilter === "ALL" ? "Sin pedidos por ahora" : `No hay pedidos en estado "${orderFilter}"`}
+                </h3>
+                <p className="text-slate-400 max-w-sm mx-auto text-sm">
+                  {isTienda
+                    ? "Los pedidos realizados por tus clientes en la tienda virtual aparecerán aquí automáticamente."
+                    : "Los pedidos que hagan tus clientes desde el menú digital o escaneando los QR de las mesas aparecerán aquí automáticamente."}
                 </p>
               </div>
-            ) : orders.map(order => (
-              <div key={order.id} className="p-5 rounded-2xl bg-[#131929] border border-white/5 flex flex-col md:flex-row justify-between gap-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-3">
-                    <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-widest border ${
-                      order.type === "DELIVERY" ? "bg-orange-500/10 text-orange-400 border-orange-500/20 shadow-[0_0_10px_rgba(249,115,22,0.1)]" :
-                      order.type === "MESA" ? "bg-blue-500/10 text-blue-400 border-blue-500/20 shadow-[0_0_10px_rgba(59,130,246,0.1)]" : "bg-purple-500/10 text-purple-400 border-purple-500/20 shadow-[0_0_10px_rgba(168,85,247,0.1)]"
-                    }`}>
-                      {order.type === "DELIVERY" ? "🛵 Envío" : order.type === "MESA" ? `🍽️ Mesa ${order.table?.number || "?"}` : "🛍️ Retiro"}
-                    </span>
-                    <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-widest border ${
-                      order.status === "PENDING" ? "bg-yellow-500/10 text-yellow-500 border-yellow-500/20 shadow-[0_0_10px_rgba(234,179,8,0.1)]" :
-                      order.status === "CONFIRMED" ? "bg-indigo-500/10 text-indigo-400 border-indigo-500/20 shadow-[0_0_10px_rgba(99,102,241,0.1)]" :
-                      order.status === "COMPLETED" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.1)]" : "bg-red-500/10 text-red-400 border-red-500/20 shadow-[0_0_10px_rgba(239,68,68,0.1)]"
-                    }`}>
-                      {order.status === "PENDING" ? "Pendiente" : order.status === "CONFIRMED" ? "Preparando" : order.status === "COMPLETED" ? "Listo/Entregado" : "Cancelado"}
-                    </span>
-                    <span className="text-xs text-slate-500">
-                      {new Date(order.createdAt).toLocaleTimeString("es-MX", {hour:"2-digit", minute:"2-digit"})}
-                    </span>
-                  </div>
-                  <div className="space-y-1 mb-3">
-                    {order.items.map((it: any, i: number) => (
-                      <div key={i} className="text-sm text-slate-300">
-                        <span className="font-bold text-white">{it.qty}x</span> {it.name} <span className="text-slate-500 ml-2">${it.price * it.qty}</span>
+            ) : filteredOrders.map(order => {
+              const isEnvio = order.type === "ENVIO" || order.type === "DELIVERY";
+              const isRetiro = order.type === "RETIRO" || order.type === "TAKEAWAY";
+              const isMesa = order.type === "MESA";
+
+              const phoneDigits = order.customerPhone ? String(order.customerPhone).replace(/\D/g, "") : "";
+              const waUrl = phoneDigits
+                ? `https://wa.me/${phoneDigits}?text=${encodeURIComponent(`¡Hola ${order.customerName || ''}! Te escribo de ${biz.name} respecto a tu pedido #${order.id.slice(-6).toUpperCase()}.`)}`
+                : null;
+
+              const payInfo = paymentLabels[order.paymentMethod?.toLowerCase()] || (order.paymentMethod ? { label: order.paymentMethod, icon: "💳", cls: "bg-slate-500/10 text-slate-300 border-slate-500/20" } : null);
+
+              return (
+                <div key={order.id} className="p-5 rounded-2xl bg-[#131929] border border-white/5 flex flex-col md:flex-row justify-between gap-5 transition-all hover:border-white/10">
+                  <div className="flex-1 min-w-0">
+                    {/* TOP BADGES */}
+                    <div className="flex flex-wrap items-center gap-2 mb-3">
+                      <span className="text-xs font-black text-slate-400 font-mono">
+                        #{order.id.slice(-6).toUpperCase()}
+                      </span>
+
+                      {/* DELIVERY BADGE */}
+                      <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-widest border ${
+                        isEnvio ? "bg-orange-500/10 text-orange-400 border-orange-500/20 shadow-[0_0_10px_rgba(249,115,22,0.1)]" :
+                        isMesa ? "bg-blue-500/10 text-blue-400 border-blue-500/20 shadow-[0_0_10px_rgba(59,130,246,0.1)]" : "bg-purple-500/10 text-purple-400 border-purple-500/20 shadow-[0_0_10px_rgba(168,85,247,0.1)]"
+                      }`}>
+                        {isEnvio ? "🚚 Envío a Domicilio" : isMesa ? `🍽️ Mesa ${order.table?.number || "?"}` : "🛍️ Retiro en Local"}
+                      </span>
+
+                      {/* STATUS BADGE */}
+                      <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-widest border ${
+                        order.status === "PENDING" ? "bg-yellow-500/10 text-yellow-500 border-yellow-500/20 shadow-[0_0_10px_rgba(234,179,8,0.1)]" :
+                        order.status === "CONFIRMED" ? "bg-indigo-500/10 text-indigo-400 border-indigo-500/20 shadow-[0_0_10px_rgba(99,102,241,0.1)]" :
+                        order.status === "COMPLETED" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.1)]" : "bg-red-500/10 text-red-400 border-red-500/20 shadow-[0_0_10px_rgba(239,68,68,0.1)]"
+                      }`}>
+                        {order.status === "PENDING" ? "Pendiente" : order.status === "CONFIRMED" ? "Preparando" : order.status === "COMPLETED" ? "Listo / Entregado" : "Cancelado"}
+                      </span>
+
+                      {/* PAYMENT BADGE */}
+                      {payInfo && (
+                        <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold border flex items-center gap-1 ${payInfo.cls}`}>
+                          <span>{payInfo.icon}</span>
+                          <span>{payInfo.label}</span>
+                        </span>
+                      )}
+
+                      <span className="text-xs text-slate-500 ml-auto font-mono">
+                        {new Date(order.createdAt).toLocaleDateString("es-MX", { day: "2-digit", month: "short" })}{" "}
+                        {new Date(order.createdAt).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })}
+                      </span>
+                    </div>
+
+                    {/* CUSTOMER INFO */}
+                    {(order.customerName || order.customerPhone || order.address) && (
+                      <div className="flex flex-wrap items-center gap-3 py-2 px-3 rounded-xl bg-white/[0.03] border border-white/5 text-xs text-slate-300 mb-3">
+                        {order.customerName && (
+                          <span className="font-semibold text-white flex items-center gap-1">
+                            👤 {order.customerName}
+                          </span>
+                        )}
+                        {order.customerPhone && (
+                          <span className="flex items-center gap-1.5">
+                            📱 {order.customerPhone}
+                            {waUrl && (
+                              <a
+                                href={waUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 font-bold text-[10px] transition-colors"
+                              >
+                                💬 WhatsApp
+                              </a>
+                            )}
+                          </span>
+                        )}
+                        {order.address && isEnvio && (
+                          <span className="text-slate-300 flex items-center gap-1">
+                            📍 {order.address}
+                          </span>
+                        )}
                       </div>
-                    ))}
+                    )}
+
+                    {/* ITEMS LIST */}
+                    <div className="space-y-1.5 mb-3 bg-black/20 p-3 rounded-xl border border-white/5">
+                      {order.items?.map((it: any, i: number) => {
+                        const itemName = it.nombre || it.name || "Producto";
+                        const itemPrice = it.precio ?? it.price ?? 0;
+                        const variants = [
+                          it.talle ? `Talle: ${it.talle}` : null,
+                          it.color ? `Color: ${it.color}` : null,
+                        ].filter(Boolean).join(" · ");
+
+                        return (
+                          <div key={i} className="text-sm text-slate-300 flex items-baseline justify-between">
+                            <div className="min-w-0 pr-2">
+                              <span className="font-bold text-white mr-1.5">{it.qty}x</span>
+                              <span className="text-slate-200">{itemName}</span>
+                              {variants && (
+                                <span className="ml-2 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-white/5 text-indigo-300 border border-white/5 inline-block">
+                                  {variants}
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-slate-400 font-mono text-xs whitespace-nowrap">
+                              ${itemPrice * it.qty}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div className="text-lg font-black text-white">
+                        Total: <span className="text-emerald-400">${order.total}</span>
+                      </div>
+                      {order.notes && (
+                        <div className="text-xs text-slate-400 italic">
+                          📝 &quot;{order.notes}&quot;
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <div className="text-lg font-black text-white">Total: ${order.total}</div>
-                  {order.type === "DELIVERY" && <div className="text-xs text-slate-400 mt-2">📍 {order.address}</div>}
+                  
+                  {/* ACTIONS COLUMN */}
+                  <div className="flex flex-row md:flex-col gap-2 min-w-[150px] justify-center border-t md:border-t-0 md:border-l border-white/5 pt-3 md:pt-0 md:pl-4">
+                    {order.status === "PENDING" && (
+                      <button onClick={() => updateOrderStatus(order.id, "CONFIRMED")} className="flex-1 py-2.5 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white text-xs font-bold transition-all shadow-[0_0_12px_rgba(99,102,241,0.2)]">
+                        Confirmar / Preparar
+                      </button>
+                    )}
+                    {order.status === "CONFIRMED" && (
+                      <button onClick={() => updateOrderStatus(order.id, "COMPLETED")} className="flex-1 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold transition-all shadow-[0_0_12px_rgba(16,185,129,0.2)]">
+                        Marcar Entregado
+                      </button>
+                    )}
+                    {order.status !== "COMPLETED" && order.status !== "CANCELLED" && (
+                      <button onClick={() => updateOrderStatus(order.id, "CANCELLED")} className="flex-1 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-bold transition-colors">
+                        Cancelar
+                      </button>
+                    )}
+                    {waUrl && (
+                      <a
+                        href={waUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-white text-xs font-bold transition-colors text-center flex items-center justify-center gap-1.5"
+                      >
+                        <Ico n="whatsapp" s={14} c="text-emerald-400" /> Chat Cliente
+                      </a>
+                    )}
+                  </div>
                 </div>
-                
-                <div className="flex flex-row md:flex-col gap-2 min-w-[140px] justify-center">
-                  {order.status === "PENDING" && (
-                    <button onClick={() => updateOrderStatus(order.id, "CONFIRMED")} className="flex-1 py-2 rounded-lg bg-indigo-500 hover:bg-indigo-600 text-white text-xs font-bold transition-colors">
-                      Confirmar
-                    </button>
-                  )}
-                  {order.status === "CONFIRMED" && (
-                    <button onClick={() => updateOrderStatus(order.id, "COMPLETED")} className="flex-1 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold transition-colors">
-                      Marcar Listo
-                    </button>
-                  )}
-                  {order.status !== "COMPLETED" && order.status !== "CANCELLED" && (
-                    <button onClick={() => updateOrderStatus(order.id, "CANCELLED")} className="flex-1 py-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-bold transition-colors">
-                      Cancelar
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
 
-      {activeTab === "tables" && (
+      {/* TABLES TAB (Only shown for non-tienda businesses) */}
+      {!isTienda && activeTab === "tables" && (
         <div className="space-y-6">
           <div className="flex justify-between items-center">
             <p className="text-sm text-slate-400">Cada mesa tiene un código QR único para que los clientes puedan pedir desde sus celulares.</p>

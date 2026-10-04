@@ -77,6 +77,7 @@ const TallerTemplate = dynamic(() => import("@/components/landings/TallerTemplat
 const LavaderoTemplate = dynamic(() => import("@/components/landings/LavaderoTemplate"));
 const GeneralTemplate = dynamic(() => import("@/components/landings/GeneralTemplate"));
 const DefaultTemplate = dynamic(() => import("@/components/landings/DefaultTemplate"));
+const TiendaTemplate = dynamic(() => import("@/components/landings/TiendaTemplate"));
 
 // NUEVOS TEMAS UNIVERSALES
 const TemplateRenderer = dynamic(() => import("@/components/landings/templates/TemplateRenderer"));
@@ -180,6 +181,10 @@ export default async function PublicLandingPage({ params, searchParams }: { para
     slotDuration: typeof activeConfig.slotDuration === "number" ? activeConfig.slotDuration : undefined,
     bannerOpacity: typeof activeConfig.bannerOpacity === "number" ? activeConfig.bannerOpacity : undefined,
     tagline: typeof activeConfig.tagline === "string" ? activeConfig.tagline : undefined,
+    tiendaProductos: Array.isArray(activeConfig.tiendaProductos) ? activeConfig.tiendaProductos : undefined,
+    tiendaCategorias: Array.isArray(activeConfig.tiendaCategorias) ? activeConfig.tiendaCategorias : undefined,
+    tiendaEnvios: typeof activeConfig.tiendaEnvios === "object" && activeConfig.tiendaEnvios !== null ? activeConfig.tiendaEnvios : undefined,
+    tiendaPagos: typeof activeConfig.tiendaPagos === "object" && activeConfig.tiendaPagos !== null ? activeConfig.tiendaPagos : undefined,
   };
 
   const biz = {
@@ -212,7 +217,7 @@ export default async function PublicLandingPage({ params, searchParams }: { para
   // ─────────────────────────────────────────────────────────
   const jsonLd = {
     "@context": "https://schema.org",
-    "@type": biz.type === "barberia" ? "HairSalon" : biz.type === "menu" ? "Restaurant" : biz.type === "clinica" ? "MedicalClinic" : biz.type === "estetica" ? "BeautySalon" : biz.type === "gimnasio" ? "ExerciseGym" : biz.type === "taller" ? "AutoRepair" : biz.type === "lavadero" ? "AutoWash" : "LocalBusiness",
+    "@type": biz.type === "tienda" ? "Store" : biz.type === "barberia" ? "HairSalon" : biz.type === "menu" ? "Restaurant" : biz.type === "clinica" ? "MedicalClinic" : biz.type === "estetica" ? "BeautySalon" : biz.type === "gimnasio" ? "ExerciseGym" : biz.type === "taller" ? "AutoRepair" : biz.type === "lavadero" ? "AutoWash" : "LocalBusiness",
     "name": biz.name,
     "image": biz.logoUrl || "https://saas-miniwebs.com/default-logo.jpg",
     "url": `https://${subdomain}.saas-miniwebs.com`,
@@ -229,6 +234,11 @@ export default async function PublicLandingPage({ params, searchParams }: { para
     const sections = layoutConfig.sections || [];
     const templateLevel = layoutConfig.templateLevel;
     const themeVariant = layoutConfig.themeVariant || "classic";
+    
+    // Si el tipo es tienda o la variante es tienda, renderizamos la tienda virtual
+    if (biz.type === "tienda" || themeVariant === "tienda") {
+      return <TiendaTemplate negocio={biz} businessId={biz.id} />;
+    }
     
     // Si se eligió una plantilla multinivel o tema universal, usamos TemplateRenderer
     const isMultiLevel =

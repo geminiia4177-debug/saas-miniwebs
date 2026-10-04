@@ -74,6 +74,9 @@ export default function Sidebar({
         {(biz.type === "menu" || biz.type === "restaurante") && (
           <NavItem icon="box" label="Pedidos / Mesas" tab="orders" active={tab} setActive={setTab} collapsed={sidebarCollapsed} />
         )}
+        {biz.type === "tienda" && (
+          <NavItem icon="shopping-bag" label="Pedidos Tienda" tab="orders" active={tab} setActive={setTab} collapsed={sidebarCollapsed} />
+        )}
 
         {!sidebarCollapsed && <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-widest px-3 py-2 mt-3">Herramientas</p>}
         {sidebarCollapsed && <div className="my-3 h-px bg-white/5" />}

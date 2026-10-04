@@ -27,6 +27,7 @@ enum BusinessType {
   cancha
   menu
   general
+  tienda
 }
 
 enum PaymentStatus {

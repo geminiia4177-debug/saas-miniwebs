@@ -19,6 +19,7 @@ import { ConfiguradorAvanzado } from "./editor/ConfiguradorAvanzado";
 import { LandingPreview } from "./editor/LandingPreview";
 import ConfiguradorTaller from "@/components/dashboard/cartuchos/ConfiguradorTaller";
 import ConfiguradorMenu   from "@/components/dashboard/cartuchos/ConfiguradorMenu";
+import ConfiguradorTienda from "@/components/dashboard/cartuchos/ConfiguradorTienda";
 
 import { useBusinessEditor } from "./editor/useBusinessEditor";
 import { HexColorPicker } from "react-colorful";
@@ -133,6 +134,7 @@ export default function EditorTab({
           else if (biz.type === 'taller') setMainTab('tallerServices');
           else if (biz.type === 'lavadero') setMainTab('vehiculos');
           else if (biz.type === 'menu' || biz.type === 'restaurante') setMainTab('menuCategorias');
+          else if (biz.type === 'tienda') setMainTab('tiendaProductos');
         } else if (section === 'gallery' || section === 'video') {
           setMainTab('video'); // o galeria si existiera
         } else if (section === 'contact') {
@@ -243,6 +245,7 @@ export default function EditorTab({
       case "barberia": return [...base, { id: "servicios", label: "Servicios", icon: "star" }, { id: "productos", label: "Productos", icon: "box" }, ...genericEnd];
       case "taller": return [...base, { id: "tallerServices", label: "Servicios", icon: "star" }, { id: "tallerSettings", label: "Ajustes", icon: "settings" }, ...genericEnd];
       case "lavadero": return [...base, { id: "vehiculos", label: "Vehículos", icon: "folder" }, ...genericEnd];
+      case "tienda": return [...base, { id: "tiendaProductos", label: "Productos", icon: "box" }, { id: "tiendaConfig", label: "Envíos y Pagos", icon: "settings" }, ...genericEnd];
       default: return [...base, { id: "servicios", label: "Servicios", icon: "star" }, { id: "productos", label: "Productos", icon: "box" }, ...genericEnd];
     }
   };
@@ -884,7 +887,9 @@ export default function EditorTab({
           {/* ── ADVANCED configurador ── */}
           {mainTab !== "diseno" && mainTab !== "config" && (
             <div className="animate-fadeIn pb-6">
-              {biz.type === "taller" && (mainTab === "tallerServices" || mainTab === "tallerSettings") ? (
+              {biz.type === "tienda" && (mainTab === "tiendaProductos" || mainTab === "tiendaConfig") ? (
+                <ConfiguradorTienda biz={biz} setBiz={setBiz} media={media} setMedia={setMedia} showToast={showToast} activeTab={mainTab} />
+              ) : biz.type === "taller" && (mainTab === "tallerServices" || mainTab === "tallerSettings") ? (
                 <ConfiguradorTaller biz={biz} setBiz={setBiz} media={media} setMedia={setMedia} showToast={showToast} activeTab={mainTab} />
               ) : (biz.type === "menu" || biz.type === "restaurante") && mainTab === "menuConfig" ? (
                 <ConfiguradorMenu biz={biz} setBiz={setBiz} media={media} setMedia={setMedia} showToast={showToast} activeTab={mainTab} />

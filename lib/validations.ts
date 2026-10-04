@@ -4,7 +4,7 @@ import { z } from "zod";
 
 export const BusinessTypeEnum = z.enum([
   "barberia", "estetica", "gimnasio", "lavadero", "taller",
-  "clinica", "cancha", "menu", "general",
+  "clinica", "cancha", "menu", "general", "tienda",
 ]);
 
 export const BusinessStatusEnum = z.enum([
@@ -116,11 +116,69 @@ const ProductItemSchema = z.object({
   description: z.string().max(1000).optional().nullable(),
   descripcion: z.string().max(1000).optional().nullable(),
   imageUrl: z.string().url().max(500).optional().nullable(),
+  imagen: z.string().url().max(500).optional().nullable(),
   active: z.boolean().optional(),
   disponible: z.boolean().optional(),
   category: z.string().max(100).optional().nullable(),
   categoria: z.string().max(100).optional().nullable(),
   stock: z.number().int().min(0).max(100000).optional().nullable(),
+  talles: z.array(z.string().max(50)).max(30).optional(),
+  sizes: z.array(z.string().max(50)).max(30).optional(),
+  colores: z.array(z.string().max(50)).max(50).optional(),
+  colors: z.array(z.string().max(50)).max(50).optional(),
+  destacado: z.boolean().optional(),
+});
+
+const StoreProductSchema = z.object({
+  id: z.union([z.string(), z.number()]),
+  name: z.string().max(200).optional(),
+  nombre: z.string().max(200).optional(),
+  price: z.union([z.string().max(50), z.number()]).optional(),
+  precio: z.union([z.string().max(50), z.number()]).optional(),
+  description: z.string().max(2000).optional().nullable(),
+  descripcion: z.string().max(2000).optional().nullable(),
+  category: z.string().max(100).optional().nullable(),
+  categoria: z.string().max(100).optional().nullable(),
+  imageUrl: z.string().url().max(500).optional().nullable(),
+  imagen: z.string().url().max(500).optional().nullable(),
+  images: z.array(z.string().url().max(500)).max(10).optional(),
+  imagenes: z.array(z.string().url().max(500)).max(10).optional(),
+  talles: z.array(z.string().max(50)).max(30).optional(),
+  sizes: z.array(z.string().max(50)).max(30).optional(),
+  colores: z.array(z.string().max(50)).max(50).optional(),
+  colors: z.array(z.string().max(50)).max(50).optional(),
+  stock: z.number().int().min(0).max(100000).optional().nullable(),
+  destacado: z.boolean().optional(),
+  disponible: z.boolean().optional(),
+  active: z.boolean().optional(),
+});
+
+const StoreShippingSchema = z.object({
+  permitirEnvio: z.boolean().optional(),
+  costoEnvio: z.number().min(0).max(1000000).optional(),
+  envioGratisDesde: z.number().min(0).max(10000000).optional().nullable(),
+  textoEnvio: z.string().max(300).optional().nullable(),
+  permitirRetiro: z.boolean().optional(),
+  direccionRetiro: z.string().max(500).optional().nullable(),
+  horarioRetiro: z.string().max(300).optional().nullable(),
+});
+
+const StorePaymentSchema = z.object({
+  acordarVendedor: z.boolean().optional(),
+  instruccionesAcordar: z.string().max(1000).optional().nullable(),
+  mercadoPago: z.object({
+    enabled: z.boolean().optional(),
+    paymentLink: z.string().max(500).optional().nullable(),
+    alias: z.string().max(100).optional().nullable(),
+  }).optional(),
+  stripe: z.object({
+    enabled: z.boolean().optional(),
+    paymentLink: z.string().max(500).optional().nullable(),
+  }).optional(),
+  paypal: z.object({
+    enabled: z.boolean().optional(),
+    meLink: z.string().max(500).optional().nullable(),
+  }).optional(),
 });
 
 const VehicleItemSchema = z.object({
@@ -224,6 +282,12 @@ export const LayoutConfigSchema = z.object({
     price: z.number().min(0),
     imageUrl: z.string().url().max(500).optional().nullable(),
   })).max(50).optional(),
+  // Tienda Virtual
+  tiendaBannerPromo: z.string().max(500).optional().nullable(),
+  tiendaProductos: z.array(StoreProductSchema).max(500).optional(),
+  tiendaCategorias: z.array(z.string().max(100)).max(50).optional(),
+  tiendaEnvios: StoreShippingSchema.optional().nullable(),
+  tiendaPagos: StorePaymentSchema.optional().nullable(),
   // Service lists per business type (strict schemas)
   barberiaServices: z.array(ServiceItemSchema).max(100).optional(),
   barberiaProducts: z.array(ProductItemSchema).max(100).optional(),

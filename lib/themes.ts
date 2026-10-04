@@ -7,7 +7,8 @@ export type BusinessType =
   | "taller" 
   | "lavadero" 
   | "clinica" 
-  | "general";
+  | "general"
+  | "tienda";
 
 export interface ThemeConfig {
   bg: string;
@@ -100,6 +101,15 @@ export const BUSINESS_THEMES: Record<BusinessType, ThemeConfig> = {
     textSecondary: "#7A7267",
     fontDisplay: "font-sans font-bold",
     border: "#EAE6DF",
+  },
+  tienda: {
+    bg: "#0B0F19",
+    surface: "#111827",
+    accent: "#6366F1",
+    textPrimary: "#F9FAFB",
+    textSecondary: "#9CA3AF",
+    fontDisplay: "font-sans font-bold tracking-tight",
+    border: "#1F2937",
   }
 };
 

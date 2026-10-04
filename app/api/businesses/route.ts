@@ -183,16 +183,80 @@ export async function POST(req: Request) {
     const typeKey = (data.type || "general") as keyof typeof BUSINESS_THEMES;
     const themeProfile = BUSINESS_THEMES[typeKey] || BUSINESS_THEMES.general;
 
-    const defaultLayoutConfig = {
+    const isTienda = typeKey === "tienda";
+
+    const defaultLayoutConfig: any = {
       sections: [
-        { id: "hero", label: "Hero / Portada", icon: "image", visible: true, config: { title: `Bienvenido a ${name}`, subtitle: "Tu negocio premium", ctaText: "Reservar Turno" } },
-        { id: "services", label: "Servicios", icon: "star", visible: true, config: { items: [] } },
+        { id: "hero", label: "Hero / Portada", icon: "image", visible: true, config: { title: `Bienvenido a ${name}`, subtitle: isTienda ? "Tu tienda online" : "Tu negocio premium", ctaText: isTienda ? "Ver Catálogo" : "Reservar Turno" } },
+        { id: "services", label: isTienda ? "Productos" : "Servicios", icon: "star", visible: true, config: { items: [] } },
         { id: "gallery", label: "Galería de Fotos", icon: "image", visible: true, config: { columns: 3 } },
         { id: "contact", label: "Contacto", icon: "link", visible: true, config: {} }
       ],
       media: [],
-      themeVariant: "modern" // Usar la vista moderna por defecto
+      themeVariant: isTienda ? "tienda" : "modern"
     };
+
+    if (isTienda) {
+      defaultLayoutConfig.tiendaBannerPromo = "¡Envío gratis en compras seleccionadas! 🎉";
+      defaultLayoutConfig.tiendaCategorias = ["Indumentaria", "Calzado", "Accesorios", "Destacados"];
+      defaultLayoutConfig.tiendaProductos = [
+        {
+          id: "prod-demo-1",
+          nombre: "Remera Oversize Signature",
+          precio: 14999,
+          descripcion: "Remera de algodón peinado 100% premium, corte relajado y máxima comodidad.",
+          imagen: "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800&auto=format&fit=crop&q=80",
+          categoria: "Indumentaria",
+          talles: ["S", "M", "L", "XL"],
+          colores: ["Negro", "Blanco", "Gris"],
+          stock: 25,
+          destacado: true,
+          activo: true,
+        },
+        {
+          id: "prod-demo-2",
+          nombre: "Zapatillas Urban Classic",
+          precio: 38999,
+          descripcion: "Diseño moderno con suela ergonómica antideslizante, ideales para el uso diario.",
+          imagen: "https://images.unsplash.com/photo-1549298916-b41d501d3772?w=800&auto=format&fit=crop&q=80",
+          categoria: "Calzado",
+          talles: ["39", "40", "41", "42", "43"],
+          colores: ["Blanco", "Negro"],
+          stock: 12,
+          destacado: true,
+          activo: true,
+        },
+        {
+          id: "prod-demo-3",
+          nombre: "Gorra Trucker Vintage",
+          precio: 8500,
+          descripcion: "Gorra con bordado de alta calidad y broche ajustable posterior.",
+          imagen: "https://images.unsplash.com/photo-1588850561407-ed78c282e89b?w=800&auto=format&fit=crop&q=80",
+          categoria: "Accesorios",
+          talles: ["Único"],
+          colores: ["Negro", "Azul Marino"],
+          stock: 30,
+          destacado: false,
+          activo: true,
+        }
+      ];
+      defaultLayoutConfig.tiendaEnvios = {
+        costoEnvio: 2500,
+        envioGratisDesde: 30000,
+        permitirRetiro: true,
+        permitirEnvio: true,
+        textoEnvio: "Envíos a todo el país (2 a 4 días hábiles) y retiro en sucursal",
+        direccionRetiro: "",
+        horarioRetiro: "Lunes a Viernes de 10:00 a 19:00"
+      };
+      defaultLayoutConfig.tiendaPagos = {
+        acordarVendedor: true,
+        instruccionesAcordar: "Coordinamos el pago por WhatsApp en efectivo o transferencia bancaria.",
+        mercadoPago: { enabled: false, paymentLink: "", alias: "" },
+        stripe: { enabled: false, paymentLink: "" },
+        paypal: { enabled: false, meLink: "" }
+      };
+    }
 
     // Limpiar el customDomain si lo envían (quitar http, https, espacios)
     const cleanCustomDomain = customDomain 
@@ -216,6 +280,7 @@ export async function POST(req: Request) {
         secondaryColor: themeProfile.bg,
         fontFamily: themeProfile.fontDisplay.includes("sans") ? "sans" : "serif",
         layoutConfig: defaultLayoutConfig,
+        publishedConfig: defaultLayoutConfig,
         userId: clientUser.id, // ¡Acá se unen el cliente y su negocio!
       },
     });

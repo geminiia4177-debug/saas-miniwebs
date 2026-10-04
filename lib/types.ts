@@ -90,18 +90,77 @@ export interface LayoutConfig {
   facebook?: string;
   tiktok?: string;
   
-  // Menu specific
+// Menu specific
   menuCategorias?: MenuCategory[];
   menuPromos?: any[];
   modosDisponibles?: ("local" | "delivery" | "llevar")[];
   deliveryRadio?: string;
   reservaMesaActiva?: boolean;
 
+  // Tienda Virtual specific
+  tiendaProductos?: StoreProduct[];
+  tiendaCategorias?: string[];
+  tiendaEnvios?: StoreShipping;
+  tiendaPagos?: StorePayment;
+
   // Chatbot config
   chatbotEnabled?: boolean;
   chatbotName?: string;
 
   [key: string]: any; // fallback
+}
+
+// Tienda Virtual Models
+export interface StoreProduct {
+  id: string;
+  nombre?: string;
+  name?: string;
+  precio?: number | string;
+  price?: number | string;
+  descripcion?: string | null;
+  description?: string | null;
+  categoria?: string | null;
+  category?: string | null;
+  imagen?: string | null;
+  imageUrl?: string | null;
+  imagenes?: string[];
+  images?: string[];
+  talles?: string[];
+  sizes?: string[];
+  colores?: string[];
+  colors?: string[];
+  stock?: number | null;
+  destacado?: boolean;
+  disponible?: boolean;
+  active?: boolean;
+}
+
+export interface StoreShipping {
+  permitirEnvio?: boolean;
+  costoEnvio?: number;
+  envioGratisDesde?: number | null;
+  textoEnvio?: string | null;
+  permitirRetiro?: boolean;
+  direccionRetiro?: string | null;
+  horarioRetiro?: string | null;
+}
+
+export interface StorePayment {
+  acordarVendedor?: boolean;
+  instruccionesAcordar?: string | null;
+  mercadoPago?: {
+    enabled?: boolean;
+    paymentLink?: string | null;
+    alias?: string | null;
+  };
+  stripe?: {
+    enabled?: boolean;
+    paymentLink?: string | null;
+  };
+  paypal?: {
+    enabled?: boolean;
+    meLink?: string | null;
+  };
 }
 
 export interface Biz {

@@ -16,6 +16,7 @@ const RUBRO_META: Record<string, any> = {
   clinica:   { label: "Clinica",     icon: "✚",  color: "#f87171" },
   taller:    { label: "Taller Mecánico", icon: "🔧", color: "#64748b" },
   lavadero:  { label: "Lavadero",    icon: "🚗", color: "#0ea5e9" },
+  tienda:    { label: "Tienda Virtual", icon: "🛍️", color: "#6366f1" },
   general:   { label: "General",     icon: "🏢", color: "#facc15" },
 };
 
