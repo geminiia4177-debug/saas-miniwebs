@@ -89,11 +89,11 @@ export const ClientTable: React.FC<ClientTableProps> = ({
   const padY = density === "compact" ? "py-2 px-3" : "py-3.5 px-4";
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-4">
       {/* ── FILTER & SEARCH BAR ── */}
-      <div className="p-4 rounded-2xl bg-[#0E131F] border border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
+      <div className="p-4 rounded-2xl bg-[#0E131F] border border-white/5 flex flex-col lg:flex-row lg:items-center justify-between gap-3 text-xs shadow-lg">
         {/* Search Input */}
-        <div className="relative flex-1 max-w-sm">
+        <div className="relative w-full lg:max-w-sm">
           <input
             type="text"
             value={search}
@@ -145,7 +145,7 @@ export const ClientTable: React.FC<ClientTableProps> = ({
           </select>
 
           {/* Density Toggle */}
-          <div className="flex items-center bg-white/5 border border-white/10 rounded-xl p-0.5 ml-auto">
+          <div className="flex items-center bg-white/5 border border-white/10 rounded-xl p-0.5 sm:ml-auto">
             <button
               type="button"
               onClick={() => setDensity("compact")}

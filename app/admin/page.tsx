@@ -46,8 +46,13 @@ export default function AdminPage() {
       const res = await fetch("/api/businesses?limit=100");
       if (res.ok) {
         const data = await res.json();
-        setBusinesses(Array.isArray(data.businesses) ? data.businesses : []);
-        setTotalBusinesses(data.total || 0);
+        const bizList = Array.isArray(data.data)
+          ? data.data
+          : Array.isArray(data.businesses)
+          ? data.businesses
+          : [];
+        setBusinesses(bizList);
+        setTotalBusinesses(data.total ?? bizList.length);
       }
     } catch {
       showToast("Error al cargar negocios", "error");
@@ -181,7 +186,7 @@ export default function AdminPage() {
       {/* ── MAIN CONTENT ── */}
       <main className="flex-1 max-w-7xl mx-auto w-full p-6 space-y-6">
         {activeSection === "clients" && (
-          <>
+          <div className="space-y-6">
             {/* Metrics Header */}
             <MetricsHeader
               businesses={businesses}
@@ -194,7 +199,7 @@ export default function AdminPage() {
               onSelectBusiness={setSelectedBusiness}
               onRefresh={fetchBusinesses}
             />
-          </>
+          </div>
         )}
 
         {activeSection === "support" && (
