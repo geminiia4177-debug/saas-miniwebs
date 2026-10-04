@@ -79,7 +79,8 @@ export const IframePreview = forwardRef<HTMLIFrameElement, IframePreviewProps>(
         if (iframe.contentWindow) {
           iframe.contentWindow.addEventListener("message", (event) => {
             if (event.data?.type === "EDIT_SECTION") {
-              window.postMessage(event.data, "*");
+              const targetOrigin = window.location.origin || "*";
+              window.postMessage(event.data, targetOrigin);
             }
           });
         }

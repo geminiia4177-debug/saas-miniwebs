@@ -8,7 +8,7 @@ import { Biz, MediaItem, Section, ServiceItem, BusinessHours } from "@/lib/types
  * consume the exact same normalized business data model.
  */
 
-export type TemplateLevel = "classic" | "motion" | "premium" | "immersive";
+export type TemplateLevel = "classic" | "motion" | "premium" | "immersive" | "bento" | "app_native" | "lookbook";
 export type AnimationIntensity = "subtle" | "balanced" | "dynamic";
 export type ThreePresetId = "flow" | "particles" | "luxury" | "organic";
 
@@ -84,6 +84,7 @@ export interface NormalizedStaffMember {
   role: string;
   image: string;
   description: string;
+  isDemo?: boolean;
 }
 
 export interface NormalizedTestimonial {
@@ -93,6 +94,7 @@ export interface NormalizedTestimonial {
   role?: string;
   rating: number;
   image?: string;
+  isDemo?: boolean;
 }
 
 export interface BusinessSocial {
@@ -150,6 +152,10 @@ const DAY_LABELS: Record<string, string> = {
   domingo: "Domingo",
 };
 
+export interface NormalizeBusinessOptions {
+  isPublic?: boolean;
+}
+
 /**
  * Normalizes any database business object, media array, and sections array
  * into the standardized BusinessDataContract.
@@ -157,7 +163,8 @@ const DAY_LABELS: Record<string, string> = {
 export function normalizeBusinessData(
   biz: any,
   media: MediaItem[] = [],
-  sections: Section[] = []
+  sections: Section[] = [],
+  options?: NormalizeBusinessOptions
 ): BusinessDataContract {
   const config = biz?.layoutConfig || {};
 
@@ -286,46 +293,74 @@ export function normalizeBusinessData(
     };
   });
 
-  // 8. Staff / Profesionales
-  const staff: NormalizedStaffMember[] = (config.staff || config.profesionales || [
-    {
-      id: "staff-1",
-      name: "Especialista Principal",
-      role: "Dirección & Estilo",
-      image: "",
-      description: "Más de 10 años de experiencia transformando la imagen de nuestros clientes.",
-    }
-  ]).map((s: any, idx: number) => ({
+  // 8. Staff / Profesionales (D09: do not inject fake staff on public pages)
+  let rawStaffList: any[] = [];
+  let isDemoStaff = false;
+
+  if (Array.isArray(config.staff) && config.staff.length > 0) {
+    rawStaffList = config.staff;
+  } else if (Array.isArray(config.profesionales) && config.profesionales.length > 0) {
+    rawStaffList = config.profesionales;
+  } else if (Array.isArray(biz?.employees) && biz.employees.length > 0) {
+    rawStaffList = biz.employees;
+  } else if (!options?.isPublic) {
+    // Only in preview/draft mode
+    isDemoStaff = true;
+    rawStaffList = [
+      {
+        id: "staff-1",
+        name: "Especialista Principal",
+        role: "Dirección & Estilo",
+        image: "",
+        description: "Más de 10 años de experiencia transformando la imagen de nuestros clientes.",
+      }
+    ];
+  }
+
+  const staff: NormalizedStaffMember[] = rawStaffList.map((s: any, idx: number) => ({
     id: s.id || `staff-${idx}`,
     name: s.name || s.nombre || `Profesional ${idx + 1}`,
     role: s.role || s.especialidad || s.cargo || "Especialista",
     image: s.image || s.imageUrl || s.foto || "",
     description: s.description || s.bio || "",
+    isDemo: isDemoStaff || !!s.isDemo,
   }));
 
-  // 9. Testimonials
-  const testimonials: NormalizedTestimonial[] = (config.testimonials || [
-    {
-      id: "test-1",
-      name: "Camila Rossi",
-      role: "Cliente Frecuente",
-      comment: "Excelente atención y resultados increíbles. Súper recomendado.",
-      rating: 5,
-    },
-    {
-      id: "test-2",
-      name: "Martín Benítez",
-      role: "Cliente Verificado",
-      comment: "Puntuales, modernos y muy profesionales. La mejor experiencia.",
-      rating: 5,
-    }
-  ]).map((t: any, idx: number) => ({
+  // 9. Testimonials (D09: do not inject fake testimonials like 'Camila Rossi' on public pages)
+  let rawTestimonialsList: any[] = [];
+  let isDemoTestimonial = false;
+
+  if (Array.isArray(config.testimonials) && config.testimonials.length > 0) {
+    rawTestimonialsList = config.testimonials;
+  } else if (!options?.isPublic) {
+    // Only in preview/draft mode
+    isDemoTestimonial = true;
+    rawTestimonialsList = [
+      {
+        id: "test-1",
+        name: "Camila Rossi",
+        role: "Cliente Frecuente",
+        comment: "Excelente atención y resultados increíbles. Súper recomendado.",
+        rating: 5,
+      },
+      {
+        id: "test-2",
+        name: "Martín Benítez",
+        role: "Cliente Verificado",
+        comment: "Puntuales, modernos y muy profesionales. La mejor experiencia.",
+        rating: 5,
+      }
+    ];
+  }
+
+  const testimonials: NormalizedTestimonial[] = rawTestimonialsList.map((t: any, idx: number) => ({
     id: t.id || `test-${idx}`,
     name: t.name || t.nombre || "Cliente",
     comment: t.comment || t.texto || "Excelente servicio",
     role: t.role || "Cliente",
     rating: typeof t.rating === "number" ? t.rating : 5,
     image: t.image || t.avatar || "",
+    isDemo: isDemoTestimonial || !!t.isDemo,
   }));
 
   // 10. Social

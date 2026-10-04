@@ -47,6 +47,7 @@ export interface Appointment {
   time: string;
   status: "PENDING" | "CONFIRMED" | "CANCELLED" | "COMPLETED";
   clientphone?: string;
+  clientPhone?: string;
   paymentMethod?: string;
   paymentReference?: string;
 }
@@ -181,6 +182,7 @@ export interface Biz {
   mapUrl?: string;
   description?: string;
   layoutConfig?: LayoutConfig;
+  publishedConfig?: LayoutConfig;
   backgroundType?: "color" | "gradient" | "image";
   backgroundImageUrl?: string;
   buttonStyle?: "rounded" | "square" | "pill";

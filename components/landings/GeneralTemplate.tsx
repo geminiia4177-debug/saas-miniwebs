@@ -6,6 +6,7 @@ import OpenNowBadge from "../ui/OpenNowBadge";
 import SectionHeader from "../ui/SectionHeader";
 import StatsRow from "../ui/StatsRow";
 import VideoSection from "../ui/VideoSection";
+import { getScheduleStatus } from "@/lib/utils/schedule";
 
 export default function GeneralTemplate(props: { negocio?: any; media?: any[]; businessId?: string; sections?: any[] }) {
   const { negocio, businessId, media = [] } = props;
@@ -45,6 +46,7 @@ export default function GeneralTemplate(props: { negocio?: any; media?: any[]; b
 
   const serviceNames = servicios.map((s: any) => s.name || s.nombre);
   const heroImageUrl = negocio?.bannerUrl || layoutConfig.heroImage || (galleryImages[0] ? galleryImages[0].url : "");
+  const scheduleStatus = getScheduleStatus(layoutConfig.hours);
 
   const handleOpenBooking = (service?: string) => {
     setPreselectedService(service || "");
@@ -134,8 +136,8 @@ export default function GeneralTemplate(props: { negocio?: any; media?: any[]; b
         <header className="relative pt-32 pb-20 md:pt-48 md:pb-32 px-6 md:px-12 mesh-bg overflow-hidden border-b border-gray-100">
           <div className="max-w-4xl mx-auto text-center relative z-10">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-gray-200 text-[12px] font-semibold text-[#4B5563] mb-8 shadow-sm">
-              <span className="w-2 h-2 rounded-full bg-[var(--accent)] animate-pulse"></span>
-              Disponible para nuevos clientes
+              <span className={`w-2 h-2 rounded-full ${scheduleStatus.isOpen ? "bg-emerald-500 animate-pulse" : "bg-amber-500"}`}></span>
+              {scheduleStatus.badgeText}
             </div>
             
             <h1 
@@ -154,7 +156,7 @@ export default function GeneralTemplate(props: { negocio?: any; media?: any[]; b
                 onClick={() => handleOpenBooking()}
                 className="btn-primary w-full sm:w-auto text-[16px] font-semibold px-8 py-4 rounded-full"
               >
-                Comenzar ahora
+                {scheduleStatus.isOpen ? "Reservar Turno Hoy" : scheduleStatus.suggestedActionText}
               </button>
               <a href="#servicios" className="w-full sm:w-auto text-[16px] font-semibold px-8 py-4 rounded-full bg-white border border-gray-200 text-[#374151] hover:bg-gray-50 transition-colors shadow-sm">
                 Ver servicios
@@ -388,7 +390,7 @@ export default function GeneralTemplate(props: { negocio?: any; media?: any[]; b
             onClick={() => handleOpenBooking()}
             className="btn-primary w-full font-inter font-bold text-[15px] py-4 rounded-2xl shadow-2xl shadow-[var(--accent-glow)] flex items-center justify-center gap-2"
           >
-            Agendar Ahora
+            {scheduleStatus.isOpen ? "Reservar Turno Hoy" : scheduleStatus.suggestedActionText}
           </button>
         </div>
 

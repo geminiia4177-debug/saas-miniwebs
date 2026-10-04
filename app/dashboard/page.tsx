@@ -15,6 +15,7 @@ import HomeTab from "@/components/dashboard/HomeTab";
 import SupportWidget from "@/components/dashboard/SupportWidget";
 import PayModal from "@/components/dashboard/PayModal";
 import OnboardingModal from "@/components/dashboard/OnboardingModal";
+import { getPublicUrl } from "@/lib/urls";
 
 // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // IMGBB UPLOAD (Para la subida general de la galerÃ­a)
@@ -283,7 +284,7 @@ export default function Dashboard() {
 
   const copyUrl = () => {
     if (!biz) return;
-    navigator.clipboard.writeText(biz.customDomain ? `https://${biz.customDomain}` : `https://${biz.subdomain}.saas-miniwebs.vercel.app`);
+    navigator.clipboard.writeText(getPublicUrl(biz));
     setCopiedUrl(true);
     setTimeout(() => setCopiedUrl(false), 2000);
     pushToast("URL copiada al portapapeles", "info");
@@ -481,7 +482,7 @@ export default function Dashboard() {
               <BiolinksTab
                 biz={biz} setBiz={setBiz} saveAll={saveAll} saving={saving}
                 showToast={pushToast} copyUrl={() => {
-                  navigator.clipboard.writeText(biz.customDomain ? `https://${biz.customDomain}/links` : `https://${biz.subdomain}.saas-miniwebs.vercel.app/links`);
+                  navigator.clipboard.writeText(getPublicUrl(biz, { path: "/links" }));
                   setCopiedUrl(true);
                   setTimeout(() => setCopiedUrl(false), 2000);
                   pushToast("URL /links copiada al portapapeles", "success");

@@ -1,10 +1,12 @@
 "use client";
 
-import React from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Biz, Section, MediaItem, Ico } from "@/lib/constants";
 import TemplateRenderer from "@/components/landings/templates/TemplateRenderer";
 import EditModeWrapper from "@/components/landings/EditModeWrapper";
 import { IframePreview } from "./IframePreview";
+import { resolveTemplateKind } from "@/lib/templates/resolver";
+import { getPublicUrl } from "@/lib/urls";
 
 import BarberiaTemplate from "@/components/landings/BarberiaTemplate";
 import CanchaTemplate from "@/components/landings/CanchaTemplate";
@@ -17,11 +19,12 @@ import LavaderoTemplate from "@/components/landings/LavaderoTemplate";
 import GeneralTemplate from "@/components/landings/GeneralTemplate";
 import TiendaTemplate from "@/components/landings/TiendaTemplate";
 
-interface LandingPreviewProps {
+export interface LandingPreviewProps {
   biz: Biz;
   sections: Section[];
   media: MediaItem[];
-  previewDevice?: "desktop" | "mobile";
+  previewDevice?: "desktop" | "tablet" | "mobile";
+  onSelectSection?: (sectionId: string) => void;
 }
 
 export const LandingPreview = ({
@@ -29,74 +32,37 @@ export const LandingPreview = ({
   sections,
   media,
   previewDevice = "desktop",
+  onSelectSection,
 }: LandingPreviewProps) => {
-  const templateLevel = biz.layoutConfig?.templateLevel;
-  const themeVariant = biz.layoutConfig?.themeVariant || "classic";
+  const templateKind = resolveTemplateKind(biz);
+  const currentUrl = getPublicUrl(biz);
 
-  const renderContent = () => {
-    // Tienda virtual
-    if (biz.type === "tienda" || themeVariant === "tienda") {
-      return <TiendaTemplate negocio={biz as any} businessId={biz.id} />;
+  const [zoomMode, setZoomMode] = useState<"fit" | "50" | "75" | "100">("fit");
+  const previewRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState<number>(1);
+
+  // Escuchar mensajes de click-to-edit si se provee callback
+  useEffect(() => {
+    const handleMsg = (e: MessageEvent) => {
+      if (e.data?.type === "EDIT_SECTION" && onSelectSection) {
+        onSelectSection(e.data.section);
+      }
+    };
+    window.addEventListener("message", handleMsg);
+    return () => window.removeEventListener("message", handleMsg);
+  }, [onSelectSection]);
+
+  // Escalado adaptable
+  useEffect(() => {
+    if (zoomMode === "50") {
+      setScale(0.5);
+      return;
     }
-
-    // Multi-level template or modern universal theme
-    const isMultiLevel =
-      !!templateLevel ||
-      [
-        "classic",
-        "clean",
-        "essential",
-        "motion",
-        "modern",
-        "dynamic",
-        "premium",
-        "luxury",
-        "editorial",
-        "minimal_luxury",
-        "dark",
-        "list",
-        "immersive",
-        "flow",
-        "particles",
-        "organic",
-        "immersive_dark",
-      ].includes(themeVariant);
-
-    if (isMultiLevel) {
-      return (
-        <TemplateRenderer
-          negocio={biz}
-          media={media}
-          sections={sections}
-          businessId={biz.id}
-        />
-      );
+    if (zoomMode === "75") {
+      setScale(0.75);
+      return;
     }
-
-    // Legacy niche specific fallbacks
-    if (biz.type === "barberia") return <BarberiaTemplate negocio={biz as any} media={media} businessId={biz.id} sections={sections} />;
-    if (biz.type === "taller") return <TallerTemplate negocio={biz as any} media={media} businessId={biz.id} sections={sections} />;
-    if (biz.type === "lavadero") return <LavaderoTemplate negocio={biz as any} media={media} businessId={biz.id} sections={sections} />;
-    if (biz.type === "cancha") return <CanchaTemplate negocio={biz as any} />;
-    if (biz.type === "menu" || biz.type === "restaurante") return <MenuTemplate negocio={biz as any} />;
-    if (biz.type === "estetica") return <EsteticaTemplate negocio={biz as any} />;
-    if (biz.type === "clinica") return <ClinicaTemplate negocio={biz as any} />;
-    if (biz.type === "gimnasio") return <GimnasioTemplate negocio={biz as any} />;
-
-    return <GeneralTemplate negocio={biz as any} media={media} businessId={biz.id} sections={sections} />;
-  };
-
-  const currentUrl = biz.customDomain 
-    ? `https://${biz.customDomain}` 
-    : `https://${biz.subdomain || "demo"}.miniwebs.lat`;
-
-  // Control de escala adaptable para que la vista de escritorio nunca se corte
-  const [fitScale, setFitScale] = React.useState<boolean>(true);
-  const previewRef = React.useRef<HTMLDivElement>(null);
-  const [scale, setScale] = React.useState<number>(1);
-
-  React.useEffect(() => {
-    if (previewDevice !== "desktop") {
+    if (zoomMode === "100") {
       setScale(1);
       return;
     }
@@ -104,8 +70,9 @@ export const LandingPreview = ({
     const updateScale = () => {
       if (!previewRef.current) return;
       const width = previewRef.current.clientWidth;
-      if (width > 0 && width < 1180 && fitScale) {
-        setScale(Math.max(0.4, Math.min(1, width / 1180)));
+      const targetWidth = previewDevice === "desktop" ? 1180 : previewDevice === "tablet" ? 820 : 375;
+      if (width > 0 && width < targetWidth) {
+        setScale(Math.max(0.35, Math.min(1, width / targetWidth)));
       } else {
         setScale(1);
       }
@@ -118,31 +85,84 @@ export const LandingPreview = ({
       ro = new ResizeObserver(updateScale);
       ro.observe(previewRef.current);
     }
-
     return () => {
       window.removeEventListener("resize", updateScale);
       ro?.disconnect();
     };
-  }, [previewDevice, fitScale]);
+  }, [previewDevice, zoomMode]);
 
-  // ── MODO MÓVIL (Smartphone Mockup de Alta Precisión) ──
+  const renderContent = () => {
+    switch (templateKind) {
+      case "tienda":
+        return <TiendaTemplate negocio={biz as any} businessId={biz.id} isPreview={true} />;
+      case "multilevel":
+        return (
+          <TemplateRenderer
+            negocio={biz}
+            media={media}
+            sections={sections}
+            businessId={biz.id}
+            isPreview={true}
+          />
+        );
+      case "barberia":
+        return <BarberiaTemplate negocio={biz as any} media={media} businessId={biz.id} sections={sections} />;
+      case "taller":
+        return <TallerTemplate negocio={biz as any} media={media} businessId={biz.id} sections={sections} />;
+      case "lavadero":
+        return <LavaderoTemplate negocio={biz as any} media={media} businessId={biz.id} sections={sections} />;
+      case "cancha":
+        return <CanchaTemplate negocio={biz as any} />;
+      case "menu":
+        return <MenuTemplate negocio={biz as any} />;
+      case "estetica":
+        return <EsteticaTemplate negocio={biz as any} />;
+      case "clinica":
+        return <ClinicaTemplate negocio={biz as any} />;
+      case "gimnasio":
+        return <GimnasioTemplate negocio={biz as any} />;
+      case "general":
+      default:
+        return <GeneralTemplate negocio={biz as any} media={media} businessId={biz.id} sections={sections} />;
+    }
+  };
+
+  // Zoom control bar component
+  const ZoomBar = () => (
+    <div className="flex items-center gap-1 bg-surface-2 p-0.5 rounded-lg border border-border-subtle">
+      {(["fit", "50", "75", "100"] as const).map((z) => (
+        <button
+          key={z}
+          type="button"
+          onClick={() => setZoomMode(z)}
+          className={`px-2 py-0.5 rounded text-[10px] font-semibold transition-colors ${
+            zoomMode === z
+              ? "bg-surface-3 text-fg shadow-sm border border-border-default"
+              : "text-fg-subtle hover:text-fg"
+          }`}
+        >
+          {z === "fit" ? "Ajustar" : `${z}%`}
+        </button>
+      ))}
+    </div>
+  );
+
+  // ── MODO MÓVIL (Marco sobrio 1px, 44px radio, sin botones falsos) ──
   if (previewDevice === "mobile") {
     return (
-      <div className="w-full max-w-[390px] mx-auto flex flex-col items-center justify-center py-2 animate-fadeIn">
-        <div className="relative w-[390px] h-[810px] max-h-[calc(100vh-140px)] bg-[#0a0f1c] rounded-[52px] p-3 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.85),0_0_0_1px_rgba(255,255,255,0.12)] border-[8px] border-[#1c2333] flex flex-col select-none">
-          {/* Botones laterales físicos */}
-          <div className="absolute -left-3 top-24 w-1.5 h-10 bg-[#283248] rounded-l-md pointer-events-none" />
-          <div className="absolute -left-3 top-38 w-1.5 h-10 bg-[#283248] rounded-l-md pointer-events-none" />
-          <div className="absolute -right-3 top-28 w-1.5 h-14 bg-[#283248] rounded-r-md pointer-events-none" />
+      <div className="w-full flex flex-col items-center justify-center p-2 sm:p-4 animate-fadeIn">
+        <div className="mb-3 flex items-center justify-between w-full max-w-[390px] px-2">
+          <span className="text-[11px] text-fg-subtle font-medium">Móvil (375px)</span>
+          <ZoomBar />
+        </div>
 
-          {/* Dynamic Island */}
-          <div className="absolute top-5 left-1/2 -translate-x-1/2 w-28 h-6 bg-black rounded-full z-40 flex items-center justify-between px-3 pointer-events-none shadow-md">
-            <div className="w-2 h-2 rounded-full bg-slate-900 border border-white/10" />
-            <div className="w-2.5 h-2.5 rounded-full bg-[#0d1424] border border-white/5" />
+        <div className="relative w-[375px] h-[780px] max-h-[calc(100vh-150px)] bg-surface-1 rounded-[44px] p-2.5 shadow-2xl border border-white/10 flex flex-col select-none">
+          {/* Dynamic Island / notch */}
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 w-24 h-5 bg-black rounded-full z-40 flex items-center justify-center pointer-events-none">
+            <div className="w-2.5 h-2.5 rounded-full bg-surface-3 border border-white/10" />
           </div>
 
-          {/* Pantalla del teléfono con IframePreview */}
-          <div className="relative w-full h-full rounded-[42px] overflow-hidden bg-black flex-1 shadow-inner">
+          <div className="relative w-full h-full rounded-[36px] overflow-hidden bg-black flex-1 shadow-inner">
             <IframePreview title="Vista Previa Móvil" className="w-full h-full">
               <div className="w-full min-h-screen bg-transparent select-text">
                 {renderContent()}
@@ -151,61 +171,72 @@ export const LandingPreview = ({
             </IframePreview>
           </div>
 
-          {/* Home Indicator Bar */}
-          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-32 h-1 bg-white/40 rounded-full z-40 pointer-events-none" />
+          {/* Home indicator */}
+          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-28 h-1 bg-white/30 rounded-full pointer-events-none" />
         </div>
       </div>
     );
   }
 
-  // ── MODO ESCRITORIO (Browser Window Mockup) ──
+  // ── MODO TABLET (820px) ──
+  if (previewDevice === "tablet") {
+    return (
+      <div className="w-full flex flex-col items-center justify-center p-2 sm:p-4 animate-fadeIn" ref={previewRef}>
+        <div className="mb-3 flex items-center justify-between w-full max-w-[840px] px-2">
+          <span className="text-[11px] text-fg-subtle font-medium">Tablet (820px)</span>
+          <ZoomBar />
+        </div>
+
+        <div className="relative w-[820px] max-w-full h-[760px] max-h-[calc(100vh-150px)] bg-surface-1 rounded-[32px] p-3 shadow-2xl border border-white/10 flex flex-col select-none">
+          {/* Front camera indicator */}
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full bg-black border border-white/10 z-40" />
+
+          <div className="relative w-full h-full rounded-[22px] overflow-hidden bg-black flex-1 shadow-inner">
+            <IframePreview title="Vista Previa Tablet" className="w-full h-full">
+              <div className="w-full min-h-screen bg-transparent select-text">
+                {renderContent()}
+                <EditModeWrapper />
+              </div>
+            </IframePreview>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── MODO ESCRITORIO (Browser Window) ──
   return (
-    <div className="w-full max-w-[1240px] mx-auto flex flex-col h-[740px] max-h-[calc(100vh-140px)] bg-[#0e1422] rounded-2xl border border-white/10 shadow-2xl overflow-hidden animate-fadeIn">
-      {/* Cabecera de navegador */}
-      <div className="h-10 bg-[#0a0f1c] border-b border-white/5 flex items-center justify-between px-4 flex-shrink-0">
+    <div
+      ref={previewRef}
+      className="w-full max-w-[1240px] mx-auto flex flex-col h-[740px] max-h-[calc(100vh-140px)] bg-[#0e1422] rounded-2xl border border-white/10 shadow-2xl overflow-hidden animate-fadeIn"
+    >
+      {/* Browser header */}
+      <div className="h-10 bg-surface-1 border-b border-border-default flex items-center justify-between px-4 flex-shrink-0 select-none">
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 rounded-full bg-[#ef4444]/80" />
           <div className="w-3 h-3 rounded-full bg-[#f59e0b]/80" />
           <div className="w-3 h-3 rounded-full bg-[#10b981]/80" />
         </div>
 
-        {/* Falsa barra de URL segura */}
-        <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-3 py-1 rounded-lg text-xs text-slate-400 font-mono max-w-sm w-full mx-4 justify-center">
-          <Ico n="lock" s={11} c="text-emerald-400" />
+        <div className="flex items-center gap-2 bg-surface-2 border border-border-subtle px-3 py-1 rounded-lg text-xs text-fg-muted font-mono max-w-sm w-full mx-4 justify-center">
+          <Ico n="lock" s={11} c="text-success" />
           <span className="truncate">{currentUrl}</span>
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => setFitScale(!fitScale)}
-            className="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors flex items-center gap-1.5"
-            style={{
-              background: fitScale ? "rgba(99,102,241,0.2)" : "rgba(255,255,255,0.06)",
-              color: fitScale ? "#a5b4fc" : "#94a3b8",
-              border: fitScale ? "1px solid rgba(99,102,241,0.35)" : "1px solid rgba(255,255,255,0.1)",
-            }}
-            title={fitScale ? "Ver en píxeles reales (100%)" : "Ajustar al ancho disponible para ver todo el sitio"}
-          >
-            <span>{fitScale ? `Ajustado (${Math.round(scale * 100)}%)` : "100% Real"}</span>
-          </button>
-          <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider hidden sm:inline">Escritorio</span>
+          <ZoomBar />
         </div>
       </div>
 
-      {/* Pantalla de escritorio con IframePreview y escalado proporcional */}
-      <div className="relative w-full flex-1 overflow-hidden bg-black" ref={previewRef}>
+      {/* Screen container */}
+      <div className="relative w-full flex-1 overflow-hidden bg-black">
         <div
-          className="h-full"
-          style={
-            fitScale && scale < 1
-              ? {
-                  width: "1180px",
-                  height: `${100 / scale}%`,
-                  transform: `scale(${scale})`,
-                  transformOrigin: "top left",
-                }
-              : { width: "100%", height: "100%" }
-          }
+          className="h-full origin-top transition-transform duration-150"
+          style={{
+            transform: scale !== 1 ? `scale(${scale})` : undefined,
+            width: scale !== 1 ? `${100 / scale}%` : "100%",
+            height: scale !== 1 ? `${100 / scale}%` : "100%",
+          }}
         >
           <IframePreview title="Vista Previa Escritorio" className="w-full h-full">
             <div className="w-full min-h-screen bg-transparent select-text">

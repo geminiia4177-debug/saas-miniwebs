@@ -5,6 +5,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { requireBusinessOwner } from "@/lib/auth-helpers";
 import { checkRateLimit, getRateLimitRetryAfterMs } from "@/lib/rate-limit";
+import { getPublicDomain } from "@/lib/urls";
 
 // ─── RATE LIMITING: Messages ──────────────────────────────────────────────────
 // P1-004: Prevent abuse of the message system and AI bot.
@@ -282,7 +283,7 @@ FECHA Y HORA ACTUAL: ${new Date().toLocaleDateString("es-MX", { weekday: "long",
 📊 ESTADO ACTUAL DEL NEGOCIO Y CONFIGURACIÓN VISUAL:
 ════════════════════════════════════════════════════════════════════════════════
 - Negocio: ${bizInfo?.name} (${bizInfo?.type})
-- Subdominio: ${bizInfo?.subdomain}.miniwebs.lat ${bizInfo?.customDomain ? `| Dominio: ${bizInfo.customDomain}` : ""}
+- Dominio público: ${getPublicDomain(bizInfo)}
 - Estado de cuenta: ${bizInfo?.status}
 - Título principal del Hero: "${heroTitle}"
 - Color del Texto del Título: ${heroTitleColor}

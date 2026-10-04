@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import PremiumLinks from "@/components/landings/PremiumLinks";
+import { getPublicUrl, getBaseAppDomain } from "@/lib/urls";
 
 import type { Metadata } from "next";
 
@@ -42,7 +43,7 @@ export async function generateMetadata({ params }: { params: Promise<{ subdomain
     openGraph: {
       title,
       description,
-      url: biz.customDomain ? `https://${biz.customDomain}/links` : `https://${resolvedParams.subdomain}.saas-miniwebs.vercel.app/links`,
+      url: getPublicUrl(biz, { path: "/links" }),
       siteName: biz.name,
       images: image ? [{ url: image }] : [],
     },
@@ -61,7 +62,7 @@ export default async function BiolinksPage({ params }: { params: Promise<{ subdo
   const host = headersList.get("host") || "";
   let targetSubdomain = resolvedParams.subdomain;
   
-  if (!host.includes("localhost") && !host.includes("saas-miniwebs.vercel.app")) {
+  if (!host.includes("localhost") && !host.includes(getBaseAppDomain())) {
     targetSubdomain = host; 
   }
 

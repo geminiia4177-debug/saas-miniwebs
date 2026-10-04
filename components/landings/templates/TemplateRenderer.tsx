@@ -18,6 +18,15 @@ const PremiumTemplate = dynamic(() => import("./PremiumTemplate"), {
 const ImmersiveTemplate = dynamic(() => import("./ImmersiveTemplate"), {
   loading: () => <div className="min-h-screen bg-[#05070e] animate-pulse" />,
 });
+const BentoTemplate = dynamic(() => import("./BentoTemplate"), {
+  loading: () => <div className="min-h-screen bg-[#07090e] animate-pulse" />,
+});
+const AppNativeTemplate = dynamic(() => import("./AppNativeTemplate"), {
+  loading: () => <div className="min-h-screen bg-[#07090e] animate-pulse" />,
+});
+const LookbookTemplate = dynamic(() => import("./LookbookTemplate"), {
+  loading: () => <div className="min-h-screen bg-[#06080d] animate-pulse" />,
+});
 
 interface TemplateRendererProps {
   negocio: any;
@@ -25,6 +34,7 @@ interface TemplateRendererProps {
   sections?: Section[];
   businessId?: string;
   bookingElement?: React.ReactNode;
+  isPreview?: boolean;
 }
 
 /**
@@ -39,14 +49,16 @@ export default function TemplateRenderer({
   sections = [],
   businessId,
   bookingElement,
+  isPreview = false,
 }: TemplateRendererProps) {
   if (!negocio) return null;
 
-  // Normalize data contract
+  // Normalize data contract (D09: no fake mock data on public landings)
   const data: BusinessDataContract = normalizeBusinessData(
     { ...negocio, id: businessId || negocio.id },
     media,
-    sections
+    sections,
+    { isPublic: !isPreview }
   );
 
   const level = data.design.templateLevel;
@@ -60,6 +72,12 @@ export default function TemplateRenderer({
       return <PremiumTemplate data={data} bookingElement={bookingElement} />;
     case "immersive":
       return <ImmersiveTemplate data={data} bookingElement={bookingElement} />;
+    case "bento":
+      return <BentoTemplate data={data} bookingElement={bookingElement} />;
+    case "app_native":
+      return <AppNativeTemplate data={data} bookingElement={bookingElement} />;
+    case "lookbook":
+      return <LookbookTemplate data={data} bookingElement={bookingElement} />;
     default:
       return <ClassicTemplate data={data} bookingElement={bookingElement} />;
   }

@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 import { checkRateLimit, getRateLimitRetryAfterMs } from "@/lib/rate-limit";
+import { getPublicUrl } from "@/lib/urls";
 
 // ─── RATE LIMITING: AI Generation ─────────────────────────────────────────────
 // P1-004: Prevent abuse of AI models. Limit to 5 per minute per user.
@@ -74,7 +75,7 @@ export async function POST(req: Request) {
 Tu objetivo es escribir un mensaje persuasivo para enviar por WhatsApp a un cliente.
 El mensaje debe ser corto, amigable, usar lenguaje argentino/neutro, incluir algunos emojis relevantes y tener un llamado a la acción claro (ej: reservar un turno).
 Usa el texto "{{cliente}}" exactamente así para referirte al nombre de la persona. No asumas ni inventes nombres reales.
-La URL para reservar es: https://${business.customDomain || `${business.subdomain}.saas-miniwebs.com`}
+La URL para reservar es: ${getPublicUrl(business)}
 
 `;
 

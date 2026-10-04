@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireSession, requireBusinessOwner } from "@/lib/auth-helpers";
 import { z } from "zod";
+import { getPublicUrl } from "@/lib/urls";
 
 const TableStatusSchema = z.enum(["OPEN", "CLOSED"]);
 
@@ -88,7 +89,7 @@ export async function POST(req: Request) {
           });
 
           const newNumber = lastTable ? lastTable.number + 1 : 1;
-          const tableUrl = business.customDomain ? `https://${business.customDomain}/?mesa=${newNumber}` : `https://${business.subdomain}.saas-miniwebs.com/?mesa=${newNumber}`;
+          const tableUrl = getPublicUrl(business, { mesa: newNumber });
           const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(tableUrl)}`;
 
           return await tx.table.create({

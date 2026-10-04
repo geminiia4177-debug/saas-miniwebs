@@ -36,8 +36,11 @@ export default function EditModeWrapper() {
         if (target.closest('header') || target.closest('nav')) mappedSection = "header";
         else if (target.closest('footer')) mappedSection = "footer";
       }
-      
-      window.parent.postMessage({ type: 'EDIT_SECTION', section: mappedSection }, '*');
+
+      const targetOrigin = typeof window !== "undefined" && window.location.origin && window.location.origin !== "null"
+        ? window.location.origin
+        : "*";
+      window.parent.postMessage({ type: 'EDIT_SECTION', section: mappedSection }, targetOrigin);
     };
 
     // Usar la fase de captura (true) para interceptar clics antes que React/Next.js

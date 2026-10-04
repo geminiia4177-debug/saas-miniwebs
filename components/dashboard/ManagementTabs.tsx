@@ -6,6 +6,7 @@ import { DropZone } from "./editor/DropZone";
 import IntelligenceTab from "./IntelligenceTab";
 import HelpTooltip from "@/components/ui/HelpTooltip";
 import { QRCodeSVG } from "qrcode.react";
+import { getPublicUrl, getPublicDomain } from "@/lib/urls";
 
 // ─────────────────────────────────────────────
 // IMGBB UPLOAD (Aislado para el panel de gestión)
@@ -372,7 +373,7 @@ export default function ManagementTabs({
               <p className="text-slate-400 max-w-sm mx-auto mb-6 text-sm">
                 Todavía no tenés turnos. ¡Empezá a compartir tu link personalizado con tus clientes en Instagram o WhatsApp para llenarla!
               </p>
-              <a href={`https://${biz.customDomain || `${biz.subdomain}.saas-miniwebs.com`}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-sm font-bold text-white transition-transform hover:scale-105" style={{ background: "linear-gradient(135deg,#6366f1,#a855f7)" }}>
+              <a href={getPublicUrl(biz)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-sm font-bold text-white transition-transform hover:scale-105" style={{ background: "linear-gradient(135deg,#6366f1,#a855f7)" }}>
                 <Ico n="external-link" s={14} /> Ver y compartir mi página
               </a>
             </div>
@@ -1029,7 +1030,7 @@ export default function ManagementTabs({
                 <div className="p-3 bg-white rounded-2xl shadow-xl flex-shrink-0 flex items-center justify-center">
                   <QRCodeSVG
                     id="store-qr-code"
-                    value={biz.customDomain ? `https://${biz.customDomain}` : `https://${biz.subdomain}.saas-miniwebs.vercel.app`}
+                    value={getPublicUrl(biz)}
                     size={120}
                     level="H"
                     includeMargin={false}
@@ -1039,7 +1040,7 @@ export default function ManagementTabs({
                   <div>
                     <h4 className="text-sm font-bold text-white mb-0.5">Cartel de Reservas Online</h4>
                     <p className="text-xs text-indigo-300 font-mono break-all select-all">
-                      {biz.customDomain ? `https://${biz.customDomain}` : `https://${biz.subdomain}.saas-miniwebs.vercel.app`}
+                      {getPublicDomain(biz)}
                     </p>
                   </div>
                   <p className="text-xs text-slate-400 leading-relaxed">
@@ -1049,7 +1050,7 @@ export default function ManagementTabs({
                     <button
                       type="button"
                       onClick={() => {
-                        const url = biz.customDomain ? `https://${biz.customDomain}` : `https://${biz.subdomain}.saas-miniwebs.vercel.app`;
+                        const url = getPublicUrl(biz);
                         navigator.clipboard.writeText(url);
                         showToast("Link copiado al portapapeles ✓", "success");
                       }}

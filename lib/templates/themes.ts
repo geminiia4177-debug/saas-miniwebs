@@ -85,6 +85,36 @@ export const TEMPLATE_LEVEL_METADATA: Record<
     supportsAnimations: true,
     supports3D: true,
   },
+  bento: {
+    name: "Bento Grid",
+    marketingName: "Bento Grid",
+    description: "Grilla modular estilo Apple/Linear que condensa toda la información clave en mosaico.",
+    badge: "Estilo Bento",
+    tags: ["Mosaico", "Moderno", "Apple / Linear"],
+    allowedThemes: ["modern", "clean"],
+    supportsAnimations: true,
+    supports3D: false,
+  },
+  app_native: {
+    name: "App Native",
+    marketingName: "App Native Mobile",
+    description: "La web se siente como una app nativa instalada con navegación táctil inferior.",
+    badge: "Mobile First",
+    tags: ["App Touch", "Tab Bar", "Conversión"],
+    allowedThemes: ["modern", "clean"],
+    supportsAnimations: true,
+    supports3D: false,
+  },
+  lookbook: {
+    name: "Lookbook",
+    marketingName: "Lookbook Editorial",
+    description: "Catálogo visual tipo revista con fotos a sangre y hotspots tocables 'Shop the Look'.",
+    badge: "Editorial",
+    tags: ["Lookbook", "Hotspots", "Moda & Deco"],
+    allowedThemes: ["editorial", "luxury"],
+    supportsAnimations: true,
+    supports3D: false,
+  },
 };
 
 export const THEME_REGISTRY: Record<string, ThemeDefinition> = {

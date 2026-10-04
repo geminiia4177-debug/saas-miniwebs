@@ -5,8 +5,12 @@ import { getTheme } from "@/lib/themes";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import BookingForm from "./BookingForm";
+import { getPublicUrl } from "@/lib/urls";
+import { resolveTemplateKind } from "@/lib/templates/resolver";
 
 export const revalidate = 0; // Disable aggressive caching for public lands
+
+const DEFAULT_LOGO = "https://saas-miniwebs.com/default-logo.jpg";
 
 export async function generateMetadata({ params }: { params: Promise<{ subdomain: string }> }): Promise<Metadata> {
   const { subdomain } = await params;
@@ -30,18 +34,85 @@ export async function generateMetadata({ params }: { params: Promise<{ subdomain
   // P0-004: Do not generate metadata for blocked or archived businesses
   if (!biz || biz.status === "BLOCKED" || biz.status === "ARCHIVED") return {};
 
-  const defaultImage = "https://saas-miniwebs.com/default-logo.jpg";
-  const imageUrl = biz.logoUrl || defaultImage;
-  const domainUrl = biz.customDomain ? `https://${biz.customDomain}` : `https://${subdomain}.saas-miniwebs.com`;
+  const imageUrl = biz.logoUrl || DEFAULT_LOGO;
+  const domainUrl = getPublicUrl(biz);
+
+  // D08: Dynamic metadata tailored per business niche
+  const getMetadataByNiche = () => {
+    switch (biz.type) {
+      case "tienda":
+        return {
+          title: `${biz.name} | Tienda Online`,
+          description: biz.description || `Comprá online en ${biz.name}. Catálogo exclusivo, envíos directos y atención personalizada.`,
+          keywords: [biz.name, "tienda online", "comprar online", "catálogo", "productos", "envíos"],
+        };
+      case "menu":
+        return {
+          title: `${biz.name} | Carta & Pedidos Online`,
+          description: biz.description || `Conocé la carta de ${biz.name} y realizá tu pedido online de forma rápida y sencilla.`,
+          keywords: [biz.name, "menú", "restaurante", "pedir online", "gastronomía", "carta digital"],
+        };
+      case "barberia":
+        return {
+          title: `${biz.name} | Barbería & Cortes`,
+          description: biz.description || `Reservá tu turno en ${biz.name}. Cortes de pelo, barba y cuidado personal.`,
+          keywords: [biz.name, "barbería", "corte de pelo", "barba", "turnos online"],
+        };
+      case "taller":
+        return {
+          title: `${biz.name} | Taller Mecánico`,
+          description: biz.description || `Servicio técnico y mecánica para tu vehículo en ${biz.name}. Reservá tu turno online.`,
+          keywords: [biz.name, "taller mecánico", "reparación", "service", "autos"],
+        };
+      case "lavadero":
+        return {
+          title: `${biz.name} | Lavadero de Autos`,
+          description: biz.description || `Lavado y estética vehicular en ${biz.name}. Turnos y atención rápida.`,
+          keywords: [biz.name, "lavadero", "car wash", "estética automotriz", "turnos"],
+        };
+      case "cancha":
+        return {
+          title: `${biz.name} | Alquiler de Canchas`,
+          description: biz.description || `Alquilá tu cancha en ${biz.name} en pocos segundos de forma online.`,
+          keywords: [biz.name, "canchas", "fútbol", "pádel", "reserva de canchas"],
+        };
+      case "estetica":
+        return {
+          title: `${biz.name} | Centro de Estética & Belleza`,
+          description: biz.description || `Tratamientos de belleza y estética en ${biz.name}. Reservá tu turno online.`,
+          keywords: [biz.name, "estética", "belleza", "tratamientos", "turnos online"],
+        };
+      case "clinica":
+        return {
+          title: `${biz.name} | Consultorios Médicos`,
+          description: biz.description || `Atención profesional de la salud en ${biz.name}. Solicitá tu turno online.`,
+          keywords: [biz.name, "salud", "médicos", "consultorios", "turnos online"],
+        };
+      case "gimnasio":
+        return {
+          title: `${biz.name} | Gimnasio & Fitness`,
+          description: biz.description || `Entrenamiento y planes en ${biz.name}. Sumate hoy mismo.`,
+          keywords: [biz.name, "gimnasio", "fitness", "entrenamiento", "planes"],
+        };
+      default:
+        return {
+          title: `${biz.name} | Sitio Oficial`,
+          description: biz.description || `Bienvenido a ${biz.name}. Conocé nuestros servicios y contactanos online.`,
+          keywords: [biz.name, biz.type || "negocio", "servicios", "online"],
+        };
+    }
+  };
+
+  const nicheMeta = getMetadataByNiche();
 
   return {
-    title: `${biz.name} | Reserva tu turno`,
-    description: biz.description || `Bienvenido a ${biz.name}. Reserva tu turno online de forma rápida y sencilla.`,
-    keywords: [biz.name, biz.type || "negocio", "turnos", "reservas", "online"],
+    title: nicheMeta.title,
+    description: nicheMeta.description,
+    keywords: nicheMeta.keywords,
     robots: "index, follow",
     openGraph: {
-      title: `${biz.name} | Reserva tu turno`,
-      description: biz.description || `Reserva tu turno en ${biz.name} en pocos segundos.`,
+      title: nicheMeta.title,
+      description: nicheMeta.description,
       url: domainUrl,
       siteName: biz.name,
       images: [
@@ -56,8 +127,8 @@ export async function generateMetadata({ params }: { params: Promise<{ subdomain
     },
     twitter: {
       card: "summary_large_image",
-      title: biz.name,
-      description: biz.description || `Reserva online en ${biz.name}.`,
+      title: nicheMeta.title,
+      description: nicheMeta.description,
       images: [imageUrl],
     },
   };
@@ -185,6 +256,7 @@ export default async function PublicLandingPage({ params, searchParams }: { para
     tiendaCategorias: Array.isArray(activeConfig.tiendaCategorias) ? activeConfig.tiendaCategorias : undefined,
     tiendaEnvios: typeof activeConfig.tiendaEnvios === "object" && activeConfig.tiendaEnvios !== null ? activeConfig.tiendaEnvios : undefined,
     tiendaPagos: typeof activeConfig.tiendaPagos === "object" && activeConfig.tiendaPagos !== null ? activeConfig.tiendaPagos : undefined,
+    hotspots: Array.isArray(activeConfig.hotspots) ? activeConfig.hotspots : undefined,
   };
 
   const biz = {
@@ -215,12 +287,13 @@ export default async function PublicLandingPage({ params, searchParams }: { para
   // 2. EL "PEAJE" DE PLANTILLAS (Ruteo Dinámico)
   // Si el negocio tiene un tipo específico, lo mandamos a su diseño premium
   // ─────────────────────────────────────────────────────────
-  const jsonLd = {
+  const publicPageUrl = getPublicUrl(biz);
+  const jsonLd: Record<string, any> = {
     "@context": "https://schema.org",
     "@type": biz.type === "tienda" ? "Store" : biz.type === "barberia" ? "HairSalon" : biz.type === "menu" ? "Restaurant" : biz.type === "clinica" ? "MedicalClinic" : biz.type === "estetica" ? "BeautySalon" : biz.type === "gimnasio" ? "ExerciseGym" : biz.type === "taller" ? "AutoRepair" : biz.type === "lavadero" ? "AutoWash" : "LocalBusiness",
     "name": biz.name,
-    "image": biz.logoUrl || "https://saas-miniwebs.com/default-logo.jpg",
-    "url": `https://${subdomain}.saas-miniwebs.com`,
+    "image": biz.logoUrl || DEFAULT_LOGO,
+    "url": publicPageUrl,
     "telephone": biz.whatsapp || "",
     "address": {
       "@type": "PostalAddress",
@@ -228,71 +301,73 @@ export default async function PublicLandingPage({ params, searchParams }: { para
     }
   };
 
+  // D08: Structured Schema.org Product / ItemList for Tiendas
+  if (biz.type === "tienda" && Array.isArray(safeLayoutConfig.tiendaProductos) && safeLayoutConfig.tiendaProductos.length > 0) {
+    jsonLd.hasOfferCatalog = {
+      "@type": "OfferCatalog",
+      "name": `Catálogo de ${biz.name}`,
+      "itemListElement": safeLayoutConfig.tiendaProductos.slice(0, 10).map((prod: any, idx: number) => ({
+        "@type": "Offer",
+        "itemOffered": {
+          "@type": "Product",
+          "name": prod.nombre || prod.name,
+          "description": prod.descripcion || prod.description || "",
+          "image": prod.imagen || prod.imageUrl || undefined,
+        },
+        "price": prod.precio || prod.price || 0,
+        "priceCurrency": "ARS",
+        "availability": prod.disponible !== false ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+      }))
+    };
+  }
+
   const renderTemplate = () => {
     const layoutConfig = biz.layoutConfig || {};
     const media = layoutConfig.media || [];
     const sections = layoutConfig.sections || [];
-    const templateLevel = layoutConfig.templateLevel;
-    const themeVariant = layoutConfig.themeVariant || "classic";
-    
-    // Si el tipo es tienda o la variante es tienda, renderizamos la tienda virtual
-    if (biz.type === "tienda" || themeVariant === "tienda") {
-      return <TiendaTemplate negocio={biz} businessId={biz.id} />;
-    }
-    
-    // Si se eligió una plantilla multinivel o tema universal, usamos TemplateRenderer
-    const isMultiLevel =
-      !!templateLevel ||
-      [
-        "classic",
-        "clean",
-        "essential",
-        "motion",
-        "modern",
-        "dynamic",
-        "premium",
-        "luxury",
-        "editorial",
-        "minimal_luxury",
-        "dark",
-        "list",
-        "immersive",
-        "flow",
-        "particles",
-        "organic",
-        "immersive_dark",
-      ].includes(themeVariant);
+    const templateKind = resolveTemplateKind(biz);
 
-    if (isMultiLevel) {
-      return (
-        <TemplateRenderer
-          negocio={biz}
-          media={media}
-          sections={sections}
-          bookingElement={
-            <BookingForm
-              businessId={biz.id}
-              services={((layoutConfig.services || layoutConfig.barberiaServices || [{ name: "Servicio General" }]) as any[]).map((s: any) => typeof s === "string" ? s : s.name)}
-              primaryColor={biz.primaryColor || undefined}
-              secondaryColor={biz.secondaryColor || undefined}
-            />
-          }
-        />
-      );
+    switch (templateKind) {
+      case "tienda":
+        return <TiendaTemplate negocio={biz} businessId={biz.id} isPreview={isPreviewAuthorized} />;
+      case "multilevel":
+        return (
+          <TemplateRenderer
+            negocio={biz}
+            media={media}
+            sections={sections}
+            businessId={biz.id}
+            isPreview={isPreviewAuthorized}
+            bookingElement={
+              <BookingForm
+                businessId={biz.id}
+                services={((layoutConfig.services || layoutConfig.barberiaServices || [{ name: "Servicio General" }]) as any[]).map((s: any) => typeof s === "string" ? s : s.name)}
+                primaryColor={biz.primaryColor || undefined}
+                secondaryColor={biz.secondaryColor || undefined}
+              />
+            }
+          />
+        );
+      case "barberia":
+        return <BarberiaTemplate negocio={biz} media={media} businessId={biz.id} sections={sections} />;
+      case "taller":
+        return <TallerTemplate negocio={biz} media={media} businessId={biz.id} sections={sections} />;
+      case "lavadero":
+        return <LavaderoTemplate negocio={biz} media={media} businessId={biz.id} sections={sections} />;
+      case "cancha":
+        return <CanchaTemplate negocio={biz} businessId={biz.id} />;
+      case "menu":
+        return <MenuTemplate negocio={biz} businessId={biz.id} />;
+      case "estetica":
+        return <EsteticaTemplate negocio={biz} businessId={biz.id} />;
+      case "clinica":
+        return <ClinicaTemplate negocio={biz} businessId={biz.id} />;
+      case "gimnasio":
+        return <GimnasioTemplate negocio={biz} businessId={biz.id} />;
+      case "general":
+      default:
+        return <GeneralTemplate negocio={biz} media={media} businessId={biz.id} sections={sections} />;
     }
-    
-    // Diseño clásico según el tipo de negocio
-    if (biz.type === "barberia") return <BarberiaTemplate negocio={biz} media={media} businessId={biz.id} sections={sections} />;
-    if (biz.type === "taller") return <TallerTemplate negocio={biz} media={media} businessId={biz.id} sections={sections} />;
-    if (biz.type === "lavadero") return <LavaderoTemplate negocio={biz} media={media} businessId={biz.id} sections={sections} />;
-    if (biz.type === "general") return <GeneralTemplate negocio={biz} media={media} businessId={biz.id} sections={sections} />;
-    
-    if (biz.type === "cancha") return <CanchaTemplate negocio={biz} businessId={biz.id} />;
-    if (biz.type === "menu") return <MenuTemplate negocio={biz} businessId={biz.id} />;
-    if (biz.type === "clinica") return <ClinicaTemplate negocio={biz} businessId={biz.id} />;
-    if (biz.type === "estetica") return <EsteticaTemplate negocio={biz} businessId={biz.id} />;
-    if (biz.type === "gimnasio") return <GimnasioTemplate negocio={biz} businessId={biz.id} />;
-    return null;
   };
 
   const TemplateComponent = renderTemplate();
