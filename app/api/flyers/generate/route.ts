@@ -584,6 +584,9 @@ Objetivo comercial de la campaña: ${goal}.
 ${bizContext}
 Instrucción personalizada del dueño: "${customPrompt || "Crear anuncios de alta conversión comercial"}".
 
+REGLA CRUCIAL SOBRE LA INSTRUCCIÓN PERSONALIZADA:
+Si el dueño especificó una temática, estética o estilo particular (por ejemplo: "estilo anime", "cyberpunk", "rockero", "retro 80s", "humor", "manga", "elegante"), DEBES impregnar creativamente esa estética y vocabulario en los títulos, badges, frases (headlines), captions y hashtags, manteniéndolo como una oferta publicitaria del negocio real (ejemplo para barbería con estilo anime: "TRANSFORMACIÓN SAIYAN", badge "POWER UP 20%", frases como "Subí de nivel tu look con precisión legendaria").
+
 Distribución temática y estilo de los 3 flyers:
 1. Flyer 1 (style: "promo"): Enfoque en Oferta, Descuento especial, o beneficio de bienvenida.
 2. Flyer 2 (style: "editorial"): Enfoque en Calidad, Distinción, Servicios estrella o Maestría artesanal.
@@ -741,7 +744,10 @@ Responde en formato JSON con la siguiente estructura:
         if (process.env.GEMINI_API_KEY) {
           try {
             const aiImg = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-            const promptImg = `${concept.imagePrompt}, commercial advertising photography for ${bizType}, high resolution, sharp details, vibrant lighting, clean negative space at center top and bottom, no text, no watermark, no typography`;
+            const userStyle = customPrompt ? `${customPrompt}, ` : "";
+            const isArtistic = /anime|manga|cartoon|dibujo|comic|cyberpunk|pixel|3d|vector/i.test(customPrompt || "");
+            const baseGenre = isArtistic ? "clean artwork" : `commercial advertising photography for ${bizType}`;
+            const promptImg = `${userStyle}${concept.imagePrompt || bizType}, ${baseGenre}, high resolution, sharp details, vibrant lighting, clean negative space at center top and bottom, no text, no watermark, no typography`;
             const imgRes = await aiImg.models.generateContent({
               model: "gemini-2.5-flash-image",
               contents: promptImg,
