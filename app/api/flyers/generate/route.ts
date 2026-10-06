@@ -740,8 +740,40 @@ Responde en formato JSON con la siguiente estructura:
       concepts.map(async (concept, idx) => {
         let photoBuffer: Buffer | null = null;
 
-        // Paso A (FM1): Intentar Gemini Image (gemini-2.5-flash-image)
-        if (process.env.GEMINI_API_KEY) {
+        // Paso A: Generar imagen de fondo con Pollinations.AI (model turbo con API Key oficial)
+        const pollinationKey = process.env.POLLINATIONS_API_KEY || "sk_yYIRTLHDWdurMwtxKH2RwYZ5SlMM4ZLV";
+        if (pollinationKey) {
+          try {
+            const userStyle = customPrompt ? `${customPrompt}, ` : "";
+            const isArtistic = /anime|manga|cartoon|dibujo|comic|cyberpunk|pixel|3d|vector/i.test(customPrompt || "");
+            const baseSubject = concept.imagePrompt || (isArtistic ? `${customPrompt} ${bizType}` : `commercial advertising photography for ${bizType}`);
+            const lighting = "dramatic warm ambient lighting, festive bokeh background, commercial product aesthetic";
+            const composition = "centered subject, shallow depth of field, wide empty negative space at center and top for text placement";
+            const negative = "no text, no letters, no words, no watermark, no human hands, no logos, clean backdrop";
+            const finalPrompt = `${userStyle}${baseSubject}, ${lighting}, ${composition}, ${negative}`;
+            const encodedPrompt = encodeURIComponent(finalPrompt.slice(0, 380));
+            const pollUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?model=turbo&width=1024&height=1024&nologo=true&enhance=false&seed=${Math.floor(Math.random() * 999999)}&key=${pollinationKey}`;
+
+            const res = await fetch(pollUrl, {
+              headers: {
+                Authorization: `Bearer ${pollinationKey}`,
+              },
+              signal: AbortSignal.timeout(16000),
+            });
+
+            if (res.ok) {
+              const ab = await res.arrayBuffer();
+              if (ab.byteLength > 2000) {
+                photoBuffer = Buffer.from(ab);
+              }
+            }
+          } catch (pollErr) {
+            console.warn("Pollinations AI generation failed, checking fallbacks:", pollErr);
+          }
+        }
+
+        // Paso B: Intentar Gemini Image (gemini-2.5-flash-image) si estuviese disponible
+        if (!photoBuffer && process.env.GEMINI_API_KEY) {
           try {
             const aiImg = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
             const userStyle = customPrompt ? `${customPrompt}, ` : "";
@@ -766,7 +798,7 @@ Responde en formato JSON con la siguiente estructura:
           }
         }
 
-        // Paso B: Foto real del negocio si existe en su galería
+        // Paso C: Foto real del negocio si existe en su galería
         if (!photoBuffer && businessGallery[idx]) {
           try {
             const res = await fetch(businessGallery[idx], { signal: AbortSignal.timeout(5000) });
@@ -778,7 +810,7 @@ Responde en formato JSON con la siguiente estructura:
           }
         }
 
-        // Paso C: Foto comercial curada en alta resolución
+        // Paso D: Foto comercial curada en alta resolución
         if (!photoBuffer) {
           const photoUrl = rubroPhotos[idx % rubroPhotos.length];
           try {
@@ -791,7 +823,7 @@ Responde en formato JSON con la siguiente estructura:
           }
         }
 
-        // Paso D: Gradiente de emergencia elegante con Sharp
+        // Paso E: Gradiente de emergencia elegante con Sharp
         if (!photoBuffer) {
           photoBuffer = await sharp({
             create: {
@@ -862,10 +894,11 @@ Responde en formato JSON con la siguiente estructura:
           .toBuffer();
 
         // ── FM2: SUBIR A CDN (ImgBB) PARA ALIVIANAR LA BASE DE DATOS ──
-        const [feedUrl, storyUrl, fbUrl] = await Promise.all([
+        const [feedUrl, storyUrl, fbUrl, bgUrl] = await Promise.all([
           uploadBufferToImgBB(feedBuffer, `${business.id}_flyer_${idx}_feed.jpg`),
           uploadBufferToImgBB(storyBuffer, `${business.id}_flyer_${idx}_story.jpg`),
           uploadBufferToImgBB(fbBuffer, `${business.id}_flyer_${idx}_fb.jpg`),
+          uploadBufferToImgBB(photoBuffer, `${business.id}_flyer_${idx}_bg.jpg`),
         ]);
 
         return {
@@ -881,6 +914,7 @@ Responde en formato JSON con la siguiente estructura:
           instagramPost: feedUrl,
           instagramStory: storyUrl,
           facebookPost: fbUrl,
+          bgPhotoUrl: bgUrl,
         };
       })
     );
