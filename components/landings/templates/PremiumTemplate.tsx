@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { BusinessDataContract } from "@/lib/templates/contract";
 import { getThemeDefinition, generateThemeVariables } from "@/lib/templates/themes";
 import { TemplateProps } from "./ClassicTemplate";
+import VideoSection from "@/components/ui/VideoSection";
 
 export default function PremiumTemplate({ data, bookingElement }: TemplateProps) {
   const { identity, contact, branding, hero, services, gallery, schedule, staff, testimonials, social, booking, design } = data;
@@ -69,8 +70,35 @@ export default function PremiumTemplate({ data, bookingElement }: TemplateProps)
   return (
     <div
       className={`min-h-screen ${isDark ? "bg-[#0a0a0d] text-[#f5f2eb]" : "bg-[#faf8f5] text-[#1c1917]"} selection:bg-[#c5a059] selection:text-black`}
-      style={{ ...themeVars, fontFamily: branding.font || "'Playfair Display', serif" }}
+      style={{
+        ...themeVars,
+        fontFamily: branding.font || "'Playfair Display', serif",
+        backgroundColor: branding.backgroundColor || undefined,
+      }}
     >
+      <style>{`
+        h1, h2, h3, .font-serif, .font-title {
+          font-family: ${branding.titleFont || branding.font || "'Playfair Display', serif"} !important;
+        }
+        h4, h5, h6, .font-subtitle {
+          font-family: ${branding.subtitleFont || branding.font || "'Plus Jakarta Sans', sans-serif"} !important;
+        }
+        ${branding.cardColor ? `
+          .rounded-3xl.border, .bg-\\[\\#121218\\] {
+            background-color: ${branding.cardColor} !important;
+          }
+        ` : ''}
+        ${branding.borderColor ? `
+          .border-white\\/5, .border-amber-500\\/20, .border-\\[\\#e7ded5\\] {
+            border-color: ${branding.borderColor} !important;
+          }
+        ` : ''}
+        ${branding.textColor ? `
+          .text-\\[\\#f5f2eb\\], .text-\\[\\#1c1917\\] {
+            color: ${branding.textColor} !important;
+          }
+        ` : ''}
+      `}</style>
       {/* ── LUXURY HEADER ── */}
       <header className={`sticky top-0 z-40 border-b ${isDark ? "bg-[#0a0a0d]/90 border-white/5" : "bg-[#faf8f5]/90 border-[#e7ded5]"} backdrop-blur-lg`}>
         <div className="max-w-6xl mx-auto px-6 h-20 flex items-center justify-between">
@@ -322,6 +350,22 @@ export default function PremiumTemplate({ data, bookingElement }: TemplateProps)
           <img src={lightboxImg} alt="Ampliación" className="max-w-full max-h-[90vh] rounded-2xl object-contain shadow-2xl" />
         </div>
       )}
+
+      {/* ── VIDEO (if present) ── */}
+      {(() => {
+        const videoSec = (data.rawSections || []).find((s) => s.id === "video" && s.visible !== false);
+        const videoUrl = videoSec?.config?.youtubeUrl || videoSec?.config?.videoUrl || (data as any).video?.url;
+        if (!videoUrl) return null;
+        return (
+          <VideoSection
+            videoUrl={videoUrl}
+            title={videoSec?.config?.title || videoSec?.label || "Conocenos en Video"}
+            subtitle={videoSec?.config?.description || videoSec?.config?.subtitle || "Descubrí la experiencia"}
+            accentColor={primary}
+            theme={isDark ? "dark" : "light"}
+          />
+        );
+      })()}
 
       {/* ── HORARIOS & UBICACIÓN ── */}
       <section id="horarios" className="py-24 px-6 max-w-4xl mx-auto">

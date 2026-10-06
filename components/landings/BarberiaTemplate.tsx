@@ -29,9 +29,22 @@ export default function BarberiaTemplate(props: { negocio: any; media?: any[]; b
   const [loadVideo, setLoadVideo] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   
+  const layout = negocio?.layoutConfig || {};
   const accent = negocio?.accentColor || negocio?.primaryColor || "#C8A96E";
-  const primary = negocio?.primaryColor || "#0a0a0a";
+  const primary = layout.backgroundColor || negocio?.primaryColor || "#0a0a0a";
   const secondary = negocio?.secondaryColor || "#1a1a1a";
+
+  const customBg = layout.backgroundColor || primary || "#0a0a0a";
+  const customCard = layout.cardColor || layout.surfaceColor || "#141414";
+  const customBorder = layout.borderColor || "rgba(255, 255, 255, 0.1)";
+  const customText = layout.textColor || "#F0EDE8";
+  const customTextMuted = layout.textMutedColor || "rgba(255, 255, 255, 0.5)";
+  const customBtnBg = layout.buttonBgColor || accent || "#C8A96E";
+  const customBtnText = layout.buttonTextColor || "#000000";
+
+  const fontTitle = layout.titleFontFamily || negocio?.fontFamily || "'Playfair Display', serif";
+  const fontSubtitle = layout.subtitleFontFamily || negocio?.fontFamily || "'DM Sans', sans-serif";
+  const fontBody = negocio?.fontFamily || "'DM Sans', sans-serif";
 
   const servicios = negocio?.layoutConfig?.barberiaServices || [];
   const productos = negocio?.layoutConfig?.barberiaProducts || [];
@@ -61,7 +74,7 @@ export default function BarberiaTemplate(props: { negocio: any; media?: any[]; b
       }
 
       // Active section detection
-      const sections = ["servicios", "productos", "galeria", "booking", "contacto"];
+      const sections = ["servicios", "productos", "galeria", "video", "booking", "contacto"];
       for (const id of sections.reverse()) {
         const el = document.getElementById(id);
         if (el && el.getBoundingClientRect().top <= 150) {
@@ -93,29 +106,30 @@ export default function BarberiaTemplate(props: { negocio: any; media?: any[]; b
   }, []);
 
   const getBackgroundStyle = () => {
-    if (negocio?.backgroundType === "image" && negocio?.backgroundImageUrl) {
-      return { backgroundImage: `url(${negocio.backgroundImageUrl})`, backgroundSize: "cover", backgroundPosition: "center", backgroundAttachment: "fixed" as const };
+    if (negocio?.backgroundType === "image" && (negocio?.backgroundImageUrl || layout.backgroundImageUrl)) {
+      const bgImg = negocio?.backgroundImageUrl || layout.backgroundImageUrl;
+      return { backgroundImage: `url(${bgImg})`, backgroundSize: "cover", backgroundPosition: "center", backgroundAttachment: "fixed" as const };
     }
     if (negocio?.backgroundType === "gradient") {
-      return { background: `linear-gradient(135deg, ${primary}, ${secondary})` };
+      return { background: `linear-gradient(135deg, ${customBg}, ${secondary})` };
     }
-    return { backgroundColor: primary };
+    return { backgroundColor: customBg };
   };
 
-  const googleFontUrl = negocio?.fontFamily && negocio.fontFamily.includes("'")
-    ? `https://fonts.googleapis.com/css2?family=${negocio.fontFamily.split("'")[1].replace(/ /g, '+')}:wght@300;400;600;700;800;900&display=swap`
-    : null;
-
   const fontStyle = {
-    fontFamily: negocio?.fontFamily && negocio.fontFamily.includes("'")
-      ? negocio.fontFamily
-      : negocio?.fontFamily === "serif" ? "Georgia,serif" :
-        negocio?.fontFamily === "mono" ? "monospace" :
-        negocio?.fontFamily === "rounded" ? "'Nunito',system-ui,sans-serif" :
-        "system-ui,sans-serif",
-    ["--scale-hero" as any]: (negocio?.layoutConfig?.fontSizeHero || 100) / 100,
-    ["--scale-titles" as any]: (negocio?.layoutConfig?.fontSizeTitles || 100) / 100,
-    ["--scale-body" as any]: (negocio?.layoutConfig?.fontSizeBody || 100) / 100,
+    fontFamily: fontBody,
+    color: customText,
+    ["--accent" as any]: accent,
+    ["--custom-bg" as any]: customBg,
+    ["--custom-card" as any]: customCard,
+    ["--custom-border" as any]: customBorder,
+    ["--custom-text" as any]: customText,
+    ["--custom-text-muted" as any]: customTextMuted,
+    ["--custom-btn-bg" as any]: customBtnBg,
+    ["--custom-btn-text" as any]: customBtnText,
+    ["--scale-hero" as any]: (layout.fontSizeHero || 100) / 100,
+    ["--scale-titles" as any]: (layout.fontSizeTitles || 100) / 100,
+    ["--scale-body" as any]: (layout.fontSizeBody || 100) / 100,
   };
 
   const handleReservarClick = () => {
@@ -141,10 +155,10 @@ export default function BarberiaTemplate(props: { negocio: any; media?: any[]; b
   return (
     <>
       <style>{`
-        ${googleFontUrl ? `@import url('${googleFontUrl}');` : ''}
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=DM+Sans:wght@300;400;500;600;700&display=swap');
-        .font-display { font-family: 'Playfair Display', serif; }
-        .font-body { font-family: 'DM Sans', sans-serif; }
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400..900&family=Cormorant+Garamond:wght@400..700&family=DM+Sans:wght@300;400;500;600;700&family=Inter:wght@300..900&family=Montserrat:wght@300..900&family=Outfit:wght@300..900&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Plus+Jakarta+Sans:wght@300..800&family=Poppins:wght@300..800&family=Space+Grotesk:wght@300..700&family=Syne:wght@400..800&display=swap');
+        .font-display { font-family: ${fontTitle} !important; }
+        .font-body { font-family: ${fontBody} !important; }
+        .font-subtitle { font-family: ${fontSubtitle} !important; }
 
         /* ─── Scroll Progress Bar ─── */
         .scroll-progress {
@@ -161,18 +175,41 @@ export default function BarberiaTemplate(props: { negocio: any; media?: any[]; b
 
         /* ─── Buttons ─── */
         .btn-reserva {
-          background-color: var(--accent);
-          color: #000;
+          background-color: ${customBtnBg} !important;
+          color: ${customBtnText} !important;
           transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
         }
         .btn-reserva:hover {
           filter: brightness(1.15);
           transform: translateY(-3px);
-          box-shadow: 0 12px 30px -8px var(--accent);
+          box-shadow: 0 12px 30px -8px ${customBtnBg};
         }
 
         /* ─── Service Card ─── */
         .service-card {
+          background-color: ${customCard} !important;
+          border-color: ${customBorder} !important;
+          transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        .service-card:hover {
+          transform: translateY(-4px);
+          border-color: var(--accent) !important;
+          box-shadow: 0 20px 40px -12px rgba(0,0,0,0.5);
+        }
+        .service-card:hover .service-price {
+          color: var(--accent);
+        }
+
+        /* ─── Product Card ─── */
+        .product-card {
+          background-color: ${customCard} !important;
+          border-color: ${customBorder} !important;
+          transition: all 0.4s ease;
+        }
+        .product-card:hover {
+          transform: translateY(-6px);
+          border-color: var(--accent) !important;
+        }
           transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
         }
         .service-card:hover {
@@ -312,6 +349,18 @@ export default function BarberiaTemplate(props: { negocio: any; media?: any[]; b
               <li><button onClick={() => scrollToSection("servicios")} className={navLinkClass("servicios")}>Servicios</button></li>
               {productos.length > 0 && <li><button onClick={() => scrollToSection("productos")} className={navLinkClass("productos")}>Productos</button></li>}
               {galleryImages.length > 0 && <li><button onClick={() => scrollToSection("galeria")} className={navLinkClass("galeria")}>Galería</button></li>}
+              {(() => {
+                const vSec = sectionList.find((s) => s.id === "video" && s.visible !== false);
+                const hasVid = vSec && (vSec.config?.youtubeUrl || vSec.config?.videoUrl || videoUrl);
+                if (!hasVid) return null;
+                return (
+                  <li>
+                    <button onClick={() => scrollToSection("video")} className={navLinkClass("video")}>
+                      {vSec.label || vSec.config?.title || "Video"}
+                    </button>
+                  </li>
+                );
+              })()}
               <li><button onClick={() => scrollToSection("booking")} className={navLinkClass("booking")}>Reservar</button></li>
               <li><button onClick={() => scrollToSection("contacto")} className={navLinkClass("contacto")}>Contacto</button></li>
             </ul>
@@ -360,6 +409,16 @@ export default function BarberiaTemplate(props: { negocio: any; media?: any[]; b
               <button onClick={() => scrollToSection("servicios")} className="text-sm tracking-[0.15em] uppercase text-white/80 hover:text-[var(--accent)] transition-colors py-2 border-b border-white/5 text-left">Servicios</button>
               {productos.length > 0 && <button onClick={() => scrollToSection("productos")} className="text-sm tracking-[0.15em] uppercase text-white/80 hover:text-[var(--accent)] transition-colors py-2 border-b border-white/5 text-left">Productos</button>}
               {galleryImages.length > 0 && <button onClick={() => scrollToSection("galeria")} className="text-sm tracking-[0.15em] uppercase text-white/80 hover:text-[var(--accent)] transition-colors py-2 border-b border-white/5 text-left">Galería</button>}
+              {(() => {
+                const vSec = sectionList.find((s) => s.id === "video" && s.visible !== false);
+                const hasVid = vSec && (vSec.config?.youtubeUrl || vSec.config?.videoUrl || videoUrl);
+                if (!hasVid) return null;
+                return (
+                  <button onClick={() => scrollToSection("video")} className="text-sm tracking-[0.15em] uppercase text-white/80 hover:text-[var(--accent)] transition-colors py-2 border-b border-white/5 text-left">
+                    {vSec.label || vSec.config?.title || "Video"}
+                  </button>
+                );
+              })()}
               <button onClick={() => scrollToSection("booking")} className="text-sm tracking-[0.15em] uppercase text-white/80 hover:text-[var(--accent)] transition-colors py-2 border-b border-white/5 text-left">Reservar</button>
               <button onClick={() => scrollToSection("contacto")} className="text-sm tracking-[0.15em] uppercase text-white/80 hover:text-[var(--accent)] transition-colors py-2 text-left">Contacto</button>
               <div className="flex gap-4 pt-2">
@@ -563,17 +622,25 @@ export default function BarberiaTemplate(props: { negocio: any; media?: any[]; b
         )}
 </React.Fragment>;
             case 'video': {
-              const currentVideoUrl = s.config?.youtubeUrl || videoUrl;
+              const currentVideoUrl = s.config?.youtubeUrl || s.config?.videoUrl || videoUrl;
+              const videoTitle = s.config?.title || s.label || "Video Institucional";
+              const videoDesc = s.config?.description || s.config?.subtitle || "Conocenos mejor";
               return <React.Fragment key={s.id}>
 {/* ─── VIDEO ─── */}
         {currentVideoUrl && extractYouTubeId(currentVideoUrl) && (
-          <section className="relative py-16 sm:py-24 px-4 sm:px-6 md:px-12 max-w-5xl mx-auto z-10">
+          <section id="video" className="relative py-16 sm:py-24 px-4 sm:px-6 md:px-12 max-w-5xl mx-auto z-10">
             <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 mb-10 sm:mb-16">
               <div className="h-px gold-line opacity-20"></div>
             </div>
             <div className="text-center mb-8 sm:mb-12 animate-on-scroll">
-              <p className="text-[10px] tracking-[0.3em] uppercase text-[var(--accent)] mb-3 sm:mb-4 font-body font-semibold">Conocenos mejor</p>
-              <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold text-white">Nuestro <em className="italic text-[var(--accent)]">Espacio</em></h2>
+              {videoDesc && (
+                <p className="text-[10px] tracking-[0.3em] uppercase text-[var(--accent)] mb-3 sm:mb-4 font-body font-semibold">
+                  {videoDesc}
+                </p>
+              )}
+              <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold text-white">
+                {videoTitle}
+              </h2>
             </div>
             <div className="aspect-video rounded-2xl overflow-hidden border-2 border-[var(--accent)]/20 shadow-2xl shadow-black/50 animate-on-scroll relative group cursor-pointer" onClick={() => setLoadVideo(true)}>
               {!loadVideo ? (

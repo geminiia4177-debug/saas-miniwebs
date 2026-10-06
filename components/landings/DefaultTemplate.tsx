@@ -239,14 +239,21 @@ export default function DefaultTemplate({ negocio, media, sections }: { negocio:
           }
 
           if (section.id === "video") {
-            const currentVideoUrl = section.config?.youtubeUrl || negocio?.layoutConfig?.videoUrl;
+            const currentVideoUrl = section.config?.youtubeUrl || section.config?.videoUrl || negocio?.layoutConfig?.videoUrl;
             if (currentVideoUrl) {
               const videoId = extractYouTubeId(currentVideoUrl);
               if (videoId) {
+                const videoTitle = section.config?.title || section.label || "Conocenos";
+                const videoDesc = section.config?.description || section.config?.subtitle;
                 return (
                   <section key="video" className="px-6 py-24 max-w-5xl mx-auto">
                     <div className="text-center mb-16">
-                      <h2 className="text-4xl font-black text-slate-900 mb-4 tracking-tight">Conocenos</h2>
+                      {videoDesc && (
+                        <p className="text-sm font-semibold uppercase tracking-wider mb-2" style={{ color: primary }}>
+                          {videoDesc}
+                        </p>
+                      )}
+                      <h2 className="text-4xl font-black text-slate-900 mb-4 tracking-tight">{videoTitle}</h2>
                       <div className="w-24 h-1 mx-auto rounded-full" style={{ backgroundColor: primary }}></div>
                     </div>
                     <div className="aspect-video rounded-3xl overflow-hidden shadow-2xl bg-slate-900 border border-slate-200">

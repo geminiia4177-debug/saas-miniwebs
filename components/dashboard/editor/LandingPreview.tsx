@@ -147,6 +147,39 @@ export const LandingPreview = ({
     </div>
   );
 
+  const PreviewContent = () => {
+    const layout = biz.layoutConfig || {};
+    const titleFont = layout.titleFontFamily || biz.fontFamily || "'Inter', sans-serif";
+    const subtitleFont = layout.subtitleFontFamily || biz.fontFamily || "'Inter', sans-serif";
+    const bodyFont = biz.fontFamily || "'Inter', sans-serif";
+    const cardBg = layout.cardColor || layout.surfaceColor || "";
+    const borderCol = layout.borderColor || "";
+    const textCol = layout.textColor || "";
+    const textMutedCol = layout.textMutedColor || "";
+    const buttonBg = layout.buttonBgColor || biz.primaryColor || "";
+    const buttonText = layout.buttonTextColor || "";
+
+    return (
+      <div className="w-full min-h-screen bg-transparent select-text">
+        <style>{`
+          :root, html, body {
+            --mw-font-title: ${titleFont} !important;
+            --mw-font-subtitle: ${subtitleFont} !important;
+            --mw-font-body: ${bodyFont} !important;
+            ${cardBg ? `--mw-surface: ${cardBg} !important;` : ''}
+            ${borderCol ? `--mw-border: ${borderCol} !important;` : ''}
+            ${textCol ? `--mw-text-primary: ${textCol} !important;` : ''}
+            ${textMutedCol ? `--mw-text-muted: ${textMutedCol} !important;` : ''}
+            ${buttonBg ? `--mw-button-bg: ${buttonBg} !important;` : ''}
+            ${buttonText ? `--mw-button-text: ${buttonText} !important;` : ''}
+          }
+        `}</style>
+        {renderContent()}
+        <EditModeWrapper />
+      </div>
+    );
+  };
+
   // ── MODO MÓVIL (Marco sobrio 1px, 44px radio, sin botones falsos) ──
   if (previewDevice === "mobile") {
     return (
@@ -164,10 +197,7 @@ export const LandingPreview = ({
 
           <div className="relative w-full h-full rounded-[36px] overflow-hidden bg-black flex-1 shadow-inner">
             <IframePreview title="Vista Previa Móvil" className="w-full h-full">
-              <div className="w-full min-h-screen bg-transparent select-text">
-                {renderContent()}
-                <EditModeWrapper />
-              </div>
+              <PreviewContent />
             </IframePreview>
           </div>
 
@@ -193,10 +223,7 @@ export const LandingPreview = ({
 
           <div className="relative w-full h-full rounded-[22px] overflow-hidden bg-black flex-1 shadow-inner">
             <IframePreview title="Vista Previa Tablet" className="w-full h-full">
-              <div className="w-full min-h-screen bg-transparent select-text">
-                {renderContent()}
-                <EditModeWrapper />
-              </div>
+              <PreviewContent />
             </IframePreview>
           </div>
         </div>
@@ -239,10 +266,7 @@ export const LandingPreview = ({
           }}
         >
           <IframePreview title="Vista Previa Escritorio" className="w-full h-full">
-            <div className="w-full min-h-screen bg-transparent select-text">
-              {renderContent()}
-              <EditModeWrapper />
-            </div>
+            <PreviewContent />
           </IframePreview>
         </div>
       </div>

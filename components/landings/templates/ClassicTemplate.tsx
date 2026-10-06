@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { BusinessDataContract } from "@/lib/templates/contract";
 import { getThemeDefinition, generateThemeVariables, getOptimalTextColor } from "@/lib/templates/themes";
+import VideoSection from "@/components/ui/VideoSection";
 
 export interface TemplateProps {
   data: BusinessDataContract;
@@ -79,6 +80,29 @@ export default function ClassicTemplate({ data, bookingElement }: TemplateProps)
         backgroundColor: branding.backgroundColor || (isDark ? "#09090b" : "#ffffff")
       }}
     >
+      <style>{`
+        h1, h2, h3, .font-title {
+          font-family: ${branding.titleFont || branding.font} !important;
+        }
+        h4, h5, h6, .font-subtitle {
+          font-family: ${branding.subtitleFont || branding.font} !important;
+        }
+        ${branding.cardColor ? `
+          .service-card, .bg-zinc-900\\/90, .bg-zinc-900, .bg-white {
+            background-color: ${branding.cardColor} !important;
+          }
+        ` : ''}
+        ${branding.borderColor ? `
+          .border-zinc-200, .border-zinc-800, .border-white\\/10 {
+            border-color: ${branding.borderColor} !important;
+          }
+        ` : ''}
+        ${branding.textColor ? `
+          .text-zinc-900, .text-white, .text-zinc-100 {
+            color: ${branding.textColor} !important;
+          }
+        ` : ''}
+      `}</style>
       {/* ── HEADER / NAVBAR ── */}
       <header
         className={`sticky top-0 z-40 border-b backdrop-blur-md transition-colors ${isDark ? "border-white/10" : "border-zinc-200/80"}`}
@@ -332,6 +356,22 @@ export default function ClassicTemplate({ data, bookingElement }: TemplateProps)
           </div>
         </section>
       )}
+
+      {/* ── VIDEO (if present) ── */}
+      {(() => {
+        const videoSec = (data.rawSections || []).find((s) => s.id === "video" && s.visible !== false);
+        const videoUrl = videoSec?.config?.youtubeUrl || videoSec?.config?.videoUrl || (data as any).video?.url;
+        if (!videoUrl) return null;
+        return (
+          <VideoSection
+            videoUrl={videoUrl}
+            title={videoSec?.config?.title || videoSec?.label || "Conocenos en Video"}
+            subtitle={videoSec?.config?.description || videoSec?.config?.subtitle || "Conocé más sobre nosotros"}
+            accentColor={primary}
+            theme={isDark ? "dark" : "light"}
+          />
+        );
+      })()}
 
       {/* ── SCHEDULE & LOCATION ── */}
       <section

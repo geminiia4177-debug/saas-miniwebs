@@ -434,18 +434,20 @@ Responde ÚNICAMENTE en JSON válido con el siguiente formato:
             <!-- Encabezado: Marca -->
             <g filter="url(#glowFeed)">
               <rect x="330" y="80" width="420" height="52" rx="26" fill="rgba(15,23,42,0.85)" stroke="rgba(255,255,255,0.22)" stroke-width="1.5"/>
-              <text x="540" y="113" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="bold" fill="#F8FAFC" text-anchor="middle" letter-spacing="3">${safeBizName}</text>
+              <text x="540" y="113" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="20" font-weight="bold" fill="#F8FAFC" text-anchor="middle" letter-spacing="3">${safeBizName}</text>
             </g>
 
-            <!-- Badge Promocional -->
+            <!-- Badge Promocional con estrellas vectoriales -->
             <g filter="url(#glowFeed)">
               <rect x="350" y="220" width="380" height="64" rx="32" fill="url(#badgeGradFeed)" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
-              <text x="540" y="262" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="900" fill="#FFFFFF" text-anchor="middle" letter-spacing="2">★ ${safeBadge} ★</text>
+              <polygon points="380,244 384,254 394,254 386,260 389,270 380,264 371,270 374,260 366,254 376,254" fill="#FFFFFF"/>
+              <text x="540" y="262" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="22" font-weight="bold" fill="#FFFFFF" text-anchor="middle" letter-spacing="2">${safeBadge}</text>
+              <polygon points="700,244 704,254 714,254 706,260 709,270 700,264 691,270 694,260 686,254 696,254" fill="#FFFFFF"/>
             </g>
 
             <!-- Título Principal -->
             <g filter="url(#glowFeed)">
-              <text x="540" y="420" font-family="Arial, Helvetica, sans-serif" font-size="56" font-weight="900" fill="#FFFFFF" text-anchor="middle" letter-spacing="1">
+              <text x="540" y="420" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="56" font-weight="bold" fill="#FFFFFF" text-anchor="middle" letter-spacing="1">
                 ${titleFeedLines.map((line, lIdx) => `<tspan x="540" dy="${lIdx === 0 ? 0 : 64}">${line}</tspan>`).join("")}
               </text>
             </g>
@@ -453,21 +455,26 @@ Responde ÚNICAMENTE en JSON válido con el siguiente formato:
             <!-- Tarjeta con Descripción Persuasiva -->
             <g filter="url(#glowFeed)">
               <rect x="140" y="530" width="800" height="140" rx="20" fill="rgba(15,23,42,0.85)" stroke="rgba(255,255,255,0.18)" stroke-width="1.5"/>
-              <text x="540" y="590" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="bold" fill="#E2E8F0" text-anchor="middle">
+              <text x="540" y="590" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="24" font-weight="normal" fill="#E2E8F0" text-anchor="middle">
                 ${headlineFeedLines.map((line, lIdx) => `<tspan x="540" dy="${lIdx === 0 ? 0 : 38}">${line}</tspan>`).join("")}
               </text>
             </g>
 
-            <!-- Botón de Llamado a la Acción -->
+            <!-- Botón de Llamado a la Acción con icono vectorial -->
             <g filter="url(#glowFeed)">
               <rect x="290" y="740" width="500" height="88" rx="44" fill="url(#btnGradFeed)" stroke="rgba(255,255,255,0.4)" stroke-width="2"/>
-              <text x="540" y="796" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="900" fill="#FFFFFF" text-anchor="middle" letter-spacing="2">📅 ${safeCta}</text>
+              <rect x="325" y="770" width="24" height="24" rx="4" fill="none" stroke="#FFFFFF" stroke-width="2"/>
+              <line x1="325" y1="778" x2="349" y2="778" stroke="#FFFFFF" stroke-width="2"/>
+              <circle cx="331" cy="784" r="1.5" fill="#FFFFFF"/>
+              <circle cx="337" cy="784" r="1.5" fill="#FFFFFF"/>
+              <circle cx="343" cy="784" r="1.5" fill="#FFFFFF"/>
+              <text x="555" y="796" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="22" font-weight="bold" fill="#FFFFFF" text-anchor="middle" letter-spacing="2">${safeCta}</text>
             </g>
 
             <!-- Footer / Web Link -->
             <g>
               <line x1="120" y1="910" x2="960" y2="910" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>
-              <text x="540" y="955" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="bold" fill="#CBD5E1" text-anchor="middle" letter-spacing="1">🌐 ${safeUrl}</text>
+              <text x="540" y="955" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="18" font-weight="bold" fill="#CBD5E1" text-anchor="middle" letter-spacing="1">WWW - ${safeUrl}</text>
             </g>
           </svg>
         `;
@@ -516,18 +523,20 @@ Responde ÚNICAMENTE en JSON válido con el siguiente formato:
             <!-- Encabezado Superior (Zona segura de Stories) -->
             <g filter="url(#glowStory)">
               <rect x="300" y="180" width="480" height="60" rx="30" fill="rgba(15,23,42,0.9)" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"/>
-              <text x="540" y="218" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="bold" fill="#F8FAFC" text-anchor="middle" letter-spacing="3">${safeBizName}</text>
+              <text x="540" y="218" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="22" font-weight="bold" fill="#F8FAFC" text-anchor="middle" letter-spacing="3">${safeBizName}</text>
             </g>
 
-            <!-- Badge Promocional -->
+            <!-- Badge Promocional con estrellas vectoriales -->
             <g filter="url(#glowStory)">
               <rect x="330" y="340" width="420" height="72" rx="36" fill="url(#badgeGradStory)" stroke="rgba(255,255,255,0.3)" stroke-width="2"/>
-              <text x="540" y="386" font-family="Arial, Helvetica, sans-serif" font-size="26" font-weight="900" fill="#FFFFFF" text-anchor="middle" letter-spacing="2">★ ${safeBadge} ★</text>
+              <polygon points="360,366 364,376 374,376 366,382 369,392 360,386 351,392 354,382 346,376 356,376" fill="#FFFFFF"/>
+              <text x="540" y="386" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="24" font-weight="bold" fill="#FFFFFF" text-anchor="middle" letter-spacing="2">${safeBadge}</text>
+              <polygon points="720,366 724,376 734,376 726,382 729,392 720,386 711,392 714,382 706,376 716,376" fill="#FFFFFF"/>
             </g>
 
             <!-- Título Principal -->
             <g filter="url(#glowStory)">
-              <text x="540" y="540" font-family="Arial, Helvetica, sans-serif" font-size="64" font-weight="900" fill="#FFFFFF" text-anchor="middle" letter-spacing="1">
+              <text x="540" y="540" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="64" font-weight="bold" fill="#FFFFFF" text-anchor="middle" letter-spacing="1">
                 ${titleStoryLines.map((line, lIdx) => `<tspan x="540" dy="${lIdx === 0 ? 0 : 72}">${line}</tspan>`).join("")}
               </text>
             </g>
@@ -535,21 +544,26 @@ Responde ÚNICAMENTE en JSON válido con el siguiente formato:
             <!-- Descripción en Story -->
             <g filter="url(#glowStory)">
               <rect x="120" y="1120" width="840" height="180" rx="28" fill="rgba(15,23,42,0.9)" stroke="rgba(255,255,255,0.2)" stroke-width="2"/>
-              <text x="540" y="1200" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="bold" fill="#E2E8F0" text-anchor="middle">
+              <text x="540" y="1200" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="28" font-weight="normal" fill="#E2E8F0" text-anchor="middle">
                 ${headlineStoryLines.map((line, lIdx) => `<tspan x="540" dy="${lIdx === 0 ? 0 : 44}">${line}</tspan>`).join("")}
               </text>
             </g>
 
-            <!-- Botón Grande de CTA -->
+            <!-- Botón Grande de CTA con icono vectorial -->
             <g filter="url(#glowStory)">
               <rect x="250" y="1420" width="580" height="104" rx="52" fill="url(#btnGradStory)" stroke="rgba(255,255,255,0.45)" stroke-width="2.5"/>
-              <text x="540" y="1485" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="900" fill="#FFFFFF" text-anchor="middle" letter-spacing="2">📅 ${safeCta}</text>
+              <rect x="295" y="1456" width="30" height="30" rx="5" fill="none" stroke="#FFFFFF" stroke-width="2.5"/>
+              <line x1="295" y1="1466" x2="325" y2="1466" stroke="#FFFFFF" stroke-width="2.5"/>
+              <circle cx="303" cy="1474" r="2" fill="#FFFFFF"/>
+              <circle cx="311" cy="1474" r="2" fill="#FFFFFF"/>
+              <circle cx="319" cy="1474" r="2" fill="#FFFFFF"/>
+              <text x="560" y="1485" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="26" font-weight="bold" fill="#FFFFFF" text-anchor="middle" letter-spacing="2">${safeCta}</text>
             </g>
 
             <!-- Footer con Enlace Web -->
             <g>
               <line x1="140" y1="1680" x2="940" y2="1680" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"/>
-              <text x="540" y="1740" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="bold" fill="#E2E8F0" text-anchor="middle" letter-spacing="1">🌐 ${safeUrl}</text>
+              <text x="540" y="1740" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="22" font-weight="bold" fill="#E2E8F0" text-anchor="middle" letter-spacing="1">WWW - ${safeUrl}</text>
             </g>
           </svg>
         `;
@@ -597,17 +611,19 @@ Responde ÚNICAMENTE en JSON válido con el siguiente formato:
             <!-- Fila Superior: Marca y Badge -->
             <g filter="url(#glowFb)">
               <rect x="80" y="65" width="340" height="42" rx="21" fill="rgba(15,23,42,0.85)" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"/>
-              <text x="250" y="92" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="bold" fill="#F8FAFC" text-anchor="middle" letter-spacing="2">${safeBizName}</text>
+              <text x="250" y="92" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="16" font-weight="bold" fill="#F8FAFC" text-anchor="middle" letter-spacing="2">${safeBizName}</text>
             </g>
 
             <g filter="url(#glowFb)">
-              <rect x="440" y="65" width="280" height="42" rx="21" fill="url(#badgeGradFb)" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
-              <text x="580" y="92" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="900" fill="#FFFFFF" text-anchor="middle" letter-spacing="1">★ ${safeBadge} ★</text>
+              <rect x="440" y="65" width="300" height="42" rx="21" fill="url(#badgeGradFb)" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
+              <polygon points="465,77 468,85 476,85 470,90 472,97 465,93 458,97 460,90 454,85 462,85" fill="#FFFFFF"/>
+              <text x="590" y="92" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="15" font-weight="bold" fill="#FFFFFF" text-anchor="middle" letter-spacing="1">${safeBadge}</text>
+              <polygon points="715,77 718,85 726,85 720,90 722,97 715,93 708,97 710,90 704,85 712,85" fill="#FFFFFF"/>
             </g>
 
             <!-- Título Principal -->
             <g filter="url(#glowFb)">
-              <text x="80" y="190" font-family="Arial, Helvetica, sans-serif" font-size="44" font-weight="900" fill="#FFFFFF" letter-spacing="1">
+              <text x="80" y="190" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="44" font-weight="bold" fill="#FFFFFF" letter-spacing="1">
                 ${titleFbLines.map((line, lIdx) => `<tspan x="80" dy="${lIdx === 0 ? 0 : 50}">${line}</tspan>`).join("")}
               </text>
             </g>
@@ -615,21 +631,26 @@ Responde ÚNICAMENTE en JSON válido con el siguiente formato:
             <!-- Tarjeta de Descripción -->
             <g filter="url(#glowFb)">
               <rect x="80" y="250" width="700" height="110" rx="18" fill="rgba(15,23,42,0.8)" stroke="rgba(255,255,255,0.15)" stroke-width="1.5"/>
-              <text x="110" y="295" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="bold" fill="#E2E8F0">
+              <text x="110" y="295" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="20" font-weight="normal" fill="#E2E8F0">
                 ${headlineFbLines.map((line, lIdx) => `<tspan x="110" dy="${lIdx === 0 ? 0 : 32}">${line}</tspan>`).join("")}
               </text>
             </g>
 
-            <!-- Botón de CTA -->
+            <!-- Botón de CTA con icono vectorial -->
             <g filter="url(#glowFb)">
               <rect x="80" y="405" width="420" height="68" rx="34" fill="url(#btnGradFb)" stroke="rgba(255,255,255,0.4)" stroke-width="2"/>
-              <text x="290" y="448" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="900" fill="#FFFFFF" text-anchor="middle" letter-spacing="2">📅 ${safeCta}</text>
+              <rect x="115" y="427" width="22" height="22" rx="4" fill="none" stroke="#FFFFFF" stroke-width="2"/>
+              <line x1="115" y1="434" x2="137" y2="434" stroke="#FFFFFF" stroke-width="2"/>
+              <circle cx="121" cy="440" r="1.5" fill="#FFFFFF"/>
+              <circle cx="126" cy="440" r="1.5" fill="#FFFFFF"/>
+              <circle cx="131" cy="440" r="1.5" fill="#FFFFFF"/>
+              <text x="300" y="448" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="19" font-weight="bold" fill="#FFFFFF" text-anchor="middle" letter-spacing="2">${safeCta}</text>
             </g>
 
             <!-- Footer Info -->
             <g>
               <line x1="80" y1="520" x2="800" y2="520" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>
-              <text x="80" y="555" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="bold" fill="#94A3B8" letter-spacing="1">🌐 ${safeUrl}</text>
+              <text x="80" y="555" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="16" font-weight="bold" fill="#94A3B8" letter-spacing="1">WWW - ${safeUrl}</text>
             </g>
           </svg>
         `;

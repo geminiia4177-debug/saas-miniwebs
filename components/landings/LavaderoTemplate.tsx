@@ -406,11 +406,23 @@ export default function LavaderoTemplate(props: { negocio: any; media?: any[]; b
         </React.Fragment>;
 
             case 'video': {
-              const currentVideoUrl = s.config?.youtubeUrl || videoUrl;
+              const currentVideoUrl = s.config?.youtubeUrl || s.config?.videoUrl || videoUrl;
+              const videoTitle = s.config?.title || s.label || "Video Institucional";
+              const videoDesc = s.config?.description || s.config?.subtitle;
               return <React.Fragment key={s.id}>
         {/* ─── VIDEO ─── */}
         {currentVideoUrl && extractYouTubeId(currentVideoUrl) && (
           <section className="relative py-24 px-4 sm:px-6 md:px-12 max-w-6xl mx-auto z-10 border-t border-white/5">
+            <div className="text-center mb-10">
+              {videoDesc && (
+                <p className="text-xs uppercase tracking-widest font-bold mb-2" style={{ color: accent }}>
+                  {videoDesc}
+                </p>
+              )}
+              <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold text-white uppercase tracking-tight">
+                {videoTitle}
+              </h2>
+            </div>
             <div className={`aspect-video rounded-3xl overflow-hidden border border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.8)] relative ${styles.animateOnScroll} group bg-black`}>
               <div className="absolute inset-0 bg-[var(--accent)] opacity-20 blur-[100px] -z-10 mix-blend-screen"></div>
               <iframe

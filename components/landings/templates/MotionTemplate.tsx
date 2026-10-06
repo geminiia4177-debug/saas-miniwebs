@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { BusinessDataContract } from "@/lib/templates/contract";
 import { getThemeDefinition, generateThemeVariables } from "@/lib/templates/themes";
 import { TemplateProps } from "./ClassicTemplate";
+import VideoSection from "@/components/ui/VideoSection";
 
 export default function MotionTemplate({ data, bookingElement }: TemplateProps) {
   const { identity, contact, branding, hero, services, gallery, schedule, staff, testimonials, social, booking, design } = data;
@@ -86,8 +87,40 @@ export default function MotionTemplate({ data, bookingElement }: TemplateProps) 
   return (
     <div
       className="min-h-screen bg-[#090d16] text-slate-100 font-sans relative overflow-x-hidden selection:bg-indigo-500 selection:text-white"
-      style={{ ...themeVars, fontFamily: branding.font }}
+      style={{
+        ...themeVars,
+        fontFamily: branding.font,
+        backgroundColor: branding.backgroundColor || undefined,
+      }}
     >
+      <style>{`
+        h1, h2, h3, .font-title {
+          font-family: ${branding.titleFont || branding.font} !important;
+        }
+        h4, h5, h6, .font-subtitle {
+          font-family: ${branding.subtitleFont || branding.font} !important;
+        }
+        ${branding.cardColor ? `
+          .rounded-3xl.bg-white\\/\\[0\\.02\\], .p-6.rounded-3xl.bg-white\\/\\[0\\.02\\] {
+            background-color: ${branding.cardColor} !important;
+          }
+        ` : ''}
+        ${branding.borderColor ? `
+          .border-white\\/10, .border-white\\/5 {
+            border-color: ${branding.borderColor} !important;
+          }
+        ` : ''}
+        ${branding.textColor ? `
+          .text-slate-100, .text-white {
+            color: ${branding.textColor} !important;
+          }
+        ` : ''}
+        ${branding.textMutedColor ? `
+          .text-slate-400, .text-slate-300 {
+            color: ${branding.textMutedColor} !important;
+          }
+        ` : ''}
+      `}</style>
       {/* ── AMBIENT GLOW BACKDROPS (GPU Accelerated) ── */}
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden" aria-hidden="true">
         <div
@@ -414,6 +447,22 @@ export default function MotionTemplate({ data, bookingElement }: TemplateProps) 
           </div>
         </section>
       )}
+
+      {/* ── VIDEO (if present) ── */}
+      {(() => {
+        const videoSec = (data.rawSections || []).find((s) => s.id === "video" && s.visible !== false);
+        const videoUrl = videoSec?.config?.youtubeUrl || videoSec?.config?.videoUrl || (data as any).video?.url;
+        if (!videoUrl) return null;
+        return (
+          <VideoSection
+            videoUrl={videoUrl}
+            title={videoSec?.config?.title || videoSec?.label || "Conocenos en Video"}
+            subtitle={videoSec?.config?.description || videoSec?.config?.subtitle || "Conocé más sobre nosotros"}
+            accentColor={primary}
+            theme="dark"
+          />
+        );
+      })()}
 
       {/* ── HORARIOS & CONTACTO ── */}
       <section id="horarios" className="relative py-20 px-4 sm:px-6 z-10">

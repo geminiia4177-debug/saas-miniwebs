@@ -69,6 +69,8 @@ const MenuCategoriaSchema = z.object({
 const SectionConfigSchema = z.object({
   title: z.string().max(300).optional().nullable(),
   subtitle: z.string().max(500).optional().nullable(),
+  description: z.string().max(2000).optional().nullable(),
+  desc: z.string().max(2000).optional().nullable(),
   ctaText: z.string().max(100).optional().nullable(),
   ctaSecondary: z.string().max(100).optional().nullable(),
   items: z.array(ServiceItemSchema).max(100).optional(),
@@ -86,6 +88,7 @@ const SectionConfigSchema = z.object({
     options: z.array(z.string().max(100)).optional(),
   })).max(20).optional(),
   youtubeUrl: z.union([z.string().max(500), z.literal("")]).optional().nullable(),
+  videoUrl: z.union([z.string().max(500), z.literal("")]).optional().nullable(),
   autoplay: z.boolean().optional(),
   showMap: z.boolean().optional(),
   mapUrl: z.union([z.string().max(500), z.literal("")]).optional().nullable(),
@@ -96,7 +99,7 @@ const SectionConfigSchema = z.object({
   showPrices: z.boolean().optional(),
   showEmployees: z.boolean().optional(),
   backgroundUrl: z.union([z.string().max(500), z.literal("")]).optional().nullable(),
-});
+}).passthrough();
 
 const SectionSchema = z.object({
   id: z.string().max(100),
@@ -105,7 +108,7 @@ const SectionSchema = z.object({
   visible: z.boolean().optional(),
   type: z.string().max(100).optional(),
   config: SectionConfigSchema.optional(),
-});
+}).passthrough();
 
 const ProductItemSchema = z.object({
   id: z.union([z.string(), z.number()]).optional(),
@@ -337,6 +340,20 @@ export const LayoutConfigSchema = z.object({
   // Chatbot
   chatbotName: z.string().max(100).optional().nullable(),
   chatbotEnabled: z.boolean().optional(),
+  // Design system colors and fonts
+  cardColor: z.union([z.string().max(50), z.literal("")]).optional().nullable(),
+  surfaceColor: z.union([z.string().max(50), z.literal("")]).optional().nullable(),
+  borderColor: z.union([z.string().max(50), z.literal("")]).optional().nullable(),
+  textColor: z.union([z.string().max(50), z.literal("")]).optional().nullable(),
+  textMutedColor: z.union([z.string().max(50), z.literal("")]).optional().nullable(),
+  buttonBgColor: z.union([z.string().max(50), z.literal("")]).optional().nullable(),
+  buttonTextColor: z.union([z.string().max(50), z.literal("")]).optional().nullable(),
+  titleFontFamily: z.string().max(200).optional().nullable(),
+  subtitleFontFamily: z.string().max(200).optional().nullable(),
+  fontFamily: z.string().max(200).optional().nullable(),
+  videoTitle: z.string().max(300).optional().nullable(),
+  videoDescription: z.string().max(2000).optional().nullable(),
+  youtubeUrl: z.union([z.string().max(500), z.literal("")]).optional().nullable(),
   // Biolinks and Stats configuration
   biolinks: z.object({
     title: z.string().max(200).optional().nullable(),
@@ -346,7 +363,7 @@ export const LayoutConfigSchema = z.object({
     links: z.array(BiolinkItemSchema).max(100).optional(),
   }).optional().nullable(),
   stats: z.record(z.string(), z.union([z.number(), z.string(), z.boolean()])).optional().nullable(),
-});
+}).passthrough();
 
 // ─── P1-016: Strict paymentData schema ────────────────────────────────────────
 export const PaymentDataSchema = z.object({

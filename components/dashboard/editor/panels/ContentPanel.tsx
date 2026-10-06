@@ -14,7 +14,7 @@ export interface ContentPanelProps {
   biz: Biz;
   setBiz: (fnOrObj: any) => void;
   sections: Section[];
-  setSections: (fn: (prev: Section[]) => Section[]) => void;
+  setSections: (fnOrVal: any) => void;
   activeSection: Section | null;
   onBackToSections: () => void;
   showToast: (msg: string, type?: "success" | "error" | "info" | "warn") => void;
@@ -60,35 +60,50 @@ export const ContentPanel: React.FC<ContentPanelProps> = ({
 
   // 4. Section-specific editor if a section was selected
   if (activeSection) {
-    const sec = activeSection;
+    const sec = sections.find((s) => s.id === activeSection.id) || activeSection;
     const isHero = sec.id === "hero";
     const isServices = sec.id === "services";
     const isVideo = sec.id === "video";
 
     const updateConfig = (field: string, val: any) => {
-      setSections((prev: Section[]) =>
-        prev.map((s) =>
-          s.id === sec.id
-            ? { ...s, config: { ...(s.config || {}), [field]: val } }
-            : s
-        )
-      );
-      if (isHero && field === "title") {
-        setBiz((prev: any) => ({
-          ...prev,
-          layoutConfig: { ...(prev?.layoutConfig || {}), heroTitle: val },
-        }));
-      }
-      if (isVideo && (field === "youtubeUrl" || field === "videoUrl")) {
-        setBiz((prev: any) => ({
+      const updated = sections.map((s) => {
+        if (s.id !== sec.id) return s;
+        const newConfig = { ...(s.config || {}), [field]: val };
+        const newLabel =
+          field === "label"
+            ? val
+            : field === "title" && (!s.label || s.label === "Video Institucional" || s.label === "Video")
+            ? val
+            : s.label;
+        return {
+          ...s,
+          label: newLabel,
+          config: newConfig,
+        };
+      });
+
+      setSections(updated);
+
+      setBiz((prev: any) => {
+        const extra: any = {};
+        if (isHero && field === "title") extra.heroTitle = val;
+        if (isHero && field === "subtitle") extra.heroSubtitle = val;
+        if (isVideo && (field === "youtubeUrl" || field === "videoUrl")) {
+          extra.videoUrl = val;
+          extra.youtubeUrl = val;
+        }
+        if (isVideo && field === "title") {
+          extra.videoTitle = val;
+        }
+        return {
           ...prev,
           layoutConfig: {
             ...(prev?.layoutConfig || {}),
-            videoUrl: val,
-            youtubeUrl: val,
+            ...extra,
+            sections: updated,
           },
-        }));
-      }
+        };
+      });
     };
 
     return (
@@ -116,7 +131,10 @@ export const ContentPanel: React.FC<ContentPanelProps> = ({
                   fieldType="heroTitle"
                   currentText={sec.config?.title || biz.layoutConfig?.heroTitle || biz.name}
                   context={`Rubro: ${biz.type}`}
-                  onSelect={(txt) => updateConfig("title", txt)}
+                  onSelect={(txt) => {
+                    updateConfig("title", txt);
+                    showToast?.("Título con IA aplicado ✓", "success");
+                  }}
                   compact
                 />
               }
@@ -136,7 +154,10 @@ export const ContentPanel: React.FC<ContentPanelProps> = ({
                   fieldType="heroSubtitle"
                   currentText={sec.config?.subtitle || biz.layoutConfig?.heroSubtitle || ""}
                   context={`Rubro: ${biz.type}. Título: ${sec.config?.title || biz.name}`}
-                  onSelect={(txt) => updateConfig("subtitle", txt)}
+                  onSelect={(txt) => {
+                    updateConfig("subtitle", txt);
+                    showToast?.("Subtítulo con IA aplicado ✓", "success");
+                  }}
                   compact
                 />
               }
@@ -248,9 +269,17 @@ export const ContentPanel: React.FC<ContentPanelProps> = ({
 
         {isVideo && (
           <div className="space-y-4">
+            <Field label="Nombre de la Sección (Menú y Navegación)">
+              <Input
+                value={sec.label || "Video Institucional"}
+                onChange={(e) => updateConfig("label", e.target.value)}
+                placeholder="Ej: Video Institucional, Nuestro Local, etc."
+              />
+            </Field>
+
             <Field label="Título del Video">
               <Input
-                value={sec.config?.title || "Video Institucional"}
+                value={sec.config?.title || sec.label || "Video Institucional"}
                 onChange={(e) => updateConfig("title", e.target.value)}
                 placeholder="Ej: Conocé nuestro espacio"
               />
@@ -264,7 +293,10 @@ export const ContentPanel: React.FC<ContentPanelProps> = ({
                   fieldType="description"
                   currentText={sec.config?.description || ""}
                   context={`Sección de video para ${biz.name} (${biz.type})`}
-                  onSelect={(txt) => updateConfig("description", txt)}
+                  onSelect={(txt) => {
+                    updateConfig("description", txt);
+                    showToast?.("Descripción con IA aplicada ✓", "success");
+                  }}
                   compact
                 />
               }
@@ -358,6 +390,14 @@ export const ContentPanel: React.FC<ContentPanelProps> = ({
 
         {!isHero && !isServices && !isVideo && (
           <div className="space-y-4">
+            <Field label="Nombre de la Sección (Menú y Navegación)">
+              <Input
+                value={sec.label || ""}
+                onChange={(e) => updateConfig("label", e.target.value)}
+                placeholder="Nombre para el menú/navegación"
+              />
+            </Field>
+
             <Field label="Título de la Sección">
               <Input
                 value={sec.config?.title || ""}
@@ -374,7 +414,10 @@ export const ContentPanel: React.FC<ContentPanelProps> = ({
                   fieldType="description"
                   currentText={sec.config?.description || ""}
                   context={`Sección: ${sec.label || sec.id}. Rubro: ${biz.type}`}
-                  onSelect={(txt) => updateConfig("description", txt)}
+                  onSelect={(txt) => {
+                    updateConfig("description", txt);
+                    showToast?.("Descripción con IA aplicada ✓", "success");
+                  }}
                   compact
                 />
               }
