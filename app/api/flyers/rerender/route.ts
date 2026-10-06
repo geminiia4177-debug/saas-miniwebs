@@ -63,13 +63,13 @@ export async function POST(req: Request) {
     const derivedColors = getDerivedFlyerColors(primaryColor, secondaryColor, accentColor);
     const publicUrl = `${business.subdomain || "negocio"}.saas-miniwebs.vercel.app`;
 
-    // Intentar recuperar el buffer de la foto original o unsplash
+    // Intentar recuperar el fondo limpio original o foto curada de Unsplash
     let photoBuffer: Buffer | null = null;
-    const existingPhotoUrl = existingFlyer.instagramPost;
+    const cleanPhotoUrl = existingFlyer.bgPhotoUrl;
 
-    if (existingPhotoUrl && existingPhotoUrl.startsWith("http")) {
+    if (cleanPhotoUrl && typeof cleanPhotoUrl === "string" && cleanPhotoUrl.startsWith("http")) {
       try {
-        const res = await fetch(existingPhotoUrl, { signal: AbortSignal.timeout(5000) });
+        const res = await fetch(cleanPhotoUrl, { signal: AbortSignal.timeout(5000) });
         if (res.ok) {
           photoBuffer = Buffer.from(await res.arrayBuffer());
         }

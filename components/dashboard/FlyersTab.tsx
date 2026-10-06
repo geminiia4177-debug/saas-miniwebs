@@ -59,6 +59,7 @@ export default function FlyersTab({ biz, showToast }: FlyersTabProps) {
   const [canGenerate, setCanGenerate] = useState<boolean>(true);
   const [nextAvailableAt, setNextAvailableAt] = useState<string | null>(initialNextDate);
   const [daysRemaining, setDaysRemaining] = useState<number>(0);
+  const [resettingQuota, setResettingQuota] = useState<boolean>(false);
 
   // Edición sin cupo (FM8)
   const [isEditing, setIsEditing] = useState(false);
@@ -73,6 +74,29 @@ export default function FlyersTab({ biz, showToast }: FlyersTabProps) {
   const [featuringBio, setFeaturingBio] = useState(false);
 
   const publicUrl = getPublicUrl(biz);
+
+  // Resetear cupo para pruebas o desarrollo
+  const handleResetQuota = async () => {
+    setResettingQuota(true);
+    try {
+      const res = await fetch("/api/flyers/reset-quota", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ businessId: biz.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Error al resetear cupo");
+
+      setCanGenerate(true);
+      setNextAvailableAt(null);
+      setDaysRemaining(0);
+      showToast("¡Cupo de flyers reseteado! Ya puedes generar flyers nuevos inmediatamente.", "success");
+    } catch (err: any) {
+      showToast(err.message || "Error al resetear cupo", "error");
+    } finally {
+      setResettingQuota(false);
+    }
+  };
 
   // Consultar estado de cuota y sincronizar
   const checkQuotaStatus = async () => {
@@ -189,6 +213,41 @@ export default function FlyersTab({ biz, showToast }: FlyersTabProps) {
       }
     } catch (err: any) {
       showToast(err.message || "Error al re-renderizar flyer", "error");
+    } finally {
+      setRerendering(false);
+    }
+  };
+
+  // Re-renderizado rápido para actualizar tipografía a curvas vectoriales nítidas
+  const handleRerenderWithVectors = async () => {
+    if (!activeFlyer) return;
+    setRerendering(true);
+    try {
+      const res = await fetch("/api/flyers/rerender", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          businessId: biz.id,
+          flyerIndex: selectedFlyerIndex,
+          title: activeFlyer.title,
+          headline: activeFlyer.headline,
+          badge: activeFlyer.badge,
+          ctaText: activeFlyer.ctaText,
+          style: activeFlyer.style,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Error al reparar flyer");
+
+      if (data.flyer) {
+        const next = [...flyers];
+        next[selectedFlyerIndex] = data.flyer;
+        setFlyers(next);
+        showToast("¡Tipografía vectorial nítida aplicada al flyer! ✨", "success");
+      }
+    } catch (err: any) {
+      showToast(err.message || "Error al reparar flyer", "error");
     } finally {
       setRerendering(false);
     }
@@ -335,6 +394,17 @@ export default function FlyersTab({ biz, showToast }: FlyersTabProps) {
               </p>
             </div>
           </div>
+
+          <button
+            type="button"
+            onClick={handleResetQuota}
+            disabled={resettingQuota}
+            className="px-3.5 py-1.5 text-xs font-bold rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/40 transition-all flex items-center gap-1.5 shrink-0 cursor-pointer self-end sm:self-center"
+            title="Resetear cupo de flyers para pruebas"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${resettingQuota ? "animate-spin" : ""}`} />
+            <span>🔄 Resetear Cupo (Pruebas)</span>
+          </button>
         </div>
       ) : (
         <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between gap-3 shadow-sm">
@@ -435,6 +505,19 @@ export default function FlyersTab({ biz, showToast }: FlyersTabProps) {
               </>
             )}
           </Button>
+
+          {!canGenerate && (
+            <button
+              type="button"
+              onClick={handleResetQuota}
+              disabled={resettingQuota}
+              className="w-full sm:w-auto px-3.5 py-2.5 rounded-xl bg-surface-2 hover:bg-surface-3 text-amber-300 border border-amber-500/40 hover:border-amber-500 text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer whitespace-nowrap shadow-sm"
+              title="Permite volver a generar flyers inmediatamente sin esperar al próximo mes"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${resettingQuota ? "animate-spin" : ""}`} />
+              <span>Resetear Cupo de Prueba</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -559,14 +642,26 @@ export default function FlyersTab({ biz, showToast }: FlyersTabProps) {
                           </span>
                           <span className="text-[11px] text-fg-subtle">Flyer #{selectedFlyerIndex + 1} de 3</span>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => setIsEditing(true)}
-                          className="text-xs text-accent hover:underline flex items-center gap-1 cursor-pointer"
-                        >
-                          <Edit3 className="w-3.5 h-3.5" />
-                          <span>Editar Texto Gratis</span>
-                        </button>
+                        <div className="flex items-center gap-2.5">
+                          <button
+                            type="button"
+                            onClick={handleRerenderWithVectors}
+                            disabled={rerendering}
+                            className="text-xs text-emerald-400 hover:text-emerald-300 hover:underline flex items-center gap-1 cursor-pointer font-medium"
+                            title="Aplica la nueva tipografía vectorial nítida sin cuadrados a este flyer"
+                          >
+                            <RefreshCw className={`w-3.5 h-3.5 ${rerendering ? "animate-spin" : ""}`} />
+                            <span>{rerendering ? "Reparando..." : "Reparar Tipografía"}</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setIsEditing(true)}
+                            className="text-xs text-accent hover:underline flex items-center gap-1 cursor-pointer"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                            <span>Editar Texto Gratis</span>
+                          </button>
+                        </div>
                       </div>
                       <h3 className="text-base font-bold text-fg">{activeFlyer.title}</h3>
                       <p className="text-xs text-fg-muted leading-relaxed">{activeFlyer.headline}</p>

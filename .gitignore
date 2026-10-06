@@ -46,3 +46,4 @@ auth_info_baileys_*/
 *.wadata
 .wadata/
 .wadata*/
+scratch/

@@ -8,6 +8,7 @@ import { checkRateLimit, getRateLimitRetryAfterMs } from "@/lib/rate-limit";
 import { z } from "zod";
 import { uploadBufferToImgBB } from "@/lib/utils/upload-server";
 import { getDerivedFlyerColors } from "@/lib/utils/colorExtractor";
+import { renderVectorText, renderVectorTextLines } from "@/lib/utils/vector-text";
 
 const RATE_WINDOW_MS = 60_000;
 const RATE_MAX = 5;
@@ -219,12 +220,12 @@ export function generateFlyerSvg(
     colors: ReturnType<typeof getDerivedFlyerColors>;
   }
 ): string {
-  const safeBiz = escapeXml(data.bizName.toUpperCase());
-  const safeTitle = escapeXml(data.title.toUpperCase());
-  const safeHeadline = escapeXml(data.headline);
-  const safeBadge = escapeXml(data.badge.toUpperCase());
-  const safeCta = escapeXml(data.ctaText.toUpperCase());
-  const safeUrl = escapeXml(data.publicUrl);
+  const safeBiz = escapeXml((data.bizName || "Mi Negocio").toUpperCase());
+  const safeTitle = escapeXml((data.title || "").toUpperCase());
+  const safeHeadline = escapeXml(data.headline || "");
+  const safeBadge = escapeXml((data.badge || "PROMO").toUpperCase());
+  const safeCta = escapeXml((data.ctaText || "Ver Más").toUpperCase());
+  const safeUrl = escapeXml(data.publicUrl || "");
   const { primary, primaryDark, accent, accentDark } = data.colors;
 
   if (format === "feed") {
@@ -249,37 +250,33 @@ export function generateFlyerSvg(
           <rect x="62" y="62" width="956" height="956" fill="none" stroke="${accent}" stroke-opacity="0.3" stroke-width="1" />
           
           <!-- Encabezado sutil -->
-          <text x="540" y="140" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="18" font-weight="bold" fill="#E2E8F0" text-anchor="middle" letter-spacing="6">${safeBiz}</text>
+          ${renderVectorText(safeBiz, 540, 140, 18, "#E2E8F0", true, "middle")}
           <line x1="420" y1="165" x2="660" y2="165" stroke="${accent}" stroke-width="2" />
           
           <!-- Badge elegante -->
           <g filter="url(#glowEd)">
             <rect x="360" y="240" width="360" height="54" rx="27" fill="rgba(15,23,42,0.85)" stroke="${accent}" stroke-width="1.5"/>
-            <text x="540" y="274" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="20" font-weight="bold" fill="${accent}" text-anchor="middle" letter-spacing="3">${safeBadge}</text>
+            ${renderVectorText(safeBadge, 540, 274, 20, accent, true, "middle")}
           </g>
           
           <!-- Título elegante centrado -->
           <g filter="url(#glowEd)">
-            <text x="540" y="440" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="54" font-weight="bold" fill="#FFFFFF" text-anchor="middle" letter-spacing="2">
-              ${titleLines.map((l, i) => `<tspan x="540" dy="${i === 0 ? 0 : 64}">${l}</tspan>`).join("")}
-            </text>
+            ${renderVectorTextLines(titleLines, 540, 440, 64, 54, "#FFFFFF", true, "middle")}
           </g>
           
           <!-- Frase editorial -->
           <g filter="url(#glowEd)">
-            <text x="540" y="620" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="24" font-style="italic" fill="#E2E8F0" text-anchor="middle">
-              ${headlineLines.map((l, i) => `<tspan x="540" dy="${i === 0 ? 0 : 38}">${l}</tspan>`).join("")}
-            </text>
+            ${renderVectorTextLines(headlineLines, 540, 620, 38, 24, "#E2E8F0", false, "middle")}
           </g>
           
           <!-- CTA Chic -->
           <g filter="url(#glowEd)">
             <rect x="320" y="760" width="440" height="80" rx="40" fill="${primary}" stroke="rgba(255,255,255,0.4)" stroke-width="2"/>
-            <text x="540" y="810" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="20" font-weight="bold" fill="#FFFFFF" text-anchor="middle" letter-spacing="3">${safeCta}</text>
+            ${renderVectorText(safeCta, 540, 810, 20, "#FFFFFF", true, "middle")}
           </g>
           
           <!-- URL footer -->
-          <text x="540" y="960" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="16" fill="#94A3B8" text-anchor="middle" letter-spacing="2">${safeUrl}</text>
+          ${renderVectorText(safeUrl, 540, 960, 16, "#94A3B8", true, "middle")}
         </svg>
       `;
     }
@@ -305,34 +302,30 @@ export function generateFlyerSvg(
           <g filter="url(#glowAct)">
             <rect x="100" y="80" width="880" height="60" rx="16" fill="rgba(15,23,42,0.85)" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"/>
             <circle cx="140" cy="110" r="8" fill="#10B981"/>
-            <text x="170" y="117" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="18" font-weight="bold" fill="#FFFFFF" letter-spacing="2">${safeBiz}</text>
+            ${renderVectorText(safeBiz, 170, 117, 18, "#FFFFFF", true, "left")}
             <rect x="740" y="93" width="220" height="34" rx="17" fill="${accent}" />
-            <text x="850" y="116" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="14" font-weight="bold" fill="#090D16" text-anchor="middle" letter-spacing="1">${safeBadge}</text>
+            ${renderVectorText(safeBadge, 850, 116, 14, "#090D16", true, "middle")}
           </g>
           
           <!-- Título Dinámico -->
           <g filter="url(#glowAct)">
-            <text x="540" y="380" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="58" font-weight="bold" fill="#FFFFFF" text-anchor="middle" letter-spacing="1">
-              ${titleLines.map((l, i) => `<tspan x="540" dy="${i === 0 ? 0 : 68}">${l}</tspan>`).join("")}
-            </text>
+            ${renderVectorTextLines(titleLines, 540, 380, 68, 58, "#FFFFFF", true, "middle")}
           </g>
           
           <!-- Glass Card para descripción con viñetas -->
           <g filter="url(#glowAct)">
             <rect x="140" y="520" width="800" height="150" rx="24" fill="rgba(15,23,42,0.9)" stroke="rgba(255,255,255,0.22)" stroke-width="1.5"/>
-            <text x="540" y="585" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="24" fill="#F1F5F9" text-anchor="middle">
-              ${headlineLines.map((l, i) => `<tspan x="540" dy="${i === 0 ? 0 : 38}">${l}</tspan>`).join("")}
-            </text>
+            ${renderVectorTextLines(headlineLines, 540, 585, 38, 24, "#F1F5F9", false, "middle")}
           </g>
           
           <!-- Botón de Acción Rápida -->
           <g filter="url(#glowAct)">
             <rect x="260" y="750" width="560" height="92" rx="46" fill="url(#btnGradAct)" stroke="rgba(255,255,255,0.4)" stroke-width="2"/>
-            <text x="540" y="808" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="24" font-weight="bold" fill="#FFFFFF" text-anchor="middle" letter-spacing="2">${safeCta}</text>
+            ${renderVectorText(safeCta, 540, 808, 24, "#FFFFFF", true, "middle")}
           </g>
           
           <!-- Enlace -->
-          <text x="540" y="960" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="18" font-weight="bold" fill="#94A3B8" text-anchor="middle" letter-spacing="2">WWW - ${safeUrl}</text>
+          ${renderVectorText("WWW - " + safeUrl, 540, 960, 18, "#94A3B8", true, "middle")}
         </svg>
       `;
     }
@@ -363,36 +356,32 @@ export function generateFlyerSvg(
 
         <g filter="url(#glowFeed)">
           <rect x="330" y="80" width="420" height="52" rx="26" fill="rgba(15,23,42,0.85)" stroke="rgba(255,255,255,0.22)" stroke-width="1.5"/>
-          <text x="540" y="113" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="20" font-weight="bold" fill="#F8FAFC" text-anchor="middle" letter-spacing="3">${safeBiz}</text>
+          ${renderVectorText(safeBiz, 540, 113, 20, "#F8FAFC", true, "middle")}
         </g>
 
         <g filter="url(#glowFeed)">
           <rect x="330" y="220" width="420" height="64" rx="32" fill="url(#badgeGrad)" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
           <polygon points="360,244 364,254 374,254 366,260 369,270 360,264 351,270 354,260 346,254 356,254" fill="#FFFFFF"/>
-          <text x="540" y="262" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="22" font-weight="bold" fill="#FFFFFF" text-anchor="middle" letter-spacing="2">${safeBadge}</text>
+          ${renderVectorText(safeBadge, 540, 262, 22, "#FFFFFF", true, "middle")}
           <polygon points="720,244 724,254 734,254 726,260 729,270 720,264 711,270 714,260 706,254 716,254" fill="#FFFFFF"/>
         </g>
 
         <g filter="url(#glowFeed)">
-          <text x="540" y="420" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="56" font-weight="bold" fill="#FFFFFF" text-anchor="middle" letter-spacing="1">
-            ${titleLines.map((l, i) => `<tspan x="540" dy="${i === 0 ? 0 : 64}">${l}</tspan>`).join("")}
-          </text>
+          ${renderVectorTextLines(titleLines, 540, 420, 64, 56, "#FFFFFF", true, "middle")}
         </g>
 
         <g filter="url(#glowFeed)">
           <rect x="140" y="530" width="800" height="140" rx="20" fill="rgba(15,23,42,0.85)" stroke="rgba(255,255,255,0.18)" stroke-width="1.5"/>
-          <text x="540" y="590" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="24" fill="#E2E8F0" text-anchor="middle">
-            ${headlineLines.map((l, i) => `<tspan x="540" dy="${i === 0 ? 0 : 38}">${l}</tspan>`).join("")}
-          </text>
+          ${renderVectorTextLines(headlineLines, 540, 590, 38, 24, "#E2E8F0", false, "middle")}
         </g>
 
         <g filter="url(#glowFeed)">
           <rect x="290" y="740" width="500" height="88" rx="44" fill="url(#btnGrad)" stroke="rgba(255,255,255,0.4)" stroke-width="2"/>
-          <text x="540" y="796" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="22" font-weight="bold" fill="#FFFFFF" text-anchor="middle" letter-spacing="2">${safeCta}</text>
+          ${renderVectorText(safeCta, 540, 796, 22, "#FFFFFF", true, "middle")}
         </g>
 
         <line x1="120" y1="910" x2="960" y2="910" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>
-        <text x="540" y="955" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="18" font-weight="bold" fill="#CBD5E1" text-anchor="middle" letter-spacing="1">WWW - ${safeUrl}</text>
+        ${renderVectorText("WWW - " + safeUrl, 540, 955, 18, "#CBD5E1", true, "middle")}
       </svg>
     `;
   }
@@ -427,34 +416,30 @@ export function generateFlyerSvg(
 
         <g filter="url(#glowSt)">
           <rect x="300" y="180" width="480" height="60" rx="30" fill="rgba(15,23,42,0.9)" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"/>
-          <text x="540" y="218" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="22" font-weight="bold" fill="#F8FAFC" text-anchor="middle" letter-spacing="3">${safeBiz}</text>
+          ${renderVectorText(safeBiz, 540, 218, 22, "#F8FAFC", true, "middle")}
         </g>
 
         <g filter="url(#glowSt)">
           <rect x="330" y="340" width="420" height="72" rx="36" fill="url(#badgeGradSt)" stroke="rgba(255,255,255,0.3)" stroke-width="2"/>
-          <text x="540" y="386" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="24" font-weight="bold" fill="#FFFFFF" text-anchor="middle" letter-spacing="2">${safeBadge}</text>
+          ${renderVectorText(safeBadge, 540, 386, 24, "#FFFFFF", true, "middle")}
         </g>
 
         <g filter="url(#glowSt)">
-          <text x="540" y="540" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="64" font-weight="bold" fill="#FFFFFF" text-anchor="middle" letter-spacing="1">
-            ${titleLines.map((l, i) => `<tspan x="540" dy="${i === 0 ? 0 : 72}">${l}</tspan>`).join("")}
-          </text>
+          ${renderVectorTextLines(titleLines, 540, 540, 72, 64, "#FFFFFF", true, "middle")}
         </g>
 
         <g filter="url(#glowSt)">
           <rect x="120" y="1120" width="840" height="180" rx="28" fill="rgba(15,23,42,0.9)" stroke="rgba(255,255,255,0.2)" stroke-width="2"/>
-          <text x="540" y="1200" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="28" fill="#E2E8F0" text-anchor="middle">
-            ${headlineLines.map((l, i) => `<tspan x="540" dy="${i === 0 ? 0 : 44}">${l}</tspan>`).join("")}
-          </text>
+          ${renderVectorTextLines(headlineLines, 540, 1200, 44, 28, "#E2E8F0", false, "middle")}
         </g>
 
         <g filter="url(#glowSt)">
           <rect x="250" y="1420" width="580" height="104" rx="52" fill="url(#btnGradSt)" stroke="rgba(255,255,255,0.45)" stroke-width="2.5"/>
-          <text x="540" y="1485" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="26" font-weight="bold" fill="#FFFFFF" text-anchor="middle" letter-spacing="2">${safeCta}</text>
+          ${renderVectorText(safeCta, 540, 1485, 26, "#FFFFFF", true, "middle")}
         </g>
 
         <line x1="140" y1="1680" x2="940" y2="1680" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"/>
-        <text x="540" y="1740" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="22" font-weight="bold" fill="#E2E8F0" text-anchor="middle" letter-spacing="1">WWW - ${safeUrl}</text>
+        ${renderVectorText("WWW - " + safeUrl, 540, 1740, 22, "#E2E8F0", true, "middle")}
       </svg>
     `;
   }
@@ -487,34 +472,30 @@ export function generateFlyerSvg(
 
       <g filter="url(#glowFb)">
         <rect x="80" y="65" width="340" height="42" rx="21" fill="rgba(15,23,42,0.85)" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"/>
-        <text x="250" y="92" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="16" font-weight="bold" fill="#F8FAFC" text-anchor="middle" letter-spacing="2">${safeBiz}</text>
+        ${renderVectorText(safeBiz, 250, 92, 16, "#F8FAFC", true, "middle")}
       </g>
 
       <g filter="url(#glowFb)">
         <rect x="440" y="65" width="300" height="42" rx="21" fill="url(#badgeGradFb)" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
-        <text x="590" y="92" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="15" font-weight="bold" fill="#FFFFFF" text-anchor="middle" letter-spacing="1">${safeBadge}</text>
+        ${renderVectorText(safeBadge, 590, 92, 15, "#FFFFFF", true, "middle")}
       </g>
 
       <g filter="url(#glowFb)">
-        <text x="80" y="190" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="44" font-weight="bold" fill="#FFFFFF" letter-spacing="1">
-          ${titleLines.map((l, i) => `<tspan x="80" dy="${i === 0 ? 0 : 50}">${l}</tspan>`).join("")}
-        </text>
+        ${renderVectorTextLines(titleLines, 80, 190, 50, 44, "#FFFFFF", true, "left")}
       </g>
 
       <g filter="url(#glowFb)">
         <rect x="80" y="250" width="700" height="110" rx="18" fill="rgba(15,23,42,0.8)" stroke="rgba(255,255,255,0.15)" stroke-width="1.5"/>
-        <text x="110" y="295" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="20" fill="#E2E8F0">
-          ${headlineLines.map((l, i) => `<tspan x="110" dy="${i === 0 ? 0 : 32}">${l}</tspan>`).join("")}
-        </text>
+        ${renderVectorTextLines(headlineLines, 110, 295, 32, 20, "#E2E8F0", false, "left")}
       </g>
 
       <g filter="url(#glowFb)">
         <rect x="80" y="405" width="420" height="68" rx="34" fill="url(#btnGradFb)" stroke="rgba(255,255,255,0.4)" stroke-width="2"/>
-        <text x="290" y="448" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="19" font-weight="bold" fill="#FFFFFF" text-anchor="middle" letter-spacing="2">${safeCta}</text>
+        ${renderVectorText(safeCta, 290, 448, 19, "#FFFFFF", true, "middle")}
       </g>
 
       <line x1="80" y1="520" x2="800" y2="520" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>
-      <text x="80" y="555" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="16" font-weight="bold" fill="#94A3B8" letter-spacing="1">WWW - ${safeUrl}</text>
+      ${renderVectorText("WWW - " + safeUrl, 80, 555, 16, "#94A3B8", true, "left")}
     </svg>
   `;
 }
