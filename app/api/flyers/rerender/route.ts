@@ -16,6 +16,7 @@ const RerenderSchema = z.object({
   badge: z.string().min(1).max(25),
   ctaText: z.string().min(1).max(35),
   style: z.enum(["promo", "editorial", "action"]).optional(),
+  fontFamily: z.enum(["inter", "bebas", "anton", "cinzel", "playfair", "orbitron", "montserrat", "russo"]).optional(),
 });
 
 export async function POST(req: Request) {
@@ -31,7 +32,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Datos inválidos", details: parse.error.format() }, { status: 400 });
     }
 
-    const { businessId, flyerIndex, title, headline, badge, ctaText, style } = parse.data;
+    const { businessId, flyerIndex, title, headline, badge, ctaText, style, fontFamily } = parse.data;
 
     const business = await prisma.business.findUnique({
       where: { id: businessId },
@@ -102,6 +103,7 @@ export async function POST(req: Request) {
     }
 
     const flyerStyle = style || existingFlyer.style || (flyerIndex === 0 ? "promo" : flyerIndex === 1 ? "editorial" : "action");
+    const flyerFont = fontFamily || existingFlyer.fontFamily || "inter";
 
     // ── RENDERIZAR FORMATO 1: FEED ──
     const bgFeed = await sharp(photoBuffer)
@@ -115,6 +117,7 @@ export async function POST(req: Request) {
       ctaText,
       publicUrl,
       colors: derivedColors,
+      fontFamily: flyerFont,
     });
     const feedBuffer = await sharp(bgFeed)
       .composite([{ input: Buffer.from(svgFeed), top: 0, left: 0 }])
@@ -133,6 +136,7 @@ export async function POST(req: Request) {
       ctaText,
       publicUrl,
       colors: derivedColors,
+      fontFamily: flyerFont,
     });
     const storyBuffer = await sharp(bgStory)
       .composite([{ input: Buffer.from(svgStory), top: 0, left: 0 }])
@@ -151,6 +155,7 @@ export async function POST(req: Request) {
       ctaText,
       publicUrl,
       colors: derivedColors,
+      fontFamily: flyerFont,
     });
     const fbBuffer = await sharp(bgFb)
       .composite([{ input: Buffer.from(svgFb), top: 0, left: 0 }])
@@ -171,6 +176,7 @@ export async function POST(req: Request) {
       badge,
       ctaText,
       style: flyerStyle,
+      fontFamily: flyerFont,
       instagramPost: feedUrl,
       instagramStory: storyUrl,
       facebookPost: fbUrl,

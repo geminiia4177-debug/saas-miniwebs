@@ -1,9 +1,23 @@
 import opentype from "opentype.js";
 import path from "path";
 import fs from "fs";
+import { FlyerFontFamily, FontOption, FLYER_FONTS } from "./flyer-fonts";
 
-let boldFont: opentype.Font | null = null;
-let regularFont: opentype.Font | null = null;
+export type { FlyerFontFamily, FontOption };
+export { FLYER_FONTS };
+
+const fontCache: Partial<Record<FlyerFontFamily | "inter_regular", opentype.Font>> = {};
+
+const FONT_FILENAMES: Record<FlyerFontFamily, string> = {
+  inter: "Inter-Bold.ttf",
+  bebas: "BebasNeue.ttf",
+  anton: "Anton.ttf",
+  cinzel: "Cinzel.ttf",
+  playfair: "PlayfairDisplay.ttf",
+  orbitron: "Orbitron.ttf",
+  montserrat: "Montserrat.ttf",
+  russo: "RussoOne.ttf",
+};
 
 function loadFontFile(filename: string): opentype.Font | null {
   const candidates = [
@@ -23,17 +37,34 @@ function loadFontFile(filename: string): opentype.Font | null {
   return null;
 }
 
-function loadFonts() {
-  if (!boldFont) {
-    boldFont = loadFontFile("Inter-Bold.ttf");
+export function getFont(fontFamily: FlyerFontFamily = "inter", isBold = true): opentype.Font | null {
+  if (fontFamily === "inter" && !isBold) {
+    if (!fontCache.inter_regular) {
+      const f = loadFontFile("Inter-Regular.ttf");
+      if (f) fontCache.inter_regular = f;
+    }
+    if (fontCache.inter_regular) return fontCache.inter_regular;
   }
-  if (!regularFont) {
-    regularFont = loadFontFile("Inter-Regular.ttf");
+
+  const key = fontFamily;
+  if (!fontCache[key]) {
+    const filename = FONT_FILENAMES[key] || "Inter-Bold.ttf";
+    const f = loadFontFile(filename);
+    if (f) fontCache[key] = f;
   }
-  return { bold: boldFont, regular: regularFont };
+
+  // Fallback a Inter si la fuente solicitada no cargara
+  if (!fontCache[key] && key !== "inter") {
+    if (!fontCache.inter) {
+      const f = loadFontFile("Inter-Bold.ttf");
+      if (f) fontCache.inter = f;
+    }
+    return fontCache.inter || null;
+  }
+
+  return fontCache[key] || null;
 }
 
-// Clean text to avoid non-renderable unicode characters (e.g. emojis that have no TTF glyph)
 // Clean text to avoid non-renderable unicode characters (e.g. emojis or special symbols)
 function cleanTextForFont(text: string): string {
   if (!text) return "";
@@ -54,12 +85,12 @@ export function renderVectorText(
   fontSize: number,
   color: string,
   isBold = true,
-  anchor: "left" | "middle" | "right" = "middle"
+  anchor: "left" | "middle" | "right" = "middle",
+  fontFamily: FlyerFontFamily = "inter"
 ): string {
   const text = cleanTextForFont(rawText);
   if (!text) return "";
-  const fonts = loadFonts();
-  const font = isBold ? (fonts.bold || fonts.regular) : (fonts.regular || fonts.bold);
+  const font = getFont(fontFamily, isBold);
 
   if (!font) {
     return "";
@@ -109,12 +140,13 @@ export function renderVectorTextLines(
   fontSize: number,
   color: string,
   isBold = true,
-  anchor: "left" | "middle" | "right" = "middle"
+  anchor: "left" | "middle" | "right" = "middle",
+  fontFamily: FlyerFontFamily = "inter"
 ): string {
   return lines
     .map((line, idx) => {
       const y = startY + idx * lineHeight;
-      return renderVectorText(line, x, y, fontSize, color, isBold, anchor);
+      return renderVectorText(line, x, y, fontSize, color, isBold, anchor, fontFamily);
     })
     .join("\n");
 }

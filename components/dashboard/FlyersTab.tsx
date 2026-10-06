@@ -16,11 +16,13 @@ import {
   ExternalLink,
   Flame,
   CheckCircle2,
+  Type,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import HelpTooltip from "@/components/ui/HelpTooltip";
 import { getPublicUrl } from "@/lib/urls";
 import { Ico } from "@/lib/constants";
+import { FlyerFontFamily, FLYER_FONTS } from "@/lib/utils/flyer-fonts";
 
 export interface FlyerItem {
   id: string;
@@ -32,6 +34,7 @@ export interface FlyerItem {
   caption?: string;
   hashtags?: string;
   style?: "promo" | "editorial" | "action";
+  fontFamily?: FlyerFontFamily;
   instagramPost: string;
   instagramStory: string;
   facebookPost: string;
@@ -68,6 +71,7 @@ export default function FlyersTab({ biz, showToast }: FlyersTabProps) {
   const [editBadge, setEditBadge] = useState("");
   const [editCta, setEditCta] = useState("");
   const [editStyle, setEditStyle] = useState<"promo" | "editorial" | "action">("promo");
+  const [editFontFamily, setEditFontFamily] = useState<FlyerFontFamily>("inter");
   const [rerendering, setRerendering] = useState(false);
 
   // Destacar en BioLinks (BM3)
@@ -130,6 +134,7 @@ export default function FlyersTab({ biz, showToast }: FlyersTabProps) {
       setEditBadge(activeFlyer.badge || "");
       setEditCta(activeFlyer.ctaText || "");
       setEditStyle(activeFlyer.style || (selectedFlyerIndex === 0 ? "promo" : selectedFlyerIndex === 1 ? "editorial" : "action"));
+      setEditFontFamily(activeFlyer.fontFamily || "inter");
     }
   }, [activeFlyer, selectedFlyerIndex]);
 
@@ -198,6 +203,7 @@ export default function FlyersTab({ biz, showToast }: FlyersTabProps) {
           badge: editBadge,
           ctaText: editCta,
           style: editStyle,
+          fontFamily: editFontFamily,
         }),
       });
 
@@ -234,6 +240,7 @@ export default function FlyersTab({ biz, showToast }: FlyersTabProps) {
           badge: activeFlyer.badge,
           ctaText: activeFlyer.ctaText,
           style: activeFlyer.style,
+          fontFamily: activeFlyer.fontFamily || "inter",
         }),
       });
 
@@ -626,6 +633,14 @@ export default function FlyersTab({ biz, showToast }: FlyersTabProps) {
                 <span>
                   Diseño: <strong className="capitalize">{activeFlyer.style || "Promo"}</strong>
                 </span>
+                <span>•</span>
+                <span className="flex items-center gap-1">
+                  <Type className="w-3 h-3 text-accent" />
+                  Fuente:{" "}
+                  <strong className="text-accent">
+                    {FLYER_FONTS.find((f) => f.id === (activeFlyer.fontFamily || "inter"))?.name || "Inter"}
+                  </strong>
+                </span>
               </div>
             </div>
 
@@ -836,6 +851,45 @@ export default function FlyersTab({ biz, showToast }: FlyersTabProps) {
                             </button>
                           ))}
                         </div>
+                      </div>
+
+                      {/* Selector de Tipografía (FM11) */}
+                      <div>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <label className="text-[10px] font-semibold text-fg-muted flex items-center gap-1">
+                            <Type className="w-3 h-3 text-accent" />
+                            <span>Tipografía del Flyer ({FLYER_FONTS.length} estilos)</span>
+                          </label>
+                          <span className="text-[10px] text-accent font-medium">
+                            {FLYER_FONTS.find((f) => f.id === editFontFamily)?.name} ({FLYER_FONTS.find((f) => f.id === editFontFamily)?.category})
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                          {FLYER_FONTS.map((font) => {
+                            const isSelected = editFontFamily === font.id;
+                            return (
+                              <button
+                                key={font.id}
+                                type="button"
+                                onClick={() => setEditFontFamily(font.id)}
+                                className={`p-2 rounded-xl text-left border transition-all cursor-pointer flex flex-col justify-between ${
+                                  isSelected
+                                    ? "bg-accent/15 border-accent text-accent shadow-sm ring-1 ring-accent/30"
+                                    : "bg-surface-2 hover:bg-surface-3 border-border-default text-fg-muted hover:text-fg"
+                                }`}
+                              >
+                                <div className="flex items-center justify-between w-full">
+                                  <span className="text-[11px] font-bold truncate">{font.name}</span>
+                                  {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-accent" />}
+                                </div>
+                                <span className="text-[9px] text-fg-subtle truncate mt-0.5">{font.category}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <p className="text-[10px] text-fg-subtle mt-1.5 italic">
+                          💡 Tip: <strong>Bebas Neue</strong> o <strong>Anton</strong> para ofertas contundentes, <strong>Cinzel</strong> para barberías y samuráis, <strong>Orbitron</strong> para anime/cyberpunk, y <strong>Playfair</strong> para estética y lujo.
+                        </p>
                       </div>
                     </div>
 
