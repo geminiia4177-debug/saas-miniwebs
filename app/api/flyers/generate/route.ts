@@ -738,193 +738,221 @@ Responde en formato JSON con la siguiente estructura:
     const rubroPhotos = CATEGORY_PHOTOS[rubroKey] || CATEGORY_PHOTOS.general;
     const businessGallery: string[] = Array.isArray(currentLayout.gallery) ? currentLayout.gallery : [];
 
-    const generatedFlyers = await Promise.all(
-      concepts.map(async (concept, idx) => {
-        let photoBuffer: Buffer | null = null;
+    const generatedFlyers: any[] = [];
 
-        // Paso A: Generar imagen de fondo con Pollinations.AI (model flux con fallback a turbo)
-        const pollinationKey = process.env.POLLINATIONS_API_KEY || "sk_yYIRTLHDWdurMwtxKH2RwYZ5SlMM4ZLV";
-        if (pollinationKey) {
-          const modelsToTry = ["flux", "turbo"];
-          for (const modelName of modelsToTry) {
-            if (photoBuffer) break;
-            try {
-              const userStyle = customPrompt ? `${customPrompt}, ` : "";
-              const isArtistic = /anime|manga|cartoon|dibujo|comic|cyberpunk|pixel|3d|vector/i.test(customPrompt || "");
-              const baseSubject = concept.imagePrompt || (isArtistic ? `${customPrompt} ${bizType}` : `commercial advertising photography for ${bizType}`);
-              const lighting = "dramatic warm ambient lighting, festive bokeh background, commercial product aesthetic";
-              const composition = "centered subject, shallow depth of field, wide empty space at center, top and bottom for text placement";
-              const negative = "no text, no letters, no words, no watermark, no human hands, no logos, clean backdrop";
-              const finalPrompt = `${userStyle}${baseSubject}, ${lighting}, ${composition}, ${negative}`;
-              const encodedPrompt = encodeURIComponent(finalPrompt.slice(0, 380));
-              const pollUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?model=${modelName}&width=1024&height=1024&nologo=true&enhance=false&seed=${Math.floor(Math.random() * 999999)}&key=${pollinationKey}`;
+    // Iteración secuencial para garantizar 0 bloqueos de concurrencia y máxima fidelidad de IA
+    for (let idx = 0; idx < concepts.length; idx++) {
+      const concept = concepts[idx];
+      let photoBuffer: Buffer | null = null;
 
-              const res = await fetch(pollUrl, {
-                headers: {
-                  Authorization: `Bearer ${pollinationKey}`,
-                },
-                signal: AbortSignal.timeout(18000),
-              });
-
-              if (res.ok) {
-                const ab = await res.arrayBuffer();
-                if (ab.byteLength > 2000) {
-                  photoBuffer = Buffer.from(ab);
-                  break;
-                }
-              }
-            } catch (pollErr) {
-              console.warn(`Pollinations AI (${modelName}) failed, checking next model:`, pollErr);
-            }
-          }
-        }
-
-        // Paso B: Intentar Gemini Image (gemini-2.5-flash-image) si estuviese disponible
-        if (!photoBuffer && process.env.GEMINI_API_KEY) {
+      // Paso A: Generar imagen de fondo con Pollinations.AI authenticated endpoint
+      const pollinationKey = process.env.POLLINATIONS_API_KEY || "sk_yYIRTLHDWdurMwtxKH2RwYZ5SlMM4ZLV";
+      if (pollinationKey) {
+        const modelsToTry = ["flux", "tongyi-mai/z-image-turbo"];
+        for (const modelName of modelsToTry) {
+          if (photoBuffer) break;
           try {
-            const aiImg = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-            const userStyle = customPrompt ? `${customPrompt}, ` : "";
+            let stylePrefix = "";
+            if (customPrompt) {
+              stylePrefix = `${customPrompt}, `;
+              if (/anime|manga/i.test(customPrompt)) {
+                stylePrefix += "Japanese anime illustration art style, high quality manga aesthetic, dynamic anime scene, ";
+              } else if (/cyberpunk/i.test(customPrompt)) {
+                stylePrefix += "cyberpunk neon aesthetic, futuristic lighting, ";
+              } else if (/comic/i.test(customPrompt)) {
+                stylePrefix += "comic book art style, graphic novel illustration, ";
+              }
+            }
+
             const isArtistic = /anime|manga|cartoon|dibujo|comic|cyberpunk|pixel|3d|vector/i.test(customPrompt || "");
-            const baseGenre = isArtistic ? "clean artwork" : `commercial advertising photography for ${bizType}`;
-            const promptImg = `${userStyle}${concept.imagePrompt || bizType}, ${baseGenre}, high resolution, sharp details, vibrant lighting, clean negative space at center top and bottom, no text, no watermark, no typography`;
-            const imgRes = await aiImg.models.generateContent({
-              model: "gemini-2.5-flash-image",
-              contents: promptImg,
-              config: {
-                responseModalities: ["IMAGE"],
-              } as any,
+            const baseSubject = concept.imagePrompt || (isArtistic ? `${customPrompt} ${bizType}` : `commercial advertising photography for ${bizType}`);
+            const lighting = isArtistic
+              ? "vibrant cinematic lighting, detailed illustration, dynamic angle"
+              : "dramatic warm ambient lighting, festive bokeh background, commercial product aesthetic";
+            const composition = "centered subject, shallow depth of field, wide empty space at center top and bottom for text placement";
+            const negative = "no text, no letters, no words, no watermark, no human hands, no logos, clean backdrop";
+            const finalPrompt = `${stylePrefix}${baseSubject}, ${lighting}, ${composition}, ${negative}`;
+            const encodedPrompt = encodeURIComponent(finalPrompt.slice(0, 400));
+            const pollUrl = `https://gen.pollinations.ai/image/${encodedPrompt}?model=${encodeURIComponent(modelName)}&width=1024&height=1024&nologo=true&seed=${Math.floor(Math.random() * 999999)}`;
+
+            const res = await fetch(pollUrl, {
+              headers: {
+                Authorization: `Bearer ${pollinationKey}`,
+              },
+              signal: AbortSignal.timeout(24000),
             });
 
-            const candidate = imgRes.candidates?.[0];
-            const part = candidate?.content?.parts?.find((p: any) => p.inlineData?.data);
-            if (part?.inlineData?.data) {
-              photoBuffer = Buffer.from(part.inlineData.data, "base64");
-            }
-          } catch (imgErr) {
-            // Se continúa con el fallback natural sin interrumpir
-          }
-        }
-
-        // Paso C: Foto real del negocio si existe en su galería
-        if (!photoBuffer && businessGallery[idx]) {
-          try {
-            const res = await fetch(businessGallery[idx], { signal: AbortSignal.timeout(5000) });
             if (res.ok) {
-              photoBuffer = Buffer.from(await res.arrayBuffer());
+              const ab = await res.arrayBuffer();
+              if (ab.byteLength > 2000) {
+                photoBuffer = Buffer.from(ab);
+                break;
+              }
             }
-          } catch {
-            // Continúa a Unsplash
+          } catch (pollErr) {
+            console.warn(`Pollinations AI (${modelName}) failed, checking next model:`, pollErr);
           }
         }
+      }
 
-        // Paso D: Foto comercial curada en alta resolución
-        if (!photoBuffer) {
-          const photoUrl = rubroPhotos[idx % rubroPhotos.length];
-          try {
-            const res = await fetch(photoUrl, { signal: AbortSignal.timeout(5000) });
-            if (res.ok) {
-              photoBuffer = Buffer.from(await res.arrayBuffer());
-            }
-          } catch {
-            // Continúa a gradiente
+      // Paso B: Intentar Gemini Image (gemini-2.5-flash-image) si estuviese disponible
+      if (!photoBuffer && process.env.GEMINI_API_KEY) {
+        try {
+          const aiImg = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+          const userStyle = customPrompt ? `${customPrompt}, ` : "";
+          const isArtistic = /anime|manga|cartoon|dibujo|comic|cyberpunk|pixel|3d|vector/i.test(customPrompt || "");
+          const baseGenre = isArtistic ? "clean artwork" : `commercial advertising photography for ${bizType}`;
+          const promptImg = `${userStyle}${concept.imagePrompt || bizType}, ${baseGenre}, high resolution, sharp details, vibrant lighting, clean negative space at center top and bottom, no text, no watermark, no typography`;
+          const imgRes = await aiImg.models.generateContent({
+            model: "gemini-2.5-flash-image",
+            contents: promptImg,
+            config: {
+              responseModalities: ["IMAGE"],
+            } as any,
+          });
+
+          const candidate = imgRes.candidates?.[0];
+          const part = candidate?.content?.parts?.find((p: any) => p.inlineData?.data);
+          if (part?.inlineData?.data) {
+            photoBuffer = Buffer.from(part.inlineData.data, "base64");
           }
+        } catch (imgErr) {
+          // Se continúa con el fallback natural sin interrumpir
         }
+      }
 
-        // Paso E: Gradiente de emergencia elegante con Sharp
-        if (!photoBuffer) {
-          photoBuffer = await sharp({
-            create: {
-              width: 1200,
-              height: 1200,
-              channels: 4,
-              background: { r: 15, g: 23, b: 42, alpha: 1 },
-            },
-          })
-            .jpeg()
+      // Paso C: Foto real del negocio si existe en su galería
+      if (!photoBuffer && businessGallery[idx]) {
+        try {
+          const res = await fetch(businessGallery[idx], { signal: AbortSignal.timeout(5000) });
+          if (res.ok) {
+            photoBuffer = Buffer.from(await res.arrayBuffer());
+          }
+        } catch {
+          // Continúa a Unsplash
+        }
+      }
+
+      // Paso D: Foto comercial curada en alta resolución
+      if (!photoBuffer) {
+        const photoUrl = rubroPhotos[idx % rubroPhotos.length];
+        try {
+          const res = await fetch(photoUrl, { signal: AbortSignal.timeout(5000) });
+          if (res.ok) {
+            photoBuffer = Buffer.from(await res.arrayBuffer());
+          }
+        } catch {
+          // Continúa a gradiente
+        }
+      }
+
+      // Paso E: Gradiente de emergencia elegante con Sharp si no hubo imagen
+      if (!photoBuffer) {
+        photoBuffer = await sharp({
+          create: {
+            width: 1200,
+            height: 1200,
+            channels: 4,
+            background: { r: 15, g: 23, b: 42, alpha: 1 },
+          },
+        })
+          .jpeg()
+          .toBuffer();
+      }
+
+      // Safeguard de recorte del borde inferior para garantizar cero marcas de agua
+      let cleanPhoto = photoBuffer;
+      try {
+        const meta = await sharp(photoBuffer).metadata();
+        if (meta.width && meta.height && meta.height > 300) {
+          cleanPhoto = await sharp(photoBuffer)
+            .extract({ left: 0, top: 0, width: meta.width, height: meta.height - 42 })
             .toBuffer();
         }
+      } catch {
+        cleanPhoto = photoBuffer;
+      }
 
-        const flyerStyle = concept.style || (idx === 0 ? "promo" : idx === 1 ? "editorial" : "action");
+      const flyerStyle = concept.style || (idx === 0 ? "promo" : idx === 1 ? "editorial" : "action");
 
-        // ── RENDERIZAR FORMATO 1: FEED (1080 x 1080) ──
-        const bgFeed = await sharp(photoBuffer)
-          .resize(1080, 1080, { fit: "cover", position: "center" })
-          .toBuffer();
-        const svgFeed = generateFlyerSvg("feed", flyerStyle, {
-          bizName,
-          title: concept.title,
-          headline: concept.headline,
-          badge: concept.badge,
-          ctaText: concept.ctaText,
-          publicUrl,
-          colors: derivedColors,
-        });
-        const feedBuffer = await sharp(bgFeed)
-          .composite([{ input: Buffer.from(svgFeed), top: 0, left: 0 }])
-          .jpeg({ quality: 90 })
-          .toBuffer();
+      // ── RENDERIZAR FORMATO 1: FEED (1080 x 1080) ──
+      const bgFeed = await sharp(cleanPhoto)
+        .resize(1080, 1080, { fit: "cover", position: "center" })
+        .toBuffer();
+      const svgFeed = generateFlyerSvg("feed", flyerStyle, {
+        bizName,
+        title: concept.title,
+        headline: concept.headline,
+        badge: concept.badge,
+        ctaText: concept.ctaText,
+        publicUrl,
+        colors: derivedColors,
+      });
+      const feedBuffer = await sharp(bgFeed)
+        .composite([{ input: Buffer.from(svgFeed), top: 0, left: 0 }])
+        .jpeg({ quality: 90 })
+        .toBuffer();
 
-        // ── RENDERIZAR FORMATO 2: STORY (1080 x 1920) ──
-        const bgStory = await sharp(photoBuffer)
-          .resize(1080, 1920, { fit: "cover", position: "center" })
-          .toBuffer();
-        const svgStory = generateFlyerSvg("story", flyerStyle, {
-          bizName,
-          title: concept.title,
-          headline: concept.headline,
-          badge: concept.badge,
-          ctaText: concept.ctaText,
-          publicUrl,
-          colors: derivedColors,
-        });
-        const storyBuffer = await sharp(bgStory)
-          .composite([{ input: Buffer.from(svgStory), top: 0, left: 0 }])
-          .jpeg({ quality: 90 })
-          .toBuffer();
+      // ── RENDERIZAR FORMATO 2: STORY (1080 x 1920) ──
+      const bgStory = await sharp(cleanPhoto)
+        .resize(1080, 1920, { fit: "cover", position: "center" })
+        .toBuffer();
+      const svgStory = generateFlyerSvg("story", flyerStyle, {
+        bizName,
+        title: concept.title,
+        headline: concept.headline,
+        badge: concept.badge,
+        ctaText: concept.ctaText,
+        publicUrl,
+        colors: derivedColors,
+      });
+      const storyBuffer = await sharp(bgStory)
+        .composite([{ input: Buffer.from(svgStory), top: 0, left: 0 }])
+        .jpeg({ quality: 90 })
+        .toBuffer();
 
-        // ── RENDERIZAR FORMATO 3: FACEBOOK (1200 x 630) ──
-        const bgFb = await sharp(photoBuffer)
-          .resize(1200, 630, { fit: "cover", position: "attention" })
-          .toBuffer();
-        const svgFb = generateFlyerSvg("fb", flyerStyle, {
-          bizName,
-          title: concept.title,
-          headline: concept.headline,
-          badge: concept.badge,
-          ctaText: concept.ctaText,
-          publicUrl,
-          colors: derivedColors,
-        });
-        const fbBuffer = await sharp(bgFb)
-          .composite([{ input: Buffer.from(svgFb), top: 0, left: 0 }])
-          .jpeg({ quality: 90 })
-          .toBuffer();
+      // ── RENDERIZAR FORMATO 3: FACEBOOK (1200 x 630) ──
+      const bgFb = await sharp(cleanPhoto)
+        .resize(1200, 630, { fit: "cover", position: "attention" })
+        .toBuffer();
+      const svgFb = generateFlyerSvg("fb", flyerStyle, {
+        bizName,
+        title: concept.title,
+        headline: concept.headline,
+        badge: concept.badge,
+        ctaText: concept.ctaText,
+        publicUrl,
+        colors: derivedColors,
+      });
+      const fbBuffer = await sharp(bgFb)
+        .composite([{ input: Buffer.from(svgFb), top: 0, left: 0 }])
+        .jpeg({ quality: 90 })
+        .toBuffer();
 
-        // ── FM2: SUBIR A CDN (ImgBB) PARA ALIVIANAR LA BASE DE DATOS ──
-        const [feedUrl, storyUrl, fbUrl, bgUrl] = await Promise.all([
-          uploadBufferToImgBB(feedBuffer, `${business.id}_flyer_${idx}_feed.jpg`),
-          uploadBufferToImgBB(storyBuffer, `${business.id}_flyer_${idx}_story.jpg`),
-          uploadBufferToImgBB(fbBuffer, `${business.id}_flyer_${idx}_fb.jpg`),
-          uploadBufferToImgBB(photoBuffer, `${business.id}_flyer_${idx}_bg.jpg`),
-        ]);
+      // ── FM2: SUBIR A CDN (ImgBB) PARA ALIVIANAR LA BASE DE DATOS ──
+      const [feedUrl, storyUrl, fbUrl, bgUrl] = await Promise.all([
+        uploadBufferToImgBB(feedBuffer, `${business.id}_flyer_${idx}_feed.jpg`),
+        uploadBufferToImgBB(storyBuffer, `${business.id}_flyer_${idx}_story.jpg`),
+        uploadBufferToImgBB(fbBuffer, `${business.id}_flyer_${idx}_fb.jpg`),
+        uploadBufferToImgBB(cleanPhoto, `${business.id}_flyer_${idx}_bg.jpg`),
+      ]);
 
-        return {
-          id: concept.id || String(idx + 1),
-          title: concept.title,
-          headline: concept.headline,
-          badge: concept.badge,
-          ctaText: concept.ctaText,
-          imagePrompt: concept.imagePrompt,
-          caption: concept.caption || "",
-          hashtags: concept.hashtags || "",
-          style: flyerStyle,
-          instagramPost: feedUrl,
-          instagramStory: storyUrl,
-          facebookPost: fbUrl,
-          bgPhotoUrl: bgUrl,
-        };
-      })
-    );
+      generatedFlyers.push({
+        id: concept.id || String(idx + 1),
+        title: concept.title,
+        headline: concept.headline,
+        badge: concept.badge,
+        ctaText: concept.ctaText,
+        imagePrompt: concept.imagePrompt,
+        caption: concept.caption || "",
+        hashtags: concept.hashtags || "",
+        style: flyerStyle,
+        instagramPost: feedUrl,
+        instagramStory: storyUrl,
+        facebookPost: fbUrl,
+        bgPhotoUrl: bgUrl,
+      });
+    }
 
     // ── 3. GUARDAR HISTORIAL Y REGISTRAR FECHA DE PRÓXIMO CUPO (1 MES) (FM9) ──
     const now = new Date();
