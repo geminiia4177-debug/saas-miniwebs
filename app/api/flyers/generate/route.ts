@@ -6,6 +6,8 @@ import { GoogleGenAI } from "@google/genai";
 import sharp from "sharp";
 import { checkRateLimit, getRateLimitRetryAfterMs } from "@/lib/rate-limit";
 import { z } from "zod";
+import { uploadBufferToImgBB } from "@/lib/utils/upload-server";
+import { getDerivedFlyerColors } from "@/lib/utils/colorExtractor";
 
 const RATE_WINDOW_MS = 60_000;
 const RATE_MAX = 5;
@@ -17,17 +19,20 @@ const FlyerRequestSchema = z.object({
   adminForce: z.boolean().optional().default(false),
 });
 
-interface FlyerConcept {
+export interface FlyerConcept {
   id: string;
   title: string;
   headline: string;
   badge: string;
   ctaText: string;
   imagePrompt: string;
+  caption?: string;
+  hashtags?: string;
+  style?: "promo" | "editorial" | "action";
 }
 
 // ── FOTOGRAFÍAS COMERCIALES DE ALTA DEFINICIÓN POR RUBRO ──
-const CATEGORY_PHOTOS: Record<string, string[]> = {
+export const CATEGORY_PHOTOS: Record<string, string[]> = {
   barberia: [
     "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=1200&q=80",
     "https://images.unsplash.com/photo-1599351431202-1e0f0137899a?w=1200&q=80",
@@ -80,7 +85,7 @@ const CATEGORY_PHOTOS: Record<string, string[]> = {
   ],
 };
 
-function escapeXml(unsafe: string): string {
+export function escapeXml(unsafe: string): string {
   return String(unsafe || "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -89,7 +94,7 @@ function escapeXml(unsafe: string): string {
     .replace(/'/g, "&apos;");
 }
 
-function wrapText(text: string, maxChars: number): string[] {
+export function wrapText(text: string, maxChars: number): string[] {
   const words = (text || "").trim().split(/\s+/);
   const lines: string[] = [];
   let currentLine = "";
@@ -141,7 +146,6 @@ export async function GET(req: Request) {
     const layout = (business.layoutConfig as any) || {};
     const usage = layout.flyersUsage || {};
 
-    const lastGeneratedAt = usage.lastGeneratedAt ? new Date(usage.lastGeneratedAt) : null;
     const nextAvailableAt = usage.nextAvailableAt ? new Date(usage.nextAvailableAt) : null;
     const now = new Date();
 
@@ -162,6 +166,357 @@ export async function GET(req: Request) {
     console.error("Flyers GET error:", error);
     return NextResponse.json({ error: "Error al consultar estado" }, { status: 500 });
   }
+}
+
+// ── BUILD REAL BUSINESS CONTEXT FOR PROMPTING (FM5) ──
+function buildBusinessContext(business: any): string {
+  const layout = (business.layoutConfig as any) || {};
+  const lines: string[] = [];
+
+  // Services & Prices
+  const services: Array<{ name?: string; price?: string | number }> = [];
+  if (Array.isArray(layout.services)) {
+    services.push(...layout.services);
+  }
+  if (Array.isArray(layout.barbershop?.services)) {
+    services.push(...layout.barbershop.services);
+  }
+  if (services.length > 0) {
+    const sList = services.slice(0, 5).map((s) => `${s.name || "Servicio"} ($${s.price || "Consultar"})`).join(", ");
+    lines.push(`Servicios principales con precios: ${sList}`);
+  }
+
+  // Address
+  if (business.address || layout.contact?.address) {
+    lines.push(`Dirección: ${business.address || layout.contact?.address}`);
+  }
+
+  // Phone / WhatsApp
+  const phone = business.phone || business.whatsapp || layout.contact?.phone || layout.contact?.whatsapp;
+  if (phone) {
+    lines.push(`Contacto WhatsApp: ${phone}`);
+  }
+
+  // Hours
+  if (layout.contact?.hours) {
+    lines.push(`Horarios de atención: ${layout.contact?.hours}`);
+  }
+
+  return lines.length > 0 ? `\nInformación real del negocio:\n${lines.join("\n")}` : "";
+}
+
+// ── SVG TEMPLATES (FM7: PROMO, EDITORIAL, ACTION) ──
+export function generateFlyerSvg(
+  format: "feed" | "story" | "fb",
+  style: "promo" | "editorial" | "action",
+  data: {
+    bizName: string;
+    title: string;
+    headline: string;
+    badge: string;
+    ctaText: string;
+    publicUrl: string;
+    colors: ReturnType<typeof getDerivedFlyerColors>;
+  }
+): string {
+  const safeBiz = escapeXml(data.bizName.toUpperCase());
+  const safeTitle = escapeXml(data.title.toUpperCase());
+  const safeHeadline = escapeXml(data.headline);
+  const safeBadge = escapeXml(data.badge.toUpperCase());
+  const safeCta = escapeXml(data.ctaText.toUpperCase());
+  const safeUrl = escapeXml(data.publicUrl);
+  const { primary, primaryDark, accent, accentDark } = data.colors;
+
+  if (format === "feed") {
+    // 1080 x 1080 (1:1)
+    const titleLines = wrapText(safeTitle, 22);
+    const headlineLines = wrapText(safeHeadline, 42);
+
+    if (style === "editorial") {
+      return `
+        <svg width="1080" height="1080" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="overlayEd" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stop-color="#020617" stop-opacity="0.88" />
+              <stop offset="40%" stop-color="#020617" stop-opacity="0.45" />
+              <stop offset="85%" stop-color="#020617" stop-opacity="0.94" />
+            </linearGradient>
+            <filter id="glowEd"><feDropShadow dx="0" dy="8" stdDeviation="16" flood-color="#000000" flood-opacity="0.85"/></filter>
+          </defs>
+          <rect width="1080" height="1080" fill="url(#overlayEd)" />
+          <!-- Marco editorial fino -->
+          <rect x="54" y="54" width="972" height="972" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1.5" />
+          <rect x="62" y="62" width="956" height="956" fill="none" stroke="${accent}" stroke-opacity="0.3" stroke-width="1" />
+          
+          <!-- Encabezado sutil -->
+          <text x="540" y="140" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="18" font-weight="bold" fill="#E2E8F0" text-anchor="middle" letter-spacing="6">${safeBiz}</text>
+          <line x1="420" y1="165" x2="660" y2="165" stroke="${accent}" stroke-width="2" />
+          
+          <!-- Badge elegante -->
+          <g filter="url(#glowEd)">
+            <rect x="360" y="240" width="360" height="54" rx="27" fill="rgba(15,23,42,0.85)" stroke="${accent}" stroke-width="1.5"/>
+            <text x="540" y="274" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="20" font-weight="bold" fill="${accent}" text-anchor="middle" letter-spacing="3">${safeBadge}</text>
+          </g>
+          
+          <!-- Título elegante centrado -->
+          <g filter="url(#glowEd)">
+            <text x="540" y="440" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="54" font-weight="bold" fill="#FFFFFF" text-anchor="middle" letter-spacing="2">
+              ${titleLines.map((l, i) => `<tspan x="540" dy="${i === 0 ? 0 : 64}">${l}</tspan>`).join("")}
+            </text>
+          </g>
+          
+          <!-- Frase editorial -->
+          <g filter="url(#glowEd)">
+            <text x="540" y="620" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="24" font-style="italic" fill="#E2E8F0" text-anchor="middle">
+              ${headlineLines.map((l, i) => `<tspan x="540" dy="${i === 0 ? 0 : 38}">${l}</tspan>`).join("")}
+            </text>
+          </g>
+          
+          <!-- CTA Chic -->
+          <g filter="url(#glowEd)">
+            <rect x="320" y="760" width="440" height="80" rx="40" fill="${primary}" stroke="rgba(255,255,255,0.4)" stroke-width="2"/>
+            <text x="540" y="810" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="20" font-weight="bold" fill="#FFFFFF" text-anchor="middle" letter-spacing="3">${safeCta}</text>
+          </g>
+          
+          <!-- URL footer -->
+          <text x="540" y="960" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="16" fill="#94A3B8" text-anchor="middle" letter-spacing="2">${safeUrl}</text>
+        </svg>
+      `;
+    }
+
+    if (style === "action") {
+      return `
+        <svg width="1080" height="1080" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="overlayAct" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stop-color="#020617" stop-opacity="0.92" />
+              <stop offset="45%" stop-color="#020617" stop-opacity="0.5" />
+              <stop offset="100%" stop-color="#020617" stop-opacity="0.96" />
+            </linearGradient>
+            <linearGradient id="btnGradAct" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="${primary}" />
+              <stop offset="100%" stop-color="${primaryDark}" />
+            </linearGradient>
+            <filter id="glowAct"><feDropShadow dx="0" dy="8" stdDeviation="16" flood-color="#000000" flood-opacity="0.85"/></filter>
+          </defs>
+          <rect width="1080" height="1080" fill="url(#overlayAct)" />
+          
+          <!-- Cabecera moderna con punto activo -->
+          <g filter="url(#glowAct)">
+            <rect x="100" y="80" width="880" height="60" rx="16" fill="rgba(15,23,42,0.85)" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"/>
+            <circle cx="140" cy="110" r="8" fill="#10B981"/>
+            <text x="170" y="117" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="18" font-weight="bold" fill="#FFFFFF" letter-spacing="2">${safeBiz}</text>
+            <rect x="740" y="93" width="220" height="34" rx="17" fill="${accent}" />
+            <text x="850" y="116" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="14" font-weight="bold" fill="#090D16" text-anchor="middle" letter-spacing="1">${safeBadge}</text>
+          </g>
+          
+          <!-- Título Dinámico -->
+          <g filter="url(#glowAct)">
+            <text x="540" y="380" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="58" font-weight="bold" fill="#FFFFFF" text-anchor="middle" letter-spacing="1">
+              ${titleLines.map((l, i) => `<tspan x="540" dy="${i === 0 ? 0 : 68}">${l}</tspan>`).join("")}
+            </text>
+          </g>
+          
+          <!-- Glass Card para descripción con viñetas -->
+          <g filter="url(#glowAct)">
+            <rect x="140" y="520" width="800" height="150" rx="24" fill="rgba(15,23,42,0.9)" stroke="rgba(255,255,255,0.22)" stroke-width="1.5"/>
+            <text x="540" y="585" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="24" fill="#F1F5F9" text-anchor="middle">
+              ${headlineLines.map((l, i) => `<tspan x="540" dy="${i === 0 ? 0 : 38}">${l}</tspan>`).join("")}
+            </text>
+          </g>
+          
+          <!-- Botón de Acción Rápida -->
+          <g filter="url(#glowAct)">
+            <rect x="260" y="750" width="560" height="92" rx="46" fill="url(#btnGradAct)" stroke="rgba(255,255,255,0.4)" stroke-width="2"/>
+            <text x="540" y="808" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="24" font-weight="bold" fill="#FFFFFF" text-anchor="middle" letter-spacing="2">${safeCta}</text>
+          </g>
+          
+          <!-- Enlace -->
+          <text x="540" y="960" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="18" font-weight="bold" fill="#94A3B8" text-anchor="middle" letter-spacing="2">WWW - ${safeUrl}</text>
+        </svg>
+      `;
+    }
+
+    // Default: promo
+    return `
+      <svg width="1080" height="1080" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="overlayFeed" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#020617" stop-opacity="0.86" />
+            <stop offset="35%" stop-color="#020617" stop-opacity="0.45" />
+            <stop offset="70%" stop-color="#020617" stop-opacity="0.78" />
+            <stop offset="100%" stop-color="#020617" stop-opacity="0.96" />
+          </linearGradient>
+          <linearGradient id="badgeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="${accent}" />
+            <stop offset="100%" stop-color="${accentDark}" />
+          </linearGradient>
+          <linearGradient id="btnGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="${primary}" />
+            <stop offset="100%" stop-color="${primaryDark}" />
+          </linearGradient>
+          <filter id="glowFeed"><feDropShadow dx="0" dy="6" stdDeviation="14" flood-color="#000000" flood-opacity="0.85"/></filter>
+        </defs>
+        <rect width="1080" height="1080" fill="url(#overlayFeed)" />
+        <rect x="36" y="36" width="1008" height="1008" rx="28" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="2" />
+        <rect x="48" y="48" width="984" height="984" rx="20" fill="none" stroke="${primary}" stroke-opacity="0.4" stroke-width="1.5" stroke-dasharray="8 6" />
+
+        <g filter="url(#glowFeed)">
+          <rect x="330" y="80" width="420" height="52" rx="26" fill="rgba(15,23,42,0.85)" stroke="rgba(255,255,255,0.22)" stroke-width="1.5"/>
+          <text x="540" y="113" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="20" font-weight="bold" fill="#F8FAFC" text-anchor="middle" letter-spacing="3">${safeBiz}</text>
+        </g>
+
+        <g filter="url(#glowFeed)">
+          <rect x="330" y="220" width="420" height="64" rx="32" fill="url(#badgeGrad)" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
+          <polygon points="360,244 364,254 374,254 366,260 369,270 360,264 351,270 354,260 346,254 356,254" fill="#FFFFFF"/>
+          <text x="540" y="262" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="22" font-weight="bold" fill="#FFFFFF" text-anchor="middle" letter-spacing="2">${safeBadge}</text>
+          <polygon points="720,244 724,254 734,254 726,260 729,270 720,264 711,270 714,260 706,254 716,254" fill="#FFFFFF"/>
+        </g>
+
+        <g filter="url(#glowFeed)">
+          <text x="540" y="420" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="56" font-weight="bold" fill="#FFFFFF" text-anchor="middle" letter-spacing="1">
+            ${titleLines.map((l, i) => `<tspan x="540" dy="${i === 0 ? 0 : 64}">${l}</tspan>`).join("")}
+          </text>
+        </g>
+
+        <g filter="url(#glowFeed)">
+          <rect x="140" y="530" width="800" height="140" rx="20" fill="rgba(15,23,42,0.85)" stroke="rgba(255,255,255,0.18)" stroke-width="1.5"/>
+          <text x="540" y="590" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="24" fill="#E2E8F0" text-anchor="middle">
+            ${headlineLines.map((l, i) => `<tspan x="540" dy="${i === 0 ? 0 : 38}">${l}</tspan>`).join("")}
+          </text>
+        </g>
+
+        <g filter="url(#glowFeed)">
+          <rect x="290" y="740" width="500" height="88" rx="44" fill="url(#btnGrad)" stroke="rgba(255,255,255,0.4)" stroke-width="2"/>
+          <text x="540" y="796" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="22" font-weight="bold" fill="#FFFFFF" text-anchor="middle" letter-spacing="2">${safeCta}</text>
+        </g>
+
+        <line x1="120" y1="910" x2="960" y2="910" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>
+        <text x="540" y="955" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="18" font-weight="bold" fill="#CBD5E1" text-anchor="middle" letter-spacing="1">WWW - ${safeUrl}</text>
+      </svg>
+    `;
+  }
+
+  if (format === "story") {
+    // 1080 x 1920 (9:16)
+    const titleLines = wrapText(safeTitle, 20);
+    const headlineLines = wrapText(safeHeadline, 38);
+
+    return `
+      <svg width="1080" height="1920" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="overlaySt" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#020617" stop-opacity="0.88" />
+            <stop offset="25%" stop-color="#020617" stop-opacity="0.48" />
+            <stop offset="60%" stop-color="#020617" stop-opacity="0.82" />
+            <stop offset="100%" stop-color="#020617" stop-opacity="0.96" />
+          </linearGradient>
+          <linearGradient id="badgeGradSt" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="${accent}" />
+            <stop offset="100%" stop-color="${accentDark}" />
+          </linearGradient>
+          <linearGradient id="btnGradSt" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="${primary}" />
+            <stop offset="100%" stop-color="${primaryDark}" />
+          </linearGradient>
+          <filter id="glowSt"><feDropShadow dx="0" dy="8" stdDeviation="16" flood-color="#000000" flood-opacity="0.85"/></filter>
+        </defs>
+        <rect width="1080" height="1920" fill="url(#overlaySt)" />
+        <rect x="44" y="44" width="992" height="1832" rx="36" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="2" />
+        <rect x="58" y="58" width="964" height="1804" rx="28" fill="none" stroke="${primary}" stroke-opacity="0.35" stroke-width="1.5" stroke-dasharray="10 8" />
+
+        <g filter="url(#glowSt)">
+          <rect x="300" y="180" width="480" height="60" rx="30" fill="rgba(15,23,42,0.9)" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"/>
+          <text x="540" y="218" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="22" font-weight="bold" fill="#F8FAFC" text-anchor="middle" letter-spacing="3">${safeBiz}</text>
+        </g>
+
+        <g filter="url(#glowSt)">
+          <rect x="330" y="340" width="420" height="72" rx="36" fill="url(#badgeGradSt)" stroke="rgba(255,255,255,0.3)" stroke-width="2"/>
+          <text x="540" y="386" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="24" font-weight="bold" fill="#FFFFFF" text-anchor="middle" letter-spacing="2">${safeBadge}</text>
+        </g>
+
+        <g filter="url(#glowSt)">
+          <text x="540" y="540" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="64" font-weight="bold" fill="#FFFFFF" text-anchor="middle" letter-spacing="1">
+            ${titleLines.map((l, i) => `<tspan x="540" dy="${i === 0 ? 0 : 72}">${l}</tspan>`).join("")}
+          </text>
+        </g>
+
+        <g filter="url(#glowSt)">
+          <rect x="120" y="1120" width="840" height="180" rx="28" fill="rgba(15,23,42,0.9)" stroke="rgba(255,255,255,0.2)" stroke-width="2"/>
+          <text x="540" y="1200" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="28" fill="#E2E8F0" text-anchor="middle">
+            ${headlineLines.map((l, i) => `<tspan x="540" dy="${i === 0 ? 0 : 44}">${l}</tspan>`).join("")}
+          </text>
+        </g>
+
+        <g filter="url(#glowSt)">
+          <rect x="250" y="1420" width="580" height="104" rx="52" fill="url(#btnGradSt)" stroke="rgba(255,255,255,0.45)" stroke-width="2.5"/>
+          <text x="540" y="1485" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="26" font-weight="bold" fill="#FFFFFF" text-anchor="middle" letter-spacing="2">${safeCta}</text>
+        </g>
+
+        <line x1="140" y1="1680" x2="940" y2="1680" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"/>
+        <text x="540" y="1740" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="22" font-weight="bold" fill="#E2E8F0" text-anchor="middle" letter-spacing="1">WWW - ${safeUrl}</text>
+      </svg>
+    `;
+  }
+
+  // format === "fb" (1200 x 630, 1.91:1)
+  const titleLines = wrapText(safeTitle, 32);
+  const headlineLines = wrapText(safeHeadline, 50);
+
+  return `
+    <svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="overlayFb" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#020617" stop-opacity="0.94" />
+          <stop offset="55%" stop-color="#020617" stop-opacity="0.82" />
+          <stop offset="100%" stop-color="#020617" stop-opacity="0.5" />
+        </linearGradient>
+        <linearGradient id="badgeGradFb" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="${accent}" />
+          <stop offset="100%" stop-color="${accentDark}" />
+        </linearGradient>
+        <linearGradient id="btnGradFb" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="${primary}" />
+          <stop offset="100%" stop-color="${primaryDark}" />
+        </linearGradient>
+        <filter id="glowFb"><feDropShadow dx="0" dy="6" stdDeviation="12" flood-color="#000000" flood-opacity="0.8"/></filter>
+      </defs>
+      <rect width="1200" height="630" fill="url(#overlayFb)" />
+      <rect x="28" y="28" width="1144" height="574" rx="24" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="2" />
+      <rect x="38" y="38" width="1124" height="554" rx="18" fill="none" stroke="${primary}" stroke-opacity="0.35" stroke-width="1.5" stroke-dasharray="8 6" />
+
+      <g filter="url(#glowFb)">
+        <rect x="80" y="65" width="340" height="42" rx="21" fill="rgba(15,23,42,0.85)" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"/>
+        <text x="250" y="92" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="16" font-weight="bold" fill="#F8FAFC" text-anchor="middle" letter-spacing="2">${safeBiz}</text>
+      </g>
+
+      <g filter="url(#glowFb)">
+        <rect x="440" y="65" width="300" height="42" rx="21" fill="url(#badgeGradFb)" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
+        <text x="590" y="92" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="15" font-weight="bold" fill="#FFFFFF" text-anchor="middle" letter-spacing="1">${safeBadge}</text>
+      </g>
+
+      <g filter="url(#glowFb)">
+        <text x="80" y="190" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="44" font-weight="bold" fill="#FFFFFF" letter-spacing="1">
+          ${titleLines.map((l, i) => `<tspan x="80" dy="${i === 0 ? 0 : 50}">${l}</tspan>`).join("")}
+        </text>
+      </g>
+
+      <g filter="url(#glowFb)">
+        <rect x="80" y="250" width="700" height="110" rx="18" fill="rgba(15,23,42,0.8)" stroke="rgba(255,255,255,0.15)" stroke-width="1.5"/>
+        <text x="110" y="295" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="20" fill="#E2E8F0">
+          ${headlineLines.map((l, i) => `<tspan x="110" dy="${i === 0 ? 0 : 32}">${l}</tspan>`).join("")}
+        </text>
+      </g>
+
+      <g filter="url(#glowFb)">
+        <rect x="80" y="405" width="420" height="68" rx="34" fill="url(#btnGradFb)" stroke="rgba(255,255,255,0.4)" stroke-width="2"/>
+        <text x="290" y="448" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="19" font-weight="bold" fill="#FFFFFF" text-anchor="middle" letter-spacing="2">${safeCta}</text>
+      </g>
+
+      <line x1="80" y1="520" x2="800" y2="520" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>
+      <text x="80" y="555" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="16" font-weight="bold" fill="#94A3B8" letter-spacing="1">WWW - ${safeUrl}</text>
+    </svg>
+  `;
 }
 
 // ── POST: GENERAR 3 FLYERS Y PROCESAR CON SHARP ──
@@ -237,45 +592,51 @@ export async function POST(req: Request) {
     const primaryColor = business.primaryColor || "#4f46e5";
     const secondaryColor = business.secondaryColor || "#0f172a";
     const accentColor = business.accentColor || "#f59e0b";
+    const derivedColors = getDerivedFlyerColors(primaryColor, secondaryColor, accentColor);
     const publicUrl = `${business.subdomain || "negocio"}.saas-miniwebs.vercel.app`;
+    const bizContext = buildBusinessContext(business);
 
-    // ── 1. GENERAR 3 CONCEPTOS PUBLICITARIOS CON IA ──
-    const promptInstructions = `Actúa como Director Creativo de Publicidad para Redes Sociales.
-Diseña exactamente 3 conceptos creativos de flyers publicitarios de alto impacto comercial para "${bizName}" (Rubro: ${bizType}).
-Colores de marca: Principal ${primaryColor}, Secundario ${secondaryColor}, Acento ${accentColor}.
-Objetivo de campaña: ${goal}.
-Instrucción adicional del usuario: "${customPrompt || "Crear flyers profesionales e impactantes"}".
+    // ── 1. GENERAR 3 CONCEPTOS PUBLICITARIOS CON IA ESTRUCTURADA (FM4 + FM5 + FM10) ──
+    const promptInstructions = `Actúa como Director Creativo Publicitario de Alto Rendimiento para Redes Sociales.
+Diseña exactamente 3 conceptos de flyers comerciales profesionales y visualmente atractivos para "${bizName}" (Rubro comercial: ${bizType}).
+Objetivo comercial de la campaña: ${goal}.
+${bizContext}
+Instrucción personalizada del dueño: "${customPrompt || "Crear anuncios de alta conversión comercial"}".
 
-Cada uno de los 3 flyers debe tener una temática publicitaria diferente:
-1. Flyer 1: Oferta o Promo Especial (descuento, beneficio exclusivo o bienvenida).
-2. Flyer 2: Servicios Estrella o Experiencia de Calidad (enfoque en la maestría y detalles del servicio).
-3. Flyer 3: Llamado a la Acción para Reservar / Visitar (turnos disponibles esta semana, cupos limitados).
+Distribución temática y estilo de los 3 flyers:
+1. Flyer 1 (style: "promo"): Enfoque en Oferta, Descuento especial, o beneficio de bienvenida.
+2. Flyer 2 (style: "editorial"): Enfoque en Calidad, Distinción, Servicios estrella o Maestría artesanal.
+3. Flyer 3 (style: "action"): Enfoque en Disponibilidad inmediata, Agendar turnos online hoy, Cupos limitados.
 
-Para cada flyer, genera:
-- "title": Título principal publicitario (3 a 5 palabras, directo, en MAYÚSCULAS o impacto).
-- "headline": Frase persuasiva explicativa (1 o 2 oraciones, máximo 90 caracteres).
-- "badge": Etiqueta promocional destacada (ej: "20% OFF", "Turnos Online", "Calidad VIP").
-- "ctaText": Llamado a la acción del botón (ej: "RESERVAR TURNO ONLINE", "CONOCER SERVICIOS", "AGENDAR HOY").
-- "imagePrompt": Prompt en inglés descriptivo.
+Límites estrictos de longitud:
+- title: Máximo 28 caracteres.
+- headline: Frase persuasiva, máximo 85 caracteres (menciona servicios o precios reales si están disponibles).
+- badge: Máximo 18 caracteres (ej: "20% OFF", "VIP PASS", "NUEVA TEMPORADA").
+- ctaText: Máximo 25 caracteres (ej: "RESERVAR TURNO", "VER CATÁLOGO", "PEDIR POR WHATSAPP").
+- imagePrompt: Prompt en inglés para imagen de fondo (fotografía comercial limpia, sin letras ni textos).
+- caption: Texto persuasivo completo para el post de Instagram (con saltos de línea y emojis atractivos).
+- hashtags: 6 a 8 hashtags virales relevantes separados por espacios (ej: #barberia #moda #promocion).
 
-Responde ÚNICAMENTE en JSON válido con el siguiente formato:
+Responde en formato JSON con la siguiente estructura:
 {
   "concepts": [
     {
       "id": "1",
-      "title": "BIENVENIDO AL ESTILO",
-      "headline": "Disfrutá un 20% de descuento en tu primera visita y afeitado tradicional.",
+      "title": "DESCUENTO EXCLUSIVO",
+      "headline": "Disfrutá una experiencia premium con 20% OFF en tu primera visita.",
       "badge": "20% OFF BIENVENIDA",
-      "ctaText": "RESERVAR TURNO ONLINE",
-      "imagePrompt": "commercial photography of luxury barbershop..."
-    },
-    ...
+      "ctaText": "RESERVAR ONLINE",
+      "style": "promo",
+      "imagePrompt": "commercial advertising photography for ${bizType}, luxury aesthetic, no text",
+      "caption": "¡Te damos la bienvenida a lo mejor! Aprovechá un beneficio exclusivo reservando online hoy. ✨",
+      "hashtags": "#promo #exclusivo #${bizType.toLowerCase()} #calidad"
+    }
   ]
 }`;
 
     let concepts: FlyerConcept[] = [];
 
-    // Intento 1: Gemini
+    // Intento 1: Gemini con structured output si está disponible
     if (process.env.GEMINI_API_KEY) {
       try {
         const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
@@ -285,17 +646,30 @@ Responde ÚNICAMENTE en JSON válido con el siguiente formato:
             const res = await ai.models.generateContent({
               model: m,
               contents: promptInstructions,
+              config: {
+                responseMimeType: "application/json",
+              },
             });
             if (res.text) {
               const cleaned = res.text.replace(/```json/g, "").replace(/```/g, "").trim();
               const parsed = JSON.parse(cleaned);
               if (Array.isArray(parsed.concepts) && parsed.concepts.length >= 3) {
-                concepts = parsed.concepts.slice(0, 3);
+                concepts = parsed.concepts.slice(0, 3).map((c: any, i: number) => ({
+                  id: String(c.id || i + 1),
+                  title: String(c.title || "").slice(0, 32),
+                  headline: String(c.headline || "").slice(0, 95),
+                  badge: String(c.badge || "").slice(0, 22),
+                  ctaText: String(c.ctaText || "").slice(0, 28),
+                  imagePrompt: String(c.imagePrompt || `commercial photo for ${bizType}`),
+                  caption: String(c.caption || ""),
+                  hashtags: String(c.hashtags || ""),
+                  style: (["promo", "editorial", "action"].includes(c.style) ? c.style : i === 0 ? "promo" : i === 1 ? "editorial" : "action"),
+                }));
                 break;
               }
             }
           } catch {
-            // probar siguiente
+            // probar siguiente modelo
           }
         }
       } catch (e) {
@@ -317,23 +691,36 @@ Responde ÚNICAMENTE en JSON válido con el siguiente formato:
         const cleaned = text.replace(/```json/g, "").replace(/```/g, "").trim();
         const parsed = JSON.parse(cleaned);
         if (Array.isArray(parsed.concepts) && parsed.concepts.length >= 3) {
-          concepts = parsed.concepts.slice(0, 3);
+          concepts = parsed.concepts.slice(0, 3).map((c: any, i: number) => ({
+            id: String(c.id || i + 1),
+            title: String(c.title || "").slice(0, 32),
+            headline: String(c.headline || "").slice(0, 95),
+            badge: String(c.badge || "").slice(0, 22),
+            ctaText: String(c.ctaText || "").slice(0, 28),
+            imagePrompt: String(c.imagePrompt || `commercial photo for ${bizType}`),
+            caption: String(c.caption || ""),
+            hashtags: String(c.hashtags || ""),
+            style: (["promo", "editorial", "action"].includes(c.style) ? c.style : i === 0 ? "promo" : i === 1 ? "editorial" : "action"),
+          }));
         }
       } catch (e) {
         console.warn("Groq flyer concepts failed:", e);
       }
     }
 
-    // Fallback de alta calidad temático
+    // Fallback garantizado de alta conversión
     if (concepts.length < 3) {
       concepts = [
         {
           id: "1",
           title: "BIENVENIDO AL ESTILO",
-          headline: `Disfrutá un 20% de descuento en tu primera visita en ${bizName}.`,
+          headline: `Disfrutá un beneficio especial en tu primera visita a ${bizName}.`,
           badge: "20% OFF BIENVENIDA",
-          ctaText: "RESERVAR TURNO ONLINE",
+          ctaText: "RESERVAR ONLINE",
+          style: "promo",
           imagePrompt: `commercial luxury advertising photography for ${bizType}`,
+          caption: `¡Te esperamos en ${bizName}! Descubrí nuestra atención y disfrutá de un beneficio exclusivo agendando online. 🌟`,
+          hashtags: `#${bizType} #bienvenida #descuento #estilo #calidad`,
         },
         {
           id: "2",
@@ -341,7 +728,10 @@ Responde ÚNICAMENTE en JSON válido con el siguiente formato:
           headline: "Calidad, dedicación y el mejor cuidado profesional en cada detalle.",
           badge: "CALIDAD PREMIUM",
           ctaText: "CONOCER SERVICIOS",
+          style: "editorial",
           imagePrompt: `high-end precision service close up for ${bizType}`,
+          caption: `Cada detalle cuenta. En ${bizName} combinamos pasión, técnica y los mejores productos para darte un resultado impecable. ✨`,
+          hashtags: `#${bizType} #calidad #profesional #detalles #experiencia`,
         },
         {
           id: "3",
@@ -349,31 +739,72 @@ Responde ÚNICAMENTE en JSON válido con el siguiente formato:
           headline: "Cupos limitados esta semana. Asegurá tu lugar en solo 3 clics.",
           badge: "CUPOS LIMITADOS",
           ctaText: "AGENDAR AHORA",
+          style: "action",
           imagePrompt: `modern welcoming storefront visual for ${bizType}`,
+          caption: `¡No te quedes sin tu horario! Agendá tu turno online en menos de 1 minuto ingresando al link de nuestra bio. 🚀`,
+          hashtags: `#turnos #online #agenda #${bizType} #disponible`,
         },
       ];
     }
 
-    // ── 2. OBTENER FOTOGRAFÍAS COMERCIALES Y RENDERIZAR CON SHARP ──
-    const rubroKey = (CATEGORY_PHOTOS[bizType.toLowerCase()] ? bizType.toLowerCase() : "general");
+    // ── 2. OBTENER IMÁGENES (FM1: GEMINI IMAGE -> FOTO REAL NEGOCIO -> UNSPLASH -> GRADIENTE) ──
+    const rubroKey = CATEGORY_PHOTOS[bizType.toLowerCase()] ? bizType.toLowerCase() : "general";
     const rubroPhotos = CATEGORY_PHOTOS[rubroKey] || CATEGORY_PHOTOS.general;
+    const businessGallery: string[] = Array.isArray(currentLayout.gallery) ? currentLayout.gallery : [];
 
     const generatedFlyers = await Promise.all(
       concepts.map(async (concept, idx) => {
-        // Seleccionar foto específica del concepto
-        const photoUrl = rubroPhotos[idx % rubroPhotos.length];
         let photoBuffer: Buffer | null = null;
 
-        try {
-          const res = await fetch(photoUrl, { signal: AbortSignal.timeout(6000) });
-          if (res.ok) {
-            photoBuffer = Buffer.from(await res.arrayBuffer());
+        // Paso A (FM1): Intentar Gemini Image (gemini-2.5-flash-image)
+        if (process.env.GEMINI_API_KEY) {
+          try {
+            const aiImg = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+            const promptImg = `${concept.imagePrompt}, commercial advertising photography for ${bizType}, high resolution, sharp details, vibrant lighting, clean negative space at center top and bottom, no text, no watermark, no typography`;
+            const imgRes = await aiImg.models.generateContent({
+              model: "gemini-2.5-flash-image",
+              contents: promptImg,
+              config: {
+                responseModalities: ["IMAGE"],
+              } as any,
+            });
+
+            const candidate = imgRes.candidates?.[0];
+            const part = candidate?.content?.parts?.find((p: any) => p.inlineData?.data);
+            if (part?.inlineData?.data) {
+              photoBuffer = Buffer.from(part.inlineData.data, "base64");
+            }
+          } catch (imgErr) {
+            // Se continúa con el fallback natural sin interrumpir
           }
-        } catch (fetchErr) {
-          console.warn("Photo fetch error, using luxury gradient fallback:", fetchErr);
         }
 
-        // Si falló el fetch, generamos un fondo degrade de diseño de emergencia
+        // Paso B: Foto real del negocio si existe en su galería
+        if (!photoBuffer && businessGallery[idx]) {
+          try {
+            const res = await fetch(businessGallery[idx], { signal: AbortSignal.timeout(5000) });
+            if (res.ok) {
+              photoBuffer = Buffer.from(await res.arrayBuffer());
+            }
+          } catch {
+            // Continúa a Unsplash
+          }
+        }
+
+        // Paso C: Foto comercial curada en alta resolución
+        if (!photoBuffer) {
+          const photoUrl = rubroPhotos[idx % rubroPhotos.length];
+          try {
+            const res = await fetch(photoUrl, { signal: AbortSignal.timeout(5000) });
+            if (res.ok) {
+              photoBuffer = Buffer.from(await res.arrayBuffer());
+            }
+          } catch {
+            // Continúa a gradiente
+          }
+        }
+
+        // Paso D: Gradiente de emergencia elegante con Sharp
         if (!photoBuffer) {
           photoBuffer = await sharp({
             create: {
@@ -387,278 +818,68 @@ Responde ÚNICAMENTE en JSON válido con el siguiente formato:
             .toBuffer();
         }
 
-        const safeBizName = escapeXml(bizName.toUpperCase());
-        const safeTitle = escapeXml(concept.title.toUpperCase());
-        const safeHeadline = escapeXml(concept.headline);
-        const safeBadge = escapeXml(concept.badge.toUpperCase());
-        const safeCta = escapeXml(concept.ctaText.toUpperCase());
-        const safeUrl = escapeXml(publicUrl);
+        const flyerStyle = concept.style || (idx === 0 ? "promo" : idx === 1 ? "editorial" : "action");
 
-        // ── FORMATO 1: FEED (1080 x 1080, 1:1) ──
+        // ── RENDERIZAR FORMATO 1: FEED (1080 x 1080) ──
         const bgFeed = await sharp(photoBuffer)
           .resize(1080, 1080, { fit: "cover", position: "center" })
           .toBuffer();
-
-        const titleFeedLines = wrapText(safeTitle, 22);
-        const headlineFeedLines = wrapText(safeHeadline, 42);
-
-        const svgFeed = `
-          <svg width="1080" height="1080" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <linearGradient id="overlayFeed" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stop-color="#020617" stop-opacity="0.84" />
-                <stop offset="35%" stop-color="#020617" stop-opacity="0.45" />
-                <stop offset="70%" stop-color="#020617" stop-opacity="0.78" />
-                <stop offset="100%" stop-color="#020617" stop-opacity="0.96" />
-              </linearGradient>
-              <linearGradient id="badgeGradFeed" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stop-color="${accentColor}" />
-                <stop offset="100%" stop-color="#d97706" />
-              </linearGradient>
-              <linearGradient id="btnGradFeed" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stop-color="${primaryColor}" />
-                <stop offset="100%" stop-color="#3730a3" />
-              </linearGradient>
-              <filter id="glowFeed">
-                <feDropShadow dx="0" dy="6" stdDeviation="14" flood-color="#000000" flood-opacity="0.85"/>
-              </filter>
-            </defs>
-
-            <!-- Overlay de oscurecimiento fotográfico -->
-            <rect width="1080" height="1080" fill="url(#overlayFeed)" />
-
-            <!-- Marco decorativo exterior -->
-            <rect x="36" y="36" width="1008" height="1008" rx="28" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="2" />
-            <rect x="48" y="48" width="984" height="984" rx="20" fill="none" stroke="${primaryColor}" stroke-opacity="0.4" stroke-width="1.5" stroke-dasharray="8 6" />
-
-            <!-- Encabezado: Marca -->
-            <g filter="url(#glowFeed)">
-              <rect x="330" y="80" width="420" height="52" rx="26" fill="rgba(15,23,42,0.85)" stroke="rgba(255,255,255,0.22)" stroke-width="1.5"/>
-              <text x="540" y="113" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="20" font-weight="bold" fill="#F8FAFC" text-anchor="middle" letter-spacing="3">${safeBizName}</text>
-            </g>
-
-            <!-- Badge Promocional con estrellas vectoriales -->
-            <g filter="url(#glowFeed)">
-              <rect x="350" y="220" width="380" height="64" rx="32" fill="url(#badgeGradFeed)" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
-              <polygon points="380,244 384,254 394,254 386,260 389,270 380,264 371,270 374,260 366,254 376,254" fill="#FFFFFF"/>
-              <text x="540" y="262" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="22" font-weight="bold" fill="#FFFFFF" text-anchor="middle" letter-spacing="2">${safeBadge}</text>
-              <polygon points="700,244 704,254 714,254 706,260 709,270 700,264 691,270 694,260 686,254 696,254" fill="#FFFFFF"/>
-            </g>
-
-            <!-- Título Principal -->
-            <g filter="url(#glowFeed)">
-              <text x="540" y="420" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="56" font-weight="bold" fill="#FFFFFF" text-anchor="middle" letter-spacing="1">
-                ${titleFeedLines.map((line, lIdx) => `<tspan x="540" dy="${lIdx === 0 ? 0 : 64}">${line}</tspan>`).join("")}
-              </text>
-            </g>
-
-            <!-- Tarjeta con Descripción Persuasiva -->
-            <g filter="url(#glowFeed)">
-              <rect x="140" y="530" width="800" height="140" rx="20" fill="rgba(15,23,42,0.85)" stroke="rgba(255,255,255,0.18)" stroke-width="1.5"/>
-              <text x="540" y="590" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="24" font-weight="normal" fill="#E2E8F0" text-anchor="middle">
-                ${headlineFeedLines.map((line, lIdx) => `<tspan x="540" dy="${lIdx === 0 ? 0 : 38}">${line}</tspan>`).join("")}
-              </text>
-            </g>
-
-            <!-- Botón de Llamado a la Acción con icono vectorial -->
-            <g filter="url(#glowFeed)">
-              <rect x="290" y="740" width="500" height="88" rx="44" fill="url(#btnGradFeed)" stroke="rgba(255,255,255,0.4)" stroke-width="2"/>
-              <rect x="325" y="770" width="24" height="24" rx="4" fill="none" stroke="#FFFFFF" stroke-width="2"/>
-              <line x1="325" y1="778" x2="349" y2="778" stroke="#FFFFFF" stroke-width="2"/>
-              <circle cx="331" cy="784" r="1.5" fill="#FFFFFF"/>
-              <circle cx="337" cy="784" r="1.5" fill="#FFFFFF"/>
-              <circle cx="343" cy="784" r="1.5" fill="#FFFFFF"/>
-              <text x="555" y="796" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="22" font-weight="bold" fill="#FFFFFF" text-anchor="middle" letter-spacing="2">${safeCta}</text>
-            </g>
-
-            <!-- Footer / Web Link -->
-            <g>
-              <line x1="120" y1="910" x2="960" y2="910" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>
-              <text x="540" y="955" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="18" font-weight="bold" fill="#CBD5E1" text-anchor="middle" letter-spacing="1">WWW - ${safeUrl}</text>
-            </g>
-          </svg>
-        `;
-
+        const svgFeed = generateFlyerSvg("feed", flyerStyle, {
+          bizName,
+          title: concept.title,
+          headline: concept.headline,
+          badge: concept.badge,
+          ctaText: concept.ctaText,
+          publicUrl,
+          colors: derivedColors,
+        });
         const feedBuffer = await sharp(bgFeed)
           .composite([{ input: Buffer.from(svgFeed), top: 0, left: 0 }])
           .jpeg({ quality: 90 })
           .toBuffer();
 
-        // ── FORMATO 2: HISTORIA (1080 x 1920, 9:16) ──
+        // ── RENDERIZAR FORMATO 2: STORY (1080 x 1920) ──
         const bgStory = await sharp(photoBuffer)
           .resize(1080, 1920, { fit: "cover", position: "center" })
           .toBuffer();
-
-        const titleStoryLines = wrapText(safeTitle, 20);
-        const headlineStoryLines = wrapText(safeHeadline, 38);
-
-        const svgStory = `
-          <svg width="1080" height="1920" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <linearGradient id="overlayStory" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stop-color="#020617" stop-opacity="0.88" />
-                <stop offset="25%" stop-color="#020617" stop-opacity="0.48" />
-                <stop offset="60%" stop-color="#020617" stop-opacity="0.82" />
-                <stop offset="100%" stop-color="#020617" stop-opacity="0.96" />
-              </linearGradient>
-              <linearGradient id="badgeGradStory" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stop-color="${accentColor}" />
-                <stop offset="100%" stop-color="#d97706" />
-              </linearGradient>
-              <linearGradient id="btnGradStory" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stop-color="${primaryColor}" />
-                <stop offset="100%" stop-color="#3730a3" />
-              </linearGradient>
-              <filter id="glowStory">
-                <feDropShadow dx="0" dy="8" stdDeviation="16" flood-color="#000000" flood-opacity="0.85"/>
-              </filter>
-            </defs>
-
-            <rect width="1080" height="1920" fill="url(#overlayStory)" />
-
-            <!-- Marco Exterior -->
-            <rect x="44" y="44" width="992" height="1832" rx="36" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="2" />
-            <rect x="58" y="58" width="964" height="1804" rx="28" fill="none" stroke="${primaryColor}" stroke-opacity="0.35" stroke-width="1.5" stroke-dasharray="10 8" />
-
-            <!-- Encabezado Superior (Zona segura de Stories) -->
-            <g filter="url(#glowStory)">
-              <rect x="300" y="180" width="480" height="60" rx="30" fill="rgba(15,23,42,0.9)" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"/>
-              <text x="540" y="218" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="22" font-weight="bold" fill="#F8FAFC" text-anchor="middle" letter-spacing="3">${safeBizName}</text>
-            </g>
-
-            <!-- Badge Promocional con estrellas vectoriales -->
-            <g filter="url(#glowStory)">
-              <rect x="330" y="340" width="420" height="72" rx="36" fill="url(#badgeGradStory)" stroke="rgba(255,255,255,0.3)" stroke-width="2"/>
-              <polygon points="360,366 364,376 374,376 366,382 369,392 360,386 351,392 354,382 346,376 356,376" fill="#FFFFFF"/>
-              <text x="540" y="386" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="24" font-weight="bold" fill="#FFFFFF" text-anchor="middle" letter-spacing="2">${safeBadge}</text>
-              <polygon points="720,366 724,376 734,376 726,382 729,392 720,386 711,392 714,382 706,376 716,376" fill="#FFFFFF"/>
-            </g>
-
-            <!-- Título Principal -->
-            <g filter="url(#glowStory)">
-              <text x="540" y="540" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="64" font-weight="bold" fill="#FFFFFF" text-anchor="middle" letter-spacing="1">
-                ${titleStoryLines.map((line, lIdx) => `<tspan x="540" dy="${lIdx === 0 ? 0 : 72}">${line}</tspan>`).join("")}
-              </text>
-            </g>
-
-            <!-- Descripción en Story -->
-            <g filter="url(#glowStory)">
-              <rect x="120" y="1120" width="840" height="180" rx="28" fill="rgba(15,23,42,0.9)" stroke="rgba(255,255,255,0.2)" stroke-width="2"/>
-              <text x="540" y="1200" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="28" font-weight="normal" fill="#E2E8F0" text-anchor="middle">
-                ${headlineStoryLines.map((line, lIdx) => `<tspan x="540" dy="${lIdx === 0 ? 0 : 44}">${line}</tspan>`).join("")}
-              </text>
-            </g>
-
-            <!-- Botón Grande de CTA con icono vectorial -->
-            <g filter="url(#glowStory)">
-              <rect x="250" y="1420" width="580" height="104" rx="52" fill="url(#btnGradStory)" stroke="rgba(255,255,255,0.45)" stroke-width="2.5"/>
-              <rect x="295" y="1456" width="30" height="30" rx="5" fill="none" stroke="#FFFFFF" stroke-width="2.5"/>
-              <line x1="295" y1="1466" x2="325" y2="1466" stroke="#FFFFFF" stroke-width="2.5"/>
-              <circle cx="303" cy="1474" r="2" fill="#FFFFFF"/>
-              <circle cx="311" cy="1474" r="2" fill="#FFFFFF"/>
-              <circle cx="319" cy="1474" r="2" fill="#FFFFFF"/>
-              <text x="560" y="1485" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="26" font-weight="bold" fill="#FFFFFF" text-anchor="middle" letter-spacing="2">${safeCta}</text>
-            </g>
-
-            <!-- Footer con Enlace Web -->
-            <g>
-              <line x1="140" y1="1680" x2="940" y2="1680" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"/>
-              <text x="540" y="1740" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="22" font-weight="bold" fill="#E2E8F0" text-anchor="middle" letter-spacing="1">WWW - ${safeUrl}</text>
-            </g>
-          </svg>
-        `;
-
+        const svgStory = generateFlyerSvg("story", flyerStyle, {
+          bizName,
+          title: concept.title,
+          headline: concept.headline,
+          badge: concept.badge,
+          ctaText: concept.ctaText,
+          publicUrl,
+          colors: derivedColors,
+        });
         const storyBuffer = await sharp(bgStory)
           .composite([{ input: Buffer.from(svgStory), top: 0, left: 0 }])
           .jpeg({ quality: 90 })
           .toBuffer();
 
-        // ── FORMATO 3: FACEBOOK (1200 x 630, 1.91:1) ──
+        // ── RENDERIZAR FORMATO 3: FACEBOOK (1200 x 630) ──
         const bgFb = await sharp(photoBuffer)
-          .resize(1200, 630, { fit: "cover", position: "center" })
+          .resize(1200, 630, { fit: "cover", position: "attention" })
           .toBuffer();
-
-        const titleFbLines = wrapText(safeTitle, 32);
-        const headlineFbLines = wrapText(safeHeadline, 50);
-
-        const svgFb = `
-          <svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <linearGradient id="overlayFb" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stop-color="#020617" stop-opacity="0.94" />
-                <stop offset="55%" stop-color="#020617" stop-opacity="0.82" />
-                <stop offset="100%" stop-color="#020617" stop-opacity="0.5" />
-              </linearGradient>
-              <linearGradient id="badgeGradFb" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stop-color="${accentColor}" />
-                <stop offset="100%" stop-color="#d97706" />
-              </linearGradient>
-              <linearGradient id="btnGradFb" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stop-color="${primaryColor}" />
-                <stop offset="100%" stop-color="#3730a3" />
-              </linearGradient>
-              <filter id="glowFb">
-                <feDropShadow dx="0" dy="6" stdDeviation="12" flood-color="#000000" flood-opacity="0.8"/>
-              </filter>
-            </defs>
-
-            <rect width="1200" height="630" fill="url(#overlayFb)" />
-
-            <!-- Marco Exterior -->
-            <rect x="28" y="28" width="1144" height="574" rx="24" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="2" />
-            <rect x="38" y="38" width="1124" height="554" rx="18" fill="none" stroke="${primaryColor}" stroke-opacity="0.35" stroke-width="1.5" stroke-dasharray="8 6" />
-
-            <!-- Fila Superior: Marca y Badge -->
-            <g filter="url(#glowFb)">
-              <rect x="80" y="65" width="340" height="42" rx="21" fill="rgba(15,23,42,0.85)" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"/>
-              <text x="250" y="92" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="16" font-weight="bold" fill="#F8FAFC" text-anchor="middle" letter-spacing="2">${safeBizName}</text>
-            </g>
-
-            <g filter="url(#glowFb)">
-              <rect x="440" y="65" width="300" height="42" rx="21" fill="url(#badgeGradFb)" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
-              <polygon points="465,77 468,85 476,85 470,90 472,97 465,93 458,97 460,90 454,85 462,85" fill="#FFFFFF"/>
-              <text x="590" y="92" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="15" font-weight="bold" fill="#FFFFFF" text-anchor="middle" letter-spacing="1">${safeBadge}</text>
-              <polygon points="715,77 718,85 726,85 720,90 722,97 715,93 708,97 710,90 704,85 712,85" fill="#FFFFFF"/>
-            </g>
-
-            <!-- Título Principal -->
-            <g filter="url(#glowFb)">
-              <text x="80" y="190" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="44" font-weight="bold" fill="#FFFFFF" letter-spacing="1">
-                ${titleFbLines.map((line, lIdx) => `<tspan x="80" dy="${lIdx === 0 ? 0 : 50}">${line}</tspan>`).join("")}
-              </text>
-            </g>
-
-            <!-- Tarjeta de Descripción -->
-            <g filter="url(#glowFb)">
-              <rect x="80" y="250" width="700" height="110" rx="18" fill="rgba(15,23,42,0.8)" stroke="rgba(255,255,255,0.15)" stroke-width="1.5"/>
-              <text x="110" y="295" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="20" font-weight="normal" fill="#E2E8F0">
-                ${headlineFbLines.map((line, lIdx) => `<tspan x="110" dy="${lIdx === 0 ? 0 : 32}">${line}</tspan>`).join("")}
-              </text>
-            </g>
-
-            <!-- Botón de CTA con icono vectorial -->
-            <g filter="url(#glowFb)">
-              <rect x="80" y="405" width="420" height="68" rx="34" fill="url(#btnGradFb)" stroke="rgba(255,255,255,0.4)" stroke-width="2"/>
-              <rect x="115" y="427" width="22" height="22" rx="4" fill="none" stroke="#FFFFFF" stroke-width="2"/>
-              <line x1="115" y1="434" x2="137" y2="434" stroke="#FFFFFF" stroke-width="2"/>
-              <circle cx="121" cy="440" r="1.5" fill="#FFFFFF"/>
-              <circle cx="126" cy="440" r="1.5" fill="#FFFFFF"/>
-              <circle cx="131" cy="440" r="1.5" fill="#FFFFFF"/>
-              <text x="300" y="448" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="19" font-weight="bold" fill="#FFFFFF" text-anchor="middle" letter-spacing="2">${safeCta}</text>
-            </g>
-
-            <!-- Footer Info -->
-            <g>
-              <line x1="80" y1="520" x2="800" y2="520" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>
-              <text x="80" y="555" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-size="16" font-weight="bold" fill="#94A3B8" letter-spacing="1">WWW - ${safeUrl}</text>
-            </g>
-          </svg>
-        `;
-
+        const svgFb = generateFlyerSvg("fb", flyerStyle, {
+          bizName,
+          title: concept.title,
+          headline: concept.headline,
+          badge: concept.badge,
+          ctaText: concept.ctaText,
+          publicUrl,
+          colors: derivedColors,
+        });
         const fbBuffer = await sharp(bgFb)
           .composite([{ input: Buffer.from(svgFb), top: 0, left: 0 }])
           .jpeg({ quality: 90 })
           .toBuffer();
+
+        // ── FM2: SUBIR A CDN (ImgBB) PARA ALIVIANAR LA BASE DE DATOS ──
+        const [feedUrl, storyUrl, fbUrl] = await Promise.all([
+          uploadBufferToImgBB(feedBuffer, `${business.id}_flyer_${idx}_feed.jpg`),
+          uploadBufferToImgBB(storyBuffer, `${business.id}_flyer_${idx}_story.jpg`),
+          uploadBufferToImgBB(fbBuffer, `${business.id}_flyer_${idx}_fb.jpg`),
+        ]);
 
         return {
           id: concept.id || String(idx + 1),
@@ -667,17 +888,20 @@ Responde ÚNICAMENTE en JSON válido con el siguiente formato:
           badge: concept.badge,
           ctaText: concept.ctaText,
           imagePrompt: concept.imagePrompt,
-          instagramPost: `data:image/jpeg;base64,${feedBuffer.toString("base64")}`,
-          instagramStory: `data:image/jpeg;base64,${storyBuffer.toString("base64")}`,
-          facebookPost: `data:image/jpeg;base64,${fbBuffer.toString("base64")}`,
+          caption: concept.caption || "",
+          hashtags: concept.hashtags || "",
+          style: flyerStyle,
+          instagramPost: feedUrl,
+          instagramStory: storyUrl,
+          facebookPost: fbUrl,
         };
       })
     );
 
-    // ── 3. GUARDAR HISTORIAL Y REGISTRAR FECHA DE PRÓXIMO CUPO (1 MES) ──
+    // ── 3. GUARDAR HISTORIAL Y REGISTRAR FECHA DE PRÓXIMO CUPO (1 MES) (FM9) ──
     const now = new Date();
     const nextAvailableAt = new Date(now);
-    nextAvailableAt.setMonth(nextAvailableAt.getMonth() + 1); // Exactamente 1 mes después (ej: 15 Oct -> 15 Nov)
+    nextAvailableAt.setMonth(nextAvailableAt.getMonth() + 1);
 
     const updatedLayoutConfig = {
       ...currentLayout,
@@ -700,7 +924,7 @@ Responde ÚNICAMENTE en JSON válido con el siguiente formato:
       lastGeneratedAt: now.toISOString(),
       nextAvailableAt: nextAvailableAt.toISOString(),
       daysRemaining: Math.max(1, Math.ceil((nextAvailableAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))),
-      message: "3 flyers generados y guardados con éxito para tu tienda.",
+      message: "3 flyers profesionales generados con éxito para tu marca.",
     });
   } catch (error: any) {
     console.error("Flyer generator error:", error);

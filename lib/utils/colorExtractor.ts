@@ -160,3 +160,40 @@ function getDefaultPalettes(): ColorPalette[] {
     { name: "Obsidiana & Oro", primary: "#EAB308", secondary: "#F97316", badge: "Lujo & Premium", contrastRatio: 7.1 },
   ];
 }
+
+export function adjustBrightness(hex: string, percent: number): string {
+  const rgb = hexToRgb(hex) || { r: 79, g: 70, b: 229 };
+  const factor = 1 + percent / 100;
+  return rgbToHex(
+    Math.min(255, Math.max(0, Math.round(rgb.r * factor))),
+    Math.min(255, Math.max(0, Math.round(rgb.g * factor))),
+    Math.min(255, Math.max(0, Math.round(rgb.b * factor)))
+  );
+}
+
+export function getContrastingTextColor(hex: string): string {
+  const rgb = hexToRgb(hex) || { r: 255, g: 255, b: 255 };
+  const luminance = getRelativeLuminance(rgb.r, rgb.g, rgb.b);
+  return luminance > 0.4 ? "#090D16" : "#FFFFFF";
+}
+
+export function getDerivedFlyerColors(primary: string, secondary: string, accent: string) {
+  const pSafe = primary || "#4f46e5";
+  const sSafe = secondary || "#0f172a";
+  const aSafe = accent || "#f59e0b";
+
+  return {
+    primary: pSafe,
+    primaryDark: adjustBrightness(pSafe, -35),
+    primaryLight: adjustBrightness(pSafe, 30),
+    primaryText: getContrastingTextColor(pSafe),
+    secondary: sSafe,
+    secondaryDark: adjustBrightness(sSafe, -50),
+    secondaryLight: adjustBrightness(sSafe, 20),
+    accent: aSafe,
+    accentDark: adjustBrightness(aSafe, -30),
+    accentLight: adjustBrightness(aSafe, 25),
+    accentText: getContrastingTextColor(aSafe),
+  };
+}
+

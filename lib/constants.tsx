@@ -80,7 +80,7 @@ export const DEFAULT_SECTIONS: Section[] = [
     config: { title: "Contacto", showMap: true, mapUrl: "", address: "", showSocial: true }
   },
   {
-    id: "links", label: "Enlaces (Tipo Linktree)", icon: "list", visible: false,
+    id: "links", label: "BioLinks / Enlaces", icon: "list", visible: false,
     config: { 
       title: "Nuestros Enlaces", 
       subtitle: "Encuentra más información aquí",
@@ -149,6 +149,8 @@ export const icons: Record<string, React.ReactNode> = {
   filter: <><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></>,
   "credit-card": <><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></>,
   package: <><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></>,
+  "map-pin": <><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></>,
+  map: <><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></>,
 };
 
 export const Ico = ({ n, s = 16, c = "", style }: { n: string; s?: number; c?: string; style?: React.CSSProperties }) => (

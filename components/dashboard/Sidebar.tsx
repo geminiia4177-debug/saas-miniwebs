@@ -106,7 +106,7 @@ export default function Sidebar({
 
   return (
     <aside
-      className={`hidden md:flex flex-shrink-0 flex-col transition-all duration-300 ${
+      className={`hidden md:flex flex-shrink-0 flex-col h-full max-h-screen overflow-hidden transition-all duration-300 ${
         sidebarCollapsed ? "w-20" : "w-64"
       } bg-[#0A0D14] border-r border-white/5 z-40 select-none`}
     >

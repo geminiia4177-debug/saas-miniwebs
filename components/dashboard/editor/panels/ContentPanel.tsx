@@ -3,11 +3,29 @@ import { Biz, Section } from "@/lib/constants";
 import ConfiguradorTienda from "@/components/dashboard/cartuchos/ConfiguradorTienda";
 import ConfiguradorMenu from "@/components/dashboard/cartuchos/ConfiguradorMenu";
 import ConfiguradorTaller from "@/components/dashboard/cartuchos/ConfiguradorTaller";
+import ConfiguradorBarberia from "@/components/dashboard/cartuchos/ConfiguradorBarberia";
+import { DropZone } from "../DropZone";
+import { uploadToImgBB } from "@/lib/utils/upload";
 import { Field } from "@/components/ui/Field";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { AIAssistButton } from "@/components/ui/AIAssistButton";
-import { ArrowLeft, Trash2, Plus, Video, Play, ExternalLink } from "lucide-react";
+import {
+  ArrowLeft,
+  Trash2,
+  Plus,
+  Video,
+  Play,
+  ExternalLink,
+  Phone,
+  MapPin,
+  Mail,
+  Clock,
+  Share2,
+  Upload,
+  ShoppingBag,
+  Image as ImageIcon,
+} from "lucide-react";
 import { extractYouTubeId } from "@/components/ui/VideoSection";
 
 export interface ContentPanelProps {
@@ -32,7 +50,7 @@ export const ContentPanel: React.FC<ContentPanelProps> = ({
   const bizType = (biz.type || "general").toLowerCase();
 
   // 1. Specialty Cartridge for Tienda Virtual
-  if (bizType === "tienda") {
+  if (bizType === "tienda" && !activeSection) {
     return (
       <div className="space-y-4 pb-20">
         <ConfiguradorTienda biz={biz} setBiz={setBiz} showToast={showToast} activeTab="tiendaProductos" />
@@ -41,7 +59,7 @@ export const ContentPanel: React.FC<ContentPanelProps> = ({
   }
 
   // 2. Specialty Cartridge for Gastronomía / Menú
-  if (bizType === "menu" || bizType === "restaurante") {
+  if ((bizType === "menu" || bizType === "restaurante") && !activeSection) {
     return (
       <div className="space-y-4 pb-20">
         <ConfiguradorMenu biz={biz} setBiz={setBiz} showToast={showToast} activeTab="menuCategorias" />
@@ -50,10 +68,19 @@ export const ContentPanel: React.FC<ContentPanelProps> = ({
   }
 
   // 3. Specialty Cartridge for Taller Mecánico / Lavadero
-  if (bizType === "taller" || bizType === "lavadero") {
+  if ((bizType === "taller" || bizType === "lavadero") && !activeSection) {
     return (
       <div className="space-y-4 pb-20">
         <ConfiguradorTaller biz={biz} setBiz={setBiz} showToast={showToast} activeTab="tallerServices" />
+      </div>
+    );
+  }
+
+  // 4. Specialty Cartridge for Barbería / Estética
+  if ((bizType === "barberia" || bizType === "estetica") && !activeSection) {
+    return (
+      <div className="space-y-4 pb-20">
+        <ConfiguradorBarberia biz={biz} setBiz={setBiz} />
       </div>
     );
   }
@@ -64,6 +91,9 @@ export const ContentPanel: React.FC<ContentPanelProps> = ({
     const isHero = sec.id === "hero";
     const isServices = sec.id === "services";
     const isVideo = sec.id === "video";
+    const isContact = sec.id === "contact" || sec.id === "contacto";
+    const isProducts = sec.id === "products" || sec.id === "productos" || sec.id === "catalogo";
+    const isGallery = sec.id === "gallery" || sec.id === "galeria";
 
     const updateConfig = (field: string, val: any) => {
       const updated = sections.map((s) => {
@@ -388,7 +418,426 @@ export const ContentPanel: React.FC<ContentPanelProps> = ({
           </div>
         )}
 
-        {!isHero && !isServices && !isVideo && (
+        {/* ── CONTACT SECTION EDITOR ── */}
+        {isContact && (
+          <div className="space-y-4">
+            <Field label="Nombre de la Sección en el Menú">
+              <Input
+                value={sec.label || "Contacto"}
+                onChange={(e) => updateConfig("label", e.target.value)}
+                placeholder="Contacto / Ubicación"
+              />
+            </Field>
+
+            <Field
+              label="Título del Bloque"
+              action={
+                <AIAssistButton
+                  businessId={biz.id}
+                  fieldType="tagline"
+                  currentText={sec.config?.title || "Visítanos o Escríbenos"}
+                  context={`Rubro: ${biz.type}`}
+                  onSelect={(txt) => {
+                    updateConfig("title", txt);
+                    showToast?.("Título con IA aplicado ✓", "success");
+                  }}
+                  compact
+                />
+              }
+            >
+              <Input
+                value={sec.config?.title || "Visítanos o Escríbenos"}
+                onChange={(e) => updateConfig("title", e.target.value)}
+                placeholder="Título de contacto"
+              />
+            </Field>
+
+            <Field label="Número de WhatsApp">
+              <Input
+                value={sec.config?.whatsapp || biz.whatsapp || (biz as any).phone || biz.layoutConfig?.whatsapp || ""}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  updateConfig("whatsapp", val);
+                  setBiz((prev: any) => ({
+                    ...prev,
+                    whatsapp: val,
+                    phone: val,
+                    layoutConfig: { ...(prev?.layoutConfig || {}), whatsapp: val },
+                  }));
+                }}
+                placeholder="+54 9 11 2345-6789"
+              />
+            </Field>
+
+            <Field label="Dirección Física / Local">
+              <Input
+                value={sec.config?.address || biz.address || biz.layoutConfig?.address || ""}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  updateConfig("address", val);
+                  setBiz((prev: any) => ({
+                    ...prev,
+                    address: val,
+                    layoutConfig: { ...(prev?.layoutConfig || {}), address: val },
+                  }));
+                }}
+                placeholder="Av. Principal 1234, Centro"
+              />
+            </Field>
+
+            <Field label="Email de Contacto">
+              <Input
+                type="email"
+                value={sec.config?.email || (biz as any).email || biz.layoutConfig?.email || ""}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  updateConfig("email", val);
+                  setBiz((prev: any) => ({
+                    ...prev,
+                    email: val,
+                    layoutConfig: { ...(prev?.layoutConfig || {}), email: val },
+                  }));
+                }}
+                placeholder="contacto@tunegocio.com"
+              />
+            </Field>
+
+            <Field label="Horarios de Atención">
+              <Input
+                value={sec.config?.hours || biz.layoutConfig?.hours || "Lunes a Sábado de 09:00 a 20:00"}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  updateConfig("hours", val);
+                  setBiz((prev: any) => ({
+                    ...prev,
+                    layoutConfig: { ...(prev?.layoutConfig || {}), hours: val },
+                  }));
+                }}
+                placeholder="Lun a Sáb 9:00 a 20:00"
+              />
+            </Field>
+
+            <Field label="Link de Google Maps">
+              <Input
+                value={sec.config?.mapUrl || biz.layoutConfig?.mapUrl || ""}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  updateConfig("mapUrl", val);
+                  setBiz((prev: any) => ({
+                    ...prev,
+                    layoutConfig: { ...(prev?.layoutConfig || {}), mapUrl: val },
+                  }));
+                }}
+                placeholder="https://maps.google.com/..."
+              />
+            </Field>
+
+            <div className="pt-2 border-t border-border-subtle space-y-2">
+              <span className="text-[10px] font-bold uppercase text-fg-subtle tracking-wider">Redes Sociales</span>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[10px] text-fg-subtle block mb-1">Instagram</label>
+                  <Input
+                    value={biz.layoutConfig?.instagram || ""}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setBiz((prev: any) => ({
+                        ...prev,
+                        layoutConfig: { ...(prev?.layoutConfig || {}), instagram: val },
+                      }));
+                    }}
+                    placeholder="@tunegocio"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] text-fg-subtle block mb-1">Facebook</label>
+                  <Input
+                    value={biz.layoutConfig?.facebook || ""}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setBiz((prev: any) => ({
+                        ...prev,
+                        layoutConfig: { ...(prev?.layoutConfig || {}), facebook: val },
+                      }));
+                    }}
+                    placeholder="facebook.com/..."
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── PRODUCTS SECTION EDITOR ── */}
+        {isProducts && (
+          <div className="space-y-4">
+            <Field label="Nombre de la Sección en el Menú">
+              <Input
+                value={sec.label || "Productos"}
+                onChange={(e) => updateConfig("label", e.target.value)}
+                placeholder="Productos / Catálogo"
+              />
+            </Field>
+
+            <div className="flex items-center justify-between pt-1">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-fg-subtle">
+                Productos ({((sec.config?.items || biz.layoutConfig?.barberiaProducts || biz.layoutConfig?.products || [])).length})
+              </h4>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const currentItems = sec.config?.items || biz.layoutConfig?.barberiaProducts || biz.layoutConfig?.products || [];
+                  const newItem = {
+                    id: `prod_${Date.now()}`,
+                    name: "Nuevo Producto",
+                    price: 2500,
+                    desc: "Descripción del producto",
+                    stock: 10,
+                    imageUrl: "",
+                  };
+                  const updated = [...currentItems, newItem];
+                  updateConfig("items", updated);
+                  setBiz((prev: any) => ({
+                    ...prev,
+                    layoutConfig: {
+                      ...(prev?.layoutConfig || {}),
+                      barberiaProducts: updated,
+                      products: updated,
+                    },
+                  }));
+                }}
+                className="gap-1.5"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Agregar Producto</span>
+              </Button>
+            </div>
+
+            <div className="space-y-3">
+              {((sec.config?.items || biz.layoutConfig?.barberiaProducts || biz.layoutConfig?.products || [])).map((prod: any, idx: number) => (
+                <div key={prod.id || idx} className="p-3.5 rounded-xl bg-surface-2 border border-border-default space-y-2.5">
+                  <div className="flex items-start gap-3">
+                    {/* Foto Producto */}
+                    <div className="w-14 h-14 rounded-lg bg-surface-1 border border-border-default overflow-hidden relative group shrink-0 flex items-center justify-center">
+                      {prod.imageUrl ? (
+                        <img src={prod.imageUrl} alt={prod.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <ImageIcon className="w-6 h-6 text-fg-subtle opacity-40" />
+                      )}
+                      <label className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity">
+                        <Upload className="w-4 h-4 text-white" />
+                        <input
+                          type="file"
+                          className="hidden"
+                          accept="image/*"
+                          onChange={async (e) => {
+                            if (e.target.files?.[0]) {
+                              showToast?.("Subiendo imagen...", "info");
+                              try {
+                                const url = await uploadToImgBB(e.target.files[0], biz.id);
+                                const currentList = sec.config?.items || biz.layoutConfig?.barberiaProducts || biz.layoutConfig?.products || [];
+                                const updated = currentList.map((item: any, i: number) => (i === idx || item.id === prod.id) ? { ...item, imageUrl: url } : item);
+                                updateConfig("items", updated);
+                                setBiz((prev: any) => ({
+                                  ...prev,
+                                  layoutConfig: {
+                                    ...(prev?.layoutConfig || {}),
+                                    barberiaProducts: updated,
+                                    products: updated,
+                                  },
+                                }));
+                                showToast?.("Imagen del producto subida ✓", "success");
+                              } catch {
+                                showToast?.("Error al subir foto", "error");
+                              }
+                            }
+                          }}
+                        />
+                      </label>
+                    </div>
+
+                    <div className="flex-1 min-w-0 space-y-1.5">
+                      <Input
+                        value={prod.name || ""}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          const currentList = sec.config?.items || biz.layoutConfig?.barberiaProducts || biz.layoutConfig?.products || [];
+                          const updated = currentList.map((item: any, i: number) => (i === idx || item.id === prod.id) ? { ...item, name: val } : item);
+                          updateConfig("items", updated);
+                          setBiz((prev: any) => ({
+                            ...prev,
+                            layoutConfig: { ...(prev?.layoutConfig || {}), barberiaProducts: updated, products: updated },
+                          }));
+                        }}
+                        placeholder="Nombre del producto"
+                        className="font-bold text-xs"
+                      />
+                      <Input
+                        value={prod.desc || prod.description || ""}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          const currentList = sec.config?.items || biz.layoutConfig?.barberiaProducts || biz.layoutConfig?.products || [];
+                          const updated = currentList.map((item: any, i: number) => (i === idx || item.id === prod.id) ? { ...item, desc: val, description: val } : item);
+                          updateConfig("items", updated);
+                          setBiz((prev: any) => ({
+                            ...prev,
+                            layoutConfig: { ...(prev?.layoutConfig || {}), barberiaProducts: updated, products: updated },
+                          }));
+                        }}
+                        placeholder="Descripción breve..."
+                        className="text-[11px]"
+                      />
+                    </div>
+
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        const currentList = sec.config?.items || biz.layoutConfig?.barberiaProducts || biz.layoutConfig?.products || [];
+                        const updated = currentList.filter((_: any, i: number) => i !== idx);
+                        updateConfig("items", updated);
+                        setBiz((prev: any) => ({
+                          ...prev,
+                          layoutConfig: { ...(prev?.layoutConfig || {}), barberiaProducts: updated, products: updated },
+                        }));
+                      }}
+                      className="text-red-400 hover:text-red-300 hover:bg-red-500/10 p-1.5 h-auto shrink-0"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 pt-1 border-t border-border-subtle/50">
+                    <div>
+                      <label className="text-[9px] font-bold text-fg-subtle uppercase block mb-1">Precio ($)</label>
+                      <Input
+                        type="number"
+                        value={prod.price || 0}
+                        onChange={(e) => {
+                          const val = Number(e.target.value);
+                          const currentList = sec.config?.items || biz.layoutConfig?.barberiaProducts || biz.layoutConfig?.products || [];
+                          const updated = currentList.map((item: any, i: number) => (i === idx || item.id === prod.id) ? { ...item, price: val } : item);
+                          updateConfig("items", updated);
+                          setBiz((prev: any) => ({
+                            ...prev,
+                            layoutConfig: { ...(prev?.layoutConfig || {}), barberiaProducts: updated, products: updated },
+                          }));
+                        }}
+                        className="text-xs font-mono font-bold"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[9px] font-bold text-fg-subtle uppercase block mb-1">Stock</label>
+                      <Input
+                        type="number"
+                        value={prod.stock || 0}
+                        onChange={(e) => {
+                          const val = Number(e.target.value);
+                          const currentList = sec.config?.items || biz.layoutConfig?.barberiaProducts || biz.layoutConfig?.products || [];
+                          const updated = currentList.map((item: any, i: number) => (i === idx || item.id === prod.id) ? { ...item, stock: val } : item);
+                          updateConfig("items", updated);
+                          setBiz((prev: any) => ({
+                            ...prev,
+                            layoutConfig: { ...(prev?.layoutConfig || {}), barberiaProducts: updated, products: updated },
+                          }));
+                        }}
+                        className="text-xs font-mono"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── GALLERY SECTION EDITOR ── */}
+        {isGallery && (
+          <div className="space-y-4">
+            <Field label="Nombre de la Sección en el Menú">
+              <Input
+                value={sec.label || "Galería"}
+                onChange={(e) => updateConfig("label", e.target.value)}
+                placeholder="Galería de Fotos"
+              />
+            </Field>
+
+            <Field label="Título del Bloque">
+              <Input
+                value={sec.config?.title || "Nuestros Trabajos"}
+                onChange={(e) => updateConfig("title", e.target.value)}
+                placeholder="Título de la galería"
+              />
+            </Field>
+
+            <div className="space-y-2">
+              <span className="text-[10px] font-bold uppercase text-fg-subtle tracking-wider">Subir fotos a la galería</span>
+              <DropZone
+                compact
+                onFiles={async (files) => {
+                  showToast?.(`Subiendo ${files.length} foto(s)...`, "info");
+                  for (const file of files) {
+                    try {
+                      const url = await uploadToImgBB(file, biz.id);
+                      const currentMedia = biz.layoutConfig?.media || [];
+                      const newItem = {
+                        id: `m_${Date.now()}`,
+                        type: "image",
+                        url,
+                        name: file.name,
+                        size: file.size,
+                        uploadedAt: new Date().toISOString(),
+                      };
+                      const updated = [newItem, ...currentMedia];
+                      setBiz((prev: any) => ({
+                        ...prev,
+                        layoutConfig: {
+                          ...(prev?.layoutConfig || {}),
+                          media: updated,
+                        },
+                      }));
+                      showToast?.("Foto agregada a la galería ✓", "success");
+                    } catch {
+                      showToast?.(`Error al subir ${file.name}`, "error");
+                    }
+                  }
+                }}
+              />
+            </div>
+
+            {/* Fotos actuales */}
+            <div className="space-y-2 pt-2">
+              <span className="text-xs font-bold text-fg block">
+                Fotos ({((biz.layoutConfig?.media || [])).length})
+              </span>
+              <div className="grid grid-cols-3 gap-2">
+                {((biz.layoutConfig?.media || [])).map((m: any, idx: number) => (
+                  <div key={m.id || idx} className="relative aspect-square rounded-lg overflow-hidden group border border-border-default">
+                    <img src={m.url} alt={m.name || "Foto"} className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const current = biz.layoutConfig?.media || [];
+                        const updated = current.filter((_: any, i: number) => i !== idx);
+                        setBiz((prev: any) => ({
+                          ...prev,
+                          layoutConfig: { ...(prev?.layoutConfig || {}), media: updated },
+                        }));
+                      }}
+                      className="absolute top-1 right-1 w-6 h-6 rounded bg-red-500/80 hover:bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── GENERIC FALLBACK SECTION EDITOR ── */}
+        {!isHero && !isServices && !isVideo && !isContact && !isProducts && !isGallery && (
           <div className="space-y-4">
             <Field label="Nombre de la Sección (Menú y Navegación)">
               <Input

@@ -14,17 +14,29 @@ function ColorPickerPopup({
   color,
   onChange,
   label,
+  align = "auto",
 }: {
   color: string;
   onChange: (c: string) => void;
   label?: string;
+  align?: "left" | "right" | "auto";
 }) {
   const [open, setOpen] = useState(false);
   const popover = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const [inputVal, setInputVal] = useState(color || "#000000");
+
+  useEffect(() => {
+    setInputVal(color || "#000000");
+  }, [color]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (popover.current && !popover.current.contains(event.target as Node)) {
+      if (
+        popover.current &&
+        !popover.current.contains(event.target as Node) &&
+        !triggerRef.current?.contains(event.target as Node)
+      ) {
         setOpen(false);
       }
     };
@@ -32,28 +44,95 @@ function ColorPickerPopup({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [open]);
 
+  const QUICK_SWATCHES = [
+    "#4f46e5", "#6366f1", "#8b5cf6", "#ec4899", "#ef4444",
+    "#f59e0b", "#10b981", "#06b6d4", "#3b82f6", "#0f172a",
+    "#1e293b", "#ffffff", "#000000"
+  ];
+
   return (
     <div className="flex flex-col items-center gap-1.5 w-full">
-      {label && <span className="text-[11px] font-medium text-fg-subtle">{label}</span>}
+      {label && <span className="text-[11px] font-medium text-fg-subtle truncate max-w-full">{label}</span>}
       <div className="relative w-full">
         <button
+          ref={triggerRef}
           type="button"
-          className="w-full h-8 rounded-lg cursor-pointer border border-border-default hover:border-border-strong transition-all flex items-center justify-between px-2 text-xs font-mono"
+          className="w-full h-8 rounded-lg cursor-pointer border border-border-default hover:border-border-strong transition-all flex items-center justify-between px-2 text-xs font-mono shadow-sm group"
           style={{ backgroundColor: color || "#000000" }}
           onClick={() => setOpen(!open)}
+          title={`Seleccionar color ${label || ""}`}
         >
           <span
-            className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-black/60 text-white backdrop-blur-sm"
+            className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-black/60 text-white backdrop-blur-sm group-hover:bg-black/80 transition-colors"
           >
             {color || "#000"}
           </span>
         </button>
 
         {open && (
-          <div className="absolute z-50 mt-2 left-0" ref={popover}>
-            <div className="fixed inset-0" onClick={() => setOpen(false)} />
-            <div className="relative z-50 p-2 rounded-xl bg-surface-2 border border-border-strong shadow-popover">
-              <HexColorPicker color={color || "#000000"} onChange={onChange} />
+          <div
+            ref={popover}
+            className={`absolute z-[9999] mt-2 ${align === "right" ? "right-0" : align === "left" ? "left-0" : "left-1/2 -translate-x-1/2"} p-3 rounded-2xl bg-[#0f1523] border border-white/20 shadow-2xl animate-scale-in w-[240px]`}
+            style={{ backdropFilter: "blur(20px)" }}
+          >
+            <div className="flex items-center justify-between pb-2 mb-2 border-b border-white/10">
+              <span className="text-xs font-bold text-white">{label || "Color"}</span>
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="text-slate-400 hover:text-white text-xs p-1 rounded-md"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="flex justify-center mb-3">
+              <HexColorPicker
+                color={color || "#000000"}
+                onChange={(c) => {
+                  onChange(c);
+                  setInputVal(c);
+                }}
+              />
+            </div>
+
+            {/* Input HEX directo */}
+            <div className="flex items-center gap-2 mb-3">
+              <div
+                className="w-6 h-6 rounded-md border border-white/20 shrink-0"
+                style={{ backgroundColor: color || "#000" }}
+              />
+              <input
+                type="text"
+                value={inputVal}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setInputVal(val);
+                  if (/^#([0-9A-F]{3}){1,2}$/i.test(val)) {
+                    onChange(val);
+                  }
+                }}
+                className="flex-1 bg-white/5 border border-white/15 rounded-lg px-2 py-1 text-xs font-mono text-white focus:outline-none focus:border-indigo-500 uppercase"
+                placeholder="#HEX"
+                maxLength={7}
+              />
+            </div>
+
+            {/* Paletas de acceso rápido */}
+            <div className="grid grid-cols-7 gap-1 pt-2 border-t border-white/10">
+              {QUICK_SWATCHES.slice(0, 14).map((swatch) => (
+                <button
+                  key={swatch}
+                  type="button"
+                  onClick={() => {
+                    onChange(swatch);
+                    setInputVal(swatch);
+                  }}
+                  className="w-6 h-6 rounded-md border border-white/15 hover:scale-110 transition-transform cursor-pointer"
+                  style={{ backgroundColor: swatch }}
+                  title={swatch}
+                />
+              ))}
             </div>
           </div>
         )}
@@ -264,16 +343,19 @@ export const DesignPanel: React.FC<DesignPanelProps> = ({
           <div className="grid grid-cols-3 gap-2.5">
             <ColorPickerPopup
               label="Principal"
+              align="left"
               color={biz.primaryColor || "#3B82F6"}
               onChange={(c) => setBiz((prev: any) => ({ ...prev, primaryColor: c }))}
             />
             <ColorPickerPopup
               label="Secundario"
+              align="auto"
               color={biz.secondaryColor || "#1E293B"}
               onChange={(c) => setBiz((prev: any) => ({ ...prev, secondaryColor: c }))}
             />
             <ColorPickerPopup
               label="Acento"
+              align="right"
               color={biz.accentColor || "#10B981"}
               onChange={(c) => setBiz((prev: any) => ({ ...prev, accentColor: c }))}
             />
@@ -288,6 +370,7 @@ export const DesignPanel: React.FC<DesignPanelProps> = ({
           <div className="grid grid-cols-3 gap-2.5">
             <ColorPickerPopup
               label="Fondo Web"
+              align="left"
               color={layout.backgroundColor || "#0a0a0c"}
               onChange={(c) =>
                 setBiz((prev: any) => ({
@@ -298,6 +381,7 @@ export const DesignPanel: React.FC<DesignPanelProps> = ({
             />
             <ColorPickerPopup
               label="Tarjetas"
+              align="auto"
               color={layout.cardColor || "#14161f"}
               onChange={(c) =>
                 setBiz((prev: any) => ({
@@ -308,6 +392,7 @@ export const DesignPanel: React.FC<DesignPanelProps> = ({
             />
             <ColorPickerPopup
               label="Bordes"
+              align="right"
               color={layout.borderColor || "#262b3d"}
               onChange={(c) =>
                 setBiz((prev: any) => ({
@@ -327,6 +412,7 @@ export const DesignPanel: React.FC<DesignPanelProps> = ({
           <div className="grid grid-cols-2 gap-2.5">
             <ColorPickerPopup
               label="Texto Principal"
+              align="left"
               color={layout.textColor || "#f8fafc"}
               onChange={(c) =>
                 setBiz((prev: any) => ({
@@ -337,6 +423,7 @@ export const DesignPanel: React.FC<DesignPanelProps> = ({
             />
             <ColorPickerPopup
               label="Texto Subtítulo"
+              align="right"
               color={layout.textMutedColor || "#94a3b8"}
               onChange={(c) =>
                 setBiz((prev: any) => ({
@@ -356,6 +443,7 @@ export const DesignPanel: React.FC<DesignPanelProps> = ({
           <div className="grid grid-cols-2 gap-2.5">
             <ColorPickerPopup
               label="Fondo Botón"
+              align="left"
               color={layout.buttonBgColor || biz.primaryColor || "#3B82F6"}
               onChange={(c) =>
                 setBiz((prev: any) => ({
@@ -366,6 +454,7 @@ export const DesignPanel: React.FC<DesignPanelProps> = ({
             />
             <ColorPickerPopup
               label="Texto Botón"
+              align="right"
               color={layout.buttonTextColor || "#ffffff"}
               onChange={(c) =>
                 setBiz((prev: any) => ({

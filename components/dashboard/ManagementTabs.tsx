@@ -59,6 +59,7 @@ export default function ManagementTabs({
   const [selectedMedia, setSelectedMedia] = useState<Set<string>>(new Set());
   const [mediaViewMode, setMediaViewMode] = useState<"grid" | "list">("grid");
   const logoRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
 
   // Password State
   const [pwdCurrent, setPwdCurrent] = useState("");
@@ -239,6 +240,25 @@ export default function ManagementTabs({
               <p className="text-sm text-slate-500">{media.length} imagen{media.length !== 1 ? "es" : ""} en tu biblioteca</p>
             </div>
             <div className="flex items-center gap-3">
+              <input
+                ref={galleryInputRef}
+                type="file"
+                multiple
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const files = Array.from(e.target.files || []);
+                  if (files.length) uploadFiles(files);
+                  e.target.value = "";
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => galleryInputRef.current?.click()}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold text-white shadow-lg shadow-indigo-500/25 transition-all bg-indigo-600 hover:bg-indigo-500 cursor-pointer"
+              >
+                <Ico n="upload" s={14} /> Subir Fotos
+              </button>
               {selectedMedia.size > 0 && (
                 <button onClick={deleteSelectedMedia} className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-red-400 transition-colors" style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.25)" }}>
                   <Ico n="trash" s={14} /> Eliminar {selectedMedia.size}

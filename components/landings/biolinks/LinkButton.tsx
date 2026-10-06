@@ -127,16 +127,30 @@ export default function LinkButton({
             <div className="relative w-11 h-11 rounded-full overflow-hidden border border-black/10 shadow-sm transition-transform group-hover:scale-110 duration-500">
               <Image src={item.thumbnail} alt="" fill className="object-cover" sizes="44px" />
             </div>
-          ) : item.icon && item.icon !== "none" ? (
+          ) : (item.icon && item.icon !== "none") || item.type ? (
             <div className={`w-11 h-11 rounded-full flex items-center justify-center transition-transform group-hover:scale-110 duration-500 ${isDarkText ? "bg-black/5" : "bg-white/10"}`}>
-              <Ico n={item.icon} s={20} c="currentColor" />
+              <Ico
+                n={
+                  item.icon && item.icon !== "none"
+                    ? item.icon
+                    : item.type === "whatsapp"
+                    ? "whatsapp"
+                    : item.type === "turnos"
+                    ? "calendar"
+                    : item.type === "map"
+                    ? "map-pin"
+                    : "link"
+                }
+                s={20}
+                c="currentColor"
+              />
             </div>
           ) : (
             <div className="w-11 h-11" />
           )}
         </div>
         
-        <span className="font-semibold tracking-wide text-[15px] flex-1 text-center px-4 leading-snug drop-shadow-sm">
+        <span className="font-semibold tracking-wide text-[15px] flex-1 text-center px-4 leading-snug drop-shadow-sm flex items-center justify-center gap-1.5">
           {item.label}
         </span>
         

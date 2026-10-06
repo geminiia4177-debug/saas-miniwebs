@@ -1,7 +1,22 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Sparkles, Download, Copy, Check, RefreshCw, Layers, Smartphone, Calendar, Lock, AlertCircle, ShieldAlert } from "lucide-react";
+import {
+  Sparkles,
+  Download,
+  Copy,
+  Check,
+  RefreshCw,
+  Layers,
+  Smartphone,
+  Calendar,
+  Lock,
+  Share2,
+  Edit3,
+  ExternalLink,
+  Flame,
+  CheckCircle2,
+} from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import HelpTooltip from "@/components/ui/HelpTooltip";
 import { getPublicUrl } from "@/lib/urls";
@@ -13,7 +28,10 @@ export interface FlyerItem {
   headline: string;
   badge: string;
   ctaText: string;
-  imagePrompt: string;
+  imagePrompt?: string;
+  caption?: string;
+  hashtags?: string;
+  style?: "promo" | "editorial" | "action";
   instagramPost: string;
   instagramStory: string;
   facebookPost: string;
@@ -28,7 +46,7 @@ export default function FlyersTab({ biz, showToast }: FlyersTabProps) {
   const [loading, setLoading] = useState(false);
   const [goal, setGoal] = useState<"general" | "promo" | "services" | "turnos">("general");
   const [customPrompt, setCustomPrompt] = useState("");
-  
+
   // Inicializar con flyers guardados si existen en el negocio
   const initialFlyers: FlyerItem[] = biz?.layoutConfig?.flyersUsage?.savedFlyers || [];
   const [flyers, setFlyers] = useState<FlyerItem[]>(initialFlyers);
@@ -36,11 +54,23 @@ export default function FlyersTab({ biz, showToast }: FlyersTabProps) {
   const [selectedFormat, setSelectedFormat] = useState<"post" | "story" | "facebook">("post");
   const [copiedCaption, setCopiedCaption] = useState(false);
 
-  // Estado del cupo mensual (3 por mes por tienda)
+  // Estado del cupo mensual
   const initialNextDate = biz?.layoutConfig?.flyersUsage?.nextAvailableAt || null;
   const [canGenerate, setCanGenerate] = useState<boolean>(true);
   const [nextAvailableAt, setNextAvailableAt] = useState<string | null>(initialNextDate);
   const [daysRemaining, setDaysRemaining] = useState<number>(0);
+
+  // Edición sin cupo (FM8)
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editHeadline, setEditHeadline] = useState("");
+  const [editBadge, setEditBadge] = useState("");
+  const [editCta, setEditCta] = useState("");
+  const [editStyle, setEditStyle] = useState<"promo" | "editorial" | "action">("promo");
+  const [rerendering, setRerendering] = useState(false);
+
+  // Destacar en BioLinks (BM3)
+  const [featuringBio, setFeaturingBio] = useState(false);
 
   const publicUrl = getPublicUrl(biz);
 
@@ -65,6 +95,19 @@ export default function FlyersTab({ biz, showToast }: FlyersTabProps) {
   useEffect(() => {
     checkQuotaStatus();
   }, [biz.id]);
+
+  const activeFlyer = flyers[selectedFlyerIndex];
+
+  // Sincronizar campos de edición cuando cambia el flyer activo
+  useEffect(() => {
+    if (activeFlyer) {
+      setEditTitle(activeFlyer.title || "");
+      setEditHeadline(activeFlyer.headline || "");
+      setEditBadge(activeFlyer.badge || "");
+      setEditCta(activeFlyer.ctaText || "");
+      setEditStyle(activeFlyer.style || (selectedFlyerIndex === 0 ? "promo" : selectedFlyerIndex === 1 ? "editorial" : "action"));
+    }
+  }, [activeFlyer, selectedFlyerIndex]);
 
   const handleGenerate = async (forceAdmin = false) => {
     if (!canGenerate && !forceAdmin) {
@@ -104,7 +147,7 @@ export default function FlyersTab({ biz, showToast }: FlyersTabProps) {
         setCanGenerate(false);
         setNextAvailableAt(data.nextAvailableAt);
         setDaysRemaining(data.daysRemaining || 30);
-        showToast("¡3 Flyers generados y optimizados para redes sociales con Sharp! 🎨", "success");
+        showToast("¡3 Flyers generados con IA y guardados en CDN! 🎨", "success");
       } else {
         throw new Error("No se recibieron flyers del servidor");
       }
@@ -115,7 +158,69 @@ export default function FlyersTab({ biz, showToast }: FlyersTabProps) {
     }
   };
 
-  const activeFlyer = flyers[selectedFlyerIndex];
+  // Re-renderizado gratis sin gastar cupo (FM8)
+  const handleRerender = async () => {
+    if (!activeFlyer) return;
+    setRerendering(true);
+    try {
+      const res = await fetch("/api/flyers/rerender", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          businessId: biz.id,
+          flyerIndex: selectedFlyerIndex,
+          title: editTitle,
+          headline: editHeadline,
+          badge: editBadge,
+          ctaText: editCta,
+          style: editStyle,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Error al actualizar flyer");
+
+      if (data.flyer) {
+        const next = [...flyers];
+        next[selectedFlyerIndex] = data.flyer;
+        setFlyers(next);
+        setIsEditing(false);
+        showToast("¡Flyer re-renderizado con éxito sin consumir cupo! ✨", "success");
+      }
+    } catch (err: any) {
+      showToast(err.message || "Error al re-renderizar flyer", "error");
+    } finally {
+      setRerendering(false);
+    }
+  };
+
+  // Destacar en BioLinks (BM3)
+  const handleFeatureInBioLinks = async () => {
+    if (!activeFlyer) return;
+    setFeaturingBio(true);
+    try {
+      const res = await fetch("/api/biolinks/feature-flyer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          businessId: biz.id,
+          title: activeFlyer.title,
+          badge: activeFlyer.badge,
+          imageUrl: activeFlyer.instagramPost,
+          daysValid: 7,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Error al destacar en BioLinks");
+
+      showToast("¡Promo destacada en BioLinks por 7 días! 🔥", "success");
+    } catch (err: any) {
+      showToast(err.message || "Error al destacar en BioLinks", "error");
+    } finally {
+      setFeaturingBio(false);
+    }
+  };
 
   const getCurrentImage = (f: FlyerItem) => {
     if (selectedFormat === "story") return f.instagramStory;
@@ -148,11 +253,33 @@ export default function FlyersTab({ biz, showToast }: FlyersTabProps) {
 
   const handleCopyCaption = () => {
     if (!activeFlyer) return;
-    const caption = `✨ ${activeFlyer.title} ✨\n\n${activeFlyer.headline}\n\n👉 ${activeFlyer.ctaText} ingresando en nuestro sitio oficial:\n🔗 https://${publicUrl}\n\n#${biz.subdomain || "negocio"} #${biz.type || "servicios"} #turnosonline #promocion`;
-    navigator.clipboard.writeText(caption);
+    const captionText =
+      activeFlyer.caption ||
+      `✨ ${activeFlyer.title} ✨\n\n${activeFlyer.headline}\n\n👉 ${activeFlyer.ctaText} ingresando en nuestro sitio oficial:\n🔗 https://${publicUrl}\n\n`;
+    const hashtagsText =
+      activeFlyer.hashtags || `#${biz.subdomain || "negocio"} #${biz.type || "servicios"} #turnosonline #promocion`;
+
+    const fullCopy = `${captionText}\n\n${hashtagsText}`;
+    navigator.clipboard.writeText(fullCopy);
     setCopiedCaption(true);
     setTimeout(() => setCopiedCaption(false), 2000);
-    showToast("Texto publicitario copiado al portapapeles ✓", "success");
+    showToast("Texto publicitario y hashtags copiados ✓", "success");
+  };
+
+  const handleShareMobile = async () => {
+    if (!activeFlyer) return;
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: activeFlyer.title,
+          text: `${activeFlyer.title} - ${activeFlyer.headline}\nhttps://${publicUrl}`,
+          url: `https://${publicUrl}`,
+        });
+        showToast("Compartido exitosamente ✓", "success");
+      } catch {}
+    } else {
+      handleCopyCaption();
+    }
   };
 
   const formattedDate = nextAvailableAt
@@ -178,18 +305,18 @@ export default function FlyersTab({ biz, showToast }: FlyersTabProps) {
             </span>
           </div>
           <p className="text-xs text-fg-muted max-w-2xl">
-            Crea 3 piezas publicitarias profesionales basadas en el rubro, nombre y colores de tu negocio. Cada imagen se procesa con Sharp e incluye tipografía publicitaria, diseño de marca y adaptación a 3 formatos: Instagram Feed, Historia y Facebook.
+            Genera 3 piezas publicitarias comerciales basadas en tu rubro, servicios reales y colores de marca. Las imágenes se procesan con Sharp, se guardan en CDN (sin sobrecargar tu base de datos) y se adaptan para Instagram Feed, Historia y Facebook.
           </p>
         </div>
 
         <HelpTooltip
-          title="Límite Mensual de Flyers"
-          description="Cada tienda cuenta con un cupo de 3 flyers publicitarios por mes. Una vez generados, quedan guardados en tu panel para descargarlos en todos los formatos cuantas veces necesites."
-          tip="Al cumplirse el mes desde tu última generación, se desbloquea un nuevo paquete de 3 flyers."
+          title="Límite Mensual y Edición Gratuita"
+          description="Cada tienda cuenta con un cupo de 3 flyers con IA por mes. Puedes editar los textos de tus flyers guardados cuantas veces quieras sin consumir cupo gracias a la herramienta de re-renderizado."
+          tip="Al cumplirse el mes desde tu última generación, se renueva automáticamente tu cupo."
         />
       </div>
 
-      {/* ── BANNER DE ESTADO DE CUPO MENSUAL ── */}
+      {/* ── BANNER DE ESTADO DE CUPO MENSUAL (FM9) ── */}
       {nextAvailableAt && !canGenerate ? (
         <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/25 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
           <div className="flex items-start gap-3">
@@ -199,12 +326,12 @@ export default function FlyersTab({ biz, showToast }: FlyersTabProps) {
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-xs font-bold text-amber-300">Cupo mensual utilizado (3 de 3 flyers creados)</span>
-                <span className="text-[10px] px-2 py-0.2 rounded-full font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                  Recarga en {daysRemaining} días
+                <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                  Renueva en {daysRemaining} días
                 </span>
               </div>
               <p className="text-xs text-amber-200/80 mt-0.5">
-                Tus 3 flyers de este mes están guardados abajo. Próxima recarga disponible el <strong>{formattedDate}</strong>. Puedes descargarlos en alta resolución cuantas veces quieras.
+                Tus 3 flyers están guardados abajo. Próxima recarga el <strong>{formattedDate}</strong>. Puedes descargarlos o <strong>editar sus textos gratis</strong> sin gastar cupo.
               </p>
             </div>
           </div>
@@ -218,7 +345,7 @@ export default function FlyersTab({ biz, showToast }: FlyersTabProps) {
             <div>
               <span className="text-xs font-bold text-emerald-300">Cupo mensual disponible</span>
               <p className="text-xs text-emerald-200/80">
-                Tienes disponible tu cupo de este mes para generar <strong>3 flyers publicitarios</strong> adaptados a tus redes sociales.
+                Tienes disponible tu cupo de este mes para generar <strong>3 flyers publicitarios</strong> con IA y Sharp.
               </p>
             </div>
           </div>
@@ -236,7 +363,7 @@ export default function FlyersTab({ biz, showToast }: FlyersTabProps) {
             <span>Configurar Temática Publicitaria</span>
           </span>
           <span className="text-[11px] text-fg-subtle">
-            Colores aplicados:{" "}
+            Colores de marca:{" "}
             <span
               className="inline-block w-2.5 h-2.5 rounded-full border border-black/20 align-middle ml-1 mr-0.5"
               style={{ backgroundColor: biz.primaryColor || "#4f46e5" }}
@@ -278,7 +405,7 @@ export default function FlyersTab({ biz, showToast }: FlyersTabProps) {
             disabled={!canGenerate}
             placeholder={
               canGenerate
-                ? "Instrucción adicional opcional (ej: 'Enfocarse en cortes modernos', 'Descuento 20% los martes')..."
+                ? "Instrucción personalizada opcional (ej: 'Enfocarse en cortes modernos', 'Descuento 20% los martes')..."
                 : `Cupo de este mes utilizado. Próxima recarga el ${formattedDate || "el próximo mes"}.`
             }
             className="flex-1 w-full px-3.5 py-2.5 rounded-xl bg-surface-2 border border-border-default text-xs text-fg focus:border-accent focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed"
@@ -294,7 +421,7 @@ export default function FlyersTab({ biz, showToast }: FlyersTabProps) {
             {loading ? (
               <>
                 <RefreshCw className="w-4 h-4 animate-spin" />
-                <span>Creando y compositando 3 flyers...</span>
+                <span>Generando 3 flyers con IA...</span>
               </>
             ) : !canGenerate ? (
               <>
@@ -321,7 +448,10 @@ export default function FlyersTab({ biz, showToast }: FlyersTabProps) {
                 <button
                   key={f.id}
                   type="button"
-                  onClick={() => setSelectedFlyerIndex(idx)}
+                  onClick={() => {
+                    setSelectedFlyerIndex(idx);
+                    setIsEditing(false);
+                  }}
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 border ${
                     selectedFlyerIndex === idx
                       ? "bg-accent text-white border-accent shadow-md"
@@ -410,97 +540,239 @@ export default function FlyersTab({ biz, showToast }: FlyersTabProps) {
                   </strong>
                 </span>
                 <span>•</span>
-                <span>Renderizado publicitario con <strong>Sharp</strong></span>
+                <span>
+                  Diseño: <strong className="capitalize">{activeFlyer.style || "Promo"}</strong>
+                </span>
               </div>
             </div>
 
-            {/* Panel de Detalles y Descarga */}
+            {/* Panel de Detalles, Edición y Acciones */}
             <div className="lg:col-span-5 space-y-4">
               <div className="p-5 rounded-2xl bg-surface-1 border border-border-default space-y-4">
-                <div className="space-y-1.5">
-                  <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-accent/15 text-accent border border-accent/30">
-                      {activeFlyer.badge}
-                    </span>
-                    <span className="text-[11px] text-fg-subtle">Flyer #{selectedFlyerIndex + 1} de 3</span>
+                {!isEditing ? (
+                  <>
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-accent/15 text-accent border border-accent/30">
+                            {activeFlyer.badge}
+                          </span>
+                          <span className="text-[11px] text-fg-subtle">Flyer #{selectedFlyerIndex + 1} de 3</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setIsEditing(true)}
+                          className="text-xs text-accent hover:underline flex items-center gap-1 cursor-pointer"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                          <span>Editar Texto Gratis</span>
+                        </button>
+                      </div>
+                      <h3 className="text-base font-bold text-fg">{activeFlyer.title}</h3>
+                      <p className="text-xs text-fg-muted leading-relaxed">{activeFlyer.headline}</p>
+                    </div>
+
+                    <div className="pt-3 border-t border-border-subtle space-y-2.5">
+                      <Button
+                        variant="primary"
+                        size="md"
+                        onClick={() => {
+                          const suffix =
+                            selectedFormat === "post"
+                              ? "feed-1080x1080"
+                              : selectedFormat === "story"
+                              ? "historia-1080x1920"
+                              : "facebook-1200x630";
+                          handleDownload(
+                            getCurrentImage(activeFlyer),
+                            `${biz.subdomain || "negocio"}-flyer-${selectedFlyerIndex + 1}-${suffix}.jpg`
+                          );
+                        }}
+                        className="w-full justify-center gap-2 font-bold shadow-md cursor-pointer"
+                      >
+                        <Download className="w-4 h-4" />
+                        <span>
+                          Descargar (
+                          {selectedFormat === "post"
+                            ? "INSTAGRAM FEED"
+                            : selectedFormat === "story"
+                            ? "HISTORIA"
+                            : "FACEBOOK"}
+                          )
+                        </span>
+                      </Button>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button
+                          variant="outline"
+                          size="md"
+                          onClick={handleCopyCaption}
+                          className="w-full justify-center gap-2 text-xs font-semibold cursor-pointer"
+                        >
+                          {copiedCaption ? (
+                            <>
+                              <Check className="w-3.5 h-3.5 text-emerald-400" />
+                              <span className="text-emerald-400">Copiado</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3.5 h-3.5" />
+                              <span>Copiar Copy & Tags</span>
+                            </>
+                          )}
+                        </Button>
+
+                        <Button
+                          variant="outline"
+                          size="md"
+                          onClick={handleShareMobile}
+                          className="w-full justify-center gap-2 text-xs font-semibold cursor-pointer"
+                        >
+                          <Share2 className="w-3.5 h-3.5" />
+                          <span>Compartir</span>
+                        </Button>
+                      </div>
+
+                      {/* Botón BM3: Destacar en BioLinks */}
+                      <button
+                        type="button"
+                        onClick={handleFeatureInBioLinks}
+                        disabled={featuringBio}
+                        className="w-full py-2.5 px-3 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2"
+                      >
+                        {featuringBio ? (
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Flame className="w-3.5 h-3.5 text-amber-400" />
+                        )}
+                        <span>Destacar Promo en BioLinks (7 días)</span>
+                      </button>
+                    </div>
+
+                    <div className="pt-2 border-t border-border-subtle">
+                      <button
+                        type="button"
+                        onClick={handleDownloadAllFormats}
+                        className="w-full py-2 px-3 rounded-xl bg-surface-2 hover:bg-surface-3 border border-border-default text-xs font-semibold text-fg transition-all cursor-pointer flex items-center justify-center gap-2"
+                      >
+                        <Download className="w-3.5 h-3.5 text-accent" />
+                        <span>Descargar este flyer en los 3 formatos</span>
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  /* Formulario de Edición Gratuita (FM8) */
+                  <div className="space-y-3 animate-fadeIn">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-fg flex items-center gap-1.5">
+                        <Edit3 className="w-3.5 h-3.5 text-accent" />
+                        <span>Editar Textos (Sin Gastar Cupo)</span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setIsEditing(false)}
+                        className="text-xs text-fg-subtle hover:text-fg cursor-pointer"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div>
+                        <label className="text-[10px] font-semibold text-fg-muted block mb-1">Título Principal</label>
+                        <input
+                          type="text"
+                          value={editTitle}
+                          onChange={(e) => setEditTitle(e.target.value)}
+                          maxLength={32}
+                          className="w-full px-3 py-1.5 rounded-lg bg-surface-2 border border-border-default text-xs text-fg focus:border-accent focus:outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] font-semibold text-fg-muted block mb-1">Frase Persuasiva</label>
+                        <textarea
+                          value={editHeadline}
+                          onChange={(e) => setEditHeadline(e.target.value)}
+                          maxLength={95}
+                          rows={2}
+                          className="w-full px-3 py-1.5 rounded-lg bg-surface-2 border border-border-default text-xs text-fg focus:border-accent focus:outline-none resize-none"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-[10px] font-semibold text-fg-muted block mb-1">Etiqueta Badge</label>
+                          <input
+                            type="text"
+                            value={editBadge}
+                            onChange={(e) => setEditBadge(e.target.value)}
+                            maxLength={20}
+                            className="w-full px-3 py-1.5 rounded-lg bg-surface-2 border border-border-default text-xs text-fg focus:border-accent focus:outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-semibold text-fg-muted block mb-1">Texto Botón CTA</label>
+                          <input
+                            type="text"
+                            value={editCta}
+                            onChange={(e) => setEditCta(e.target.value)}
+                            maxLength={25}
+                            className="w-full px-3 py-1.5 rounded-lg bg-surface-2 border border-border-default text-xs text-fg focus:border-accent focus:outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] font-semibold text-fg-muted block mb-1">Estilo de Diseño</label>
+                        <div className="grid grid-cols-3 gap-1.5">
+                          {(["promo", "editorial", "action"] as const).map((st) => (
+                            <button
+                              key={st}
+                              type="button"
+                              onClick={() => setEditStyle(st)}
+                              className={`py-1.5 px-2 rounded-lg text-[11px] font-semibold capitalize border cursor-pointer ${
+                                editStyle === st
+                                  ? "bg-accent/15 border-accent text-accent"
+                                  : "bg-surface-2 border-border-default text-fg-muted"
+                              }`}
+                            >
+                              {st}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="pt-2 flex gap-2">
+                      <Button
+                        variant="primary"
+                        size="md"
+                        onClick={handleRerender}
+                        disabled={rerendering}
+                        className="w-full justify-center gap-2 font-bold cursor-pointer"
+                      >
+                        {rerendering ? (
+                          <>
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                            <span>Re-renderizando...</span>
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <span>Aplicar Cambios (Gratis)</span>
+                          </>
+                        )}
+                      </Button>
+                    </div>
                   </div>
-                  <h3 className="text-base font-bold text-fg">{activeFlyer.title}</h3>
-                  <p className="text-xs text-fg-muted leading-relaxed">{activeFlyer.headline}</p>
-                </div>
-
-                <div className="pt-3 border-t border-border-subtle space-y-2.5">
-                  <span className="text-[11px] font-bold text-fg uppercase tracking-wider block">
-                    Descargar Flyer
-                  </span>
-
-                  <Button
-                    variant="primary"
-                    size="md"
-                    onClick={() => {
-                      const suffix =
-                        selectedFormat === "post"
-                          ? "feed-1080x1080"
-                          : selectedFormat === "story"
-                          ? "historia-1080x1920"
-                          : "facebook-1200x630";
-                      handleDownload(
-                        getCurrentImage(activeFlyer),
-                        `${biz.subdomain || "negocio"}-flyer-${selectedFlyerIndex + 1}-${suffix}.jpg`
-                      );
-                    }}
-                    className="w-full justify-center gap-2 font-bold shadow-md cursor-pointer"
-                  >
-                    <Download className="w-4 h-4" />
-                    <span>
-                      Descargar (
-                      {selectedFormat === "post"
-                        ? "INSTAGRAM FEED"
-                        : selectedFormat === "story"
-                        ? "HISTORIA"
-                        : "FACEBOOK"}
-                      )
-                    </span>
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    size="md"
-                    onClick={handleCopyCaption}
-                    className="w-full justify-center gap-2 text-xs font-semibold cursor-pointer"
-                  >
-                    {copiedCaption ? (
-                      <>
-                        <Check className="w-3.5 h-3.5 text-emerald-400" />
-                        <span className="text-emerald-400">¡Texto de Redes Copiado!</span>
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-3.5 h-3.5" />
-                        <span>Copiar Texto / Copy para Redes</span>
-                      </>
-                    )}
-                  </Button>
-                </div>
-
-                <div className="pt-3 border-t border-border-subtle">
-                  <span className="text-[11px] font-semibold text-fg-subtle block mb-2">
-                    Opciones de descarga completas:
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleDownloadAllFormats}
-                    className="w-full py-2 px-3 rounded-xl bg-surface-2 hover:bg-surface-3 border border-border-default text-xs font-semibold text-fg transition-all cursor-pointer flex items-center justify-center gap-2"
-                  >
-                    <Download className="w-3.5 h-3.5 text-accent" />
-                    <span>Descargar este flyer en los 3 formatos</span>
-                  </button>
-                </div>
+                )}
               </div>
             </div>
           </div>
         </div>
       ) : (
-        /* Estado vacío inicial si aún no se han generado */
+        /* Estado inicial vacío */
         <div className="p-8 sm:p-12 text-center rounded-2xl bg-surface-1 border border-dashed border-border-default space-y-3">
           <div className="w-12 h-12 rounded-2xl bg-accent/10 text-accent flex items-center justify-center mx-auto">
             <Sparkles className="w-6 h-6" />

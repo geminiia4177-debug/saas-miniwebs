@@ -73,6 +73,19 @@ export default async function BiolinksPage({ params }: { params: Promise<{ subdo
         { customDomain: targetSubdomain }
       ]
     },
+    select: {
+      id: true,
+      name: true,
+      subdomain: true,
+      customDomain: true,
+      status: true,
+      logoUrl: true,
+      primaryColor: true,
+      secondaryColor: true,
+      accentColor: true,
+      fontFamily: true,
+      publishedConfig: true,
+    },
   });
   
   if (!bizData || bizData.status === "BLOCKED" || bizData.status === "ARCHIVED") {

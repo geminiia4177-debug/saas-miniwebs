@@ -38,6 +38,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Parámetros inválidos" }, { status: 400 });
     }
 
+    // BM8: Deduplicate repeated clicks from same IP on same link within 3 minutes
+    const dedupKey = `biolink:dedup:${ip}:${businessId}:${linkId}`;
+    if (!(await checkRateLimit(dedupKey, 1, 180_000, { failClosed: false }))) {
+      return NextResponse.json({ success: true, deduplicated: true });
+    }
+
     // P1-002: Atomic update within transaction to prevent lost increments under concurrency
     const updated = await prisma.$transaction(async (tx) => {
       const biz = await tx.business.findUnique({

@@ -314,7 +314,7 @@ export default function Dashboard() {
   const pending = appointments.filter(a => a.status === "PENDING");
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row" style={{ background: "#070b12", fontFamily: "'Plus Jakarta Sans',system-ui,sans-serif", "--primary-color": biz?.primaryColor || "#6366f1", "--secondary-color": biz?.secondaryColor || "#a855f7" } as React.CSSProperties}>
+    <div className="h-screen h-[100dvh] w-full overflow-hidden flex flex-col md:flex-row bg-[#080a10]" style={{ fontFamily: "'Plus Jakarta Sans',system-ui,sans-serif", "--primary-color": biz?.primaryColor || "#6366f1", "--secondary-color": biz?.secondaryColor || "#a855f7" } as React.CSSProperties}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&display=swap');
         * { box-sizing: border-box; }
@@ -404,7 +404,7 @@ export default function Dashboard() {
         unreadSupport={0}
       />
 
-      <main className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden custom-scrollbar bg-[#080a10]">
+      <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-[#080a10]">
 
         {/* ALERT BANNER GLOBAL */}
         {globalAlert && (
@@ -452,7 +452,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-3 sm:p-4 md:p-6 pb-[calc(env(safe-area-inset-bottom)+7rem)] md:pb-8 relative" style={{ background: "radial-gradient(ellipse at 50% -20%, rgba(99,102,241,0.05), transparent 60%)" }}>
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-3 sm:p-4 md:p-6 pb-32 sm:pb-28 relative" style={{ background: "radial-gradient(ellipse at 50% -20%, rgba(99,102,241,0.05), transparent 60%)" }}>
 
           <div className="max-w-[1400px] mx-auto min-h-full flex flex-col">
             {/* ── HOME (Overview) ── */}
