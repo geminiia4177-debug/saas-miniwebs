@@ -32,6 +32,9 @@ export const IframePreview = forwardRef<HTMLIFrameElement, IframePreviewProps>(
           <meta charset="utf-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1.0" />
           <base target="_blank" />
+          <link rel="preconnect" href="https://fonts.googleapis.com" />
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+          <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400..900&family=Cormorant+Garamond:wght@400..700&family=Inter:wght@300..900&family=Montserrat:wght@300..900&family=Outfit:wght@300..900&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Plus+Jakarta+Sans:wght@300..800&family=Poppins:wght@300..800&family=Space+Grotesk:wght@300..700&family=Syne:wght@400..800&display=swap" />
         `;
 
         // Copiar todos los tags <link rel="stylesheet"> y <style> del documento padre

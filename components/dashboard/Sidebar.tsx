@@ -254,6 +254,14 @@ export default function Sidebar({
           )}
           {sidebarCollapsed && <div className="my-2 h-px bg-white/5" />}
           <NavItem
+            icon={<Sparkles className="w-4 h-4 text-accent" />}
+            label="Flyers con IA"
+            tab="flyers"
+            active={tab}
+            setActive={setTab}
+            collapsed={sidebarCollapsed}
+          />
+          <NavItem
             icon={<Bot className="w-4 h-4" />}
             label="Asesor Inteligente"
             tab="intelligence"

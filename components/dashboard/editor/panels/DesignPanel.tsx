@@ -121,6 +121,10 @@ export const DesignPanel: React.FC<DesignPanelProps> = ({
     { label: "Montserrat (Elegante & Premium)", value: "'Montserrat', sans-serif" },
     { label: "Playfair Display (Editorial Serif)", value: "'Playfair Display', serif" },
     { label: "Cinzel (Clásica y Distinguida)", value: "'Cinzel', serif" },
+    { label: "Syne (Artística y Vanguardista)", value: "'Syne', sans-serif" },
+    { label: "Space Grotesk (Tech y Futurista)", value: "'Space Grotesk', sans-serif" },
+    { label: "Cormorant Garamond (Lujo y Alta Gama)", value: "'Cormorant Garamond', serif" },
+    { label: "Poppins (Amigable y Redondeada)", value: "'Poppins', sans-serif" },
   ];
 
   return (
@@ -252,53 +256,221 @@ export const DesignPanel: React.FC<DesignPanelProps> = ({
           </div>
         )}
 
-        <div className="grid grid-cols-3 gap-3">
-          <ColorPickerPopup
-            label="Principal"
-            color={biz.primaryColor || "#3B82F6"}
-            onChange={(c) => setBiz((prev: any) => ({ ...prev, primaryColor: c }))}
-          />
-          <ColorPickerPopup
-            label="Secundario"
-            color={biz.secondaryColor || "#1E293B"}
-            onChange={(c) => setBiz((prev: any) => ({ ...prev, secondaryColor: c }))}
-          />
-          <ColorPickerPopup
-            label="Acento"
-            color={biz.accentColor || "#10B981"}
-            onChange={(c) => setBiz((prev: any) => ({ ...prev, accentColor: c }))}
-          />
+        {/* Subsección: Identidad de Marca */}
+        <div className="space-y-1.5 pt-1">
+          <span className="text-[10px] font-bold text-fg-subtle uppercase tracking-wider block">
+            Identidad Principal
+          </span>
+          <div className="grid grid-cols-3 gap-2.5">
+            <ColorPickerPopup
+              label="Principal"
+              color={biz.primaryColor || "#3B82F6"}
+              onChange={(c) => setBiz((prev: any) => ({ ...prev, primaryColor: c }))}
+            />
+            <ColorPickerPopup
+              label="Secundario"
+              color={biz.secondaryColor || "#1E293B"}
+              onChange={(c) => setBiz((prev: any) => ({ ...prev, secondaryColor: c }))}
+            />
+            <ColorPickerPopup
+              label="Acento"
+              color={biz.accentColor || "#10B981"}
+              onChange={(c) => setBiz((prev: any) => ({ ...prev, accentColor: c }))}
+            />
+          </div>
+        </div>
+
+        {/* Subsección: Superficies & Fondos */}
+        <div className="space-y-1.5 pt-2 border-t border-border-subtle">
+          <span className="text-[10px] font-bold text-fg-subtle uppercase tracking-wider block">
+            Superficies & Fondos
+          </span>
+          <div className="grid grid-cols-3 gap-2.5">
+            <ColorPickerPopup
+              label="Fondo Web"
+              color={layout.backgroundColor || "#0a0a0c"}
+              onChange={(c) =>
+                setBiz((prev: any) => ({
+                  ...prev,
+                  layoutConfig: { ...(prev.layoutConfig || {}), backgroundColor: c },
+                }))
+              }
+            />
+            <ColorPickerPopup
+              label="Tarjetas"
+              color={layout.cardColor || "#14161f"}
+              onChange={(c) =>
+                setBiz((prev: any) => ({
+                  ...prev,
+                  layoutConfig: { ...(prev.layoutConfig || {}), cardColor: c, surfaceColor: c },
+                }))
+              }
+            />
+            <ColorPickerPopup
+              label="Bordes"
+              color={layout.borderColor || "#262b3d"}
+              onChange={(c) =>
+                setBiz((prev: any) => ({
+                  ...prev,
+                  layoutConfig: { ...(prev.layoutConfig || {}), borderColor: c },
+                }))
+              }
+            />
+          </div>
+        </div>
+
+        {/* Subsección: Textos & Contraste */}
+        <div className="space-y-1.5 pt-2 border-t border-border-subtle">
+          <span className="text-[10px] font-bold text-fg-subtle uppercase tracking-wider block">
+            Textos & Lectura
+          </span>
+          <div className="grid grid-cols-2 gap-2.5">
+            <ColorPickerPopup
+              label="Texto Principal"
+              color={layout.textColor || "#f8fafc"}
+              onChange={(c) =>
+                setBiz((prev: any) => ({
+                  ...prev,
+                  layoutConfig: { ...(prev.layoutConfig || {}), textColor: c },
+                }))
+              }
+            />
+            <ColorPickerPopup
+              label="Texto Subtítulo"
+              color={layout.textMutedColor || "#94a3b8"}
+              onChange={(c) =>
+                setBiz((prev: any) => ({
+                  ...prev,
+                  layoutConfig: { ...(prev.layoutConfig || {}), textMutedColor: c },
+                }))
+              }
+            />
+          </div>
+        </div>
+
+        {/* Subsección: Botones & CTA */}
+        <div className="space-y-1.5 pt-2 border-t border-border-subtle">
+          <span className="text-[10px] font-bold text-fg-subtle uppercase tracking-wider block">
+            Botones & Llamadas a la Acción
+          </span>
+          <div className="grid grid-cols-2 gap-2.5">
+            <ColorPickerPopup
+              label="Fondo Botón"
+              color={layout.buttonBgColor || biz.primaryColor || "#3B82F6"}
+              onChange={(c) =>
+                setBiz((prev: any) => ({
+                  ...prev,
+                  layoutConfig: { ...(prev.layoutConfig || {}), buttonBgColor: c },
+                }))
+              }
+            />
+            <ColorPickerPopup
+              label="Texto Botón"
+              color={layout.buttonTextColor || "#ffffff"}
+              onChange={(c) =>
+                setBiz((prev: any) => ({
+                  ...prev,
+                  layoutConfig: { ...(prev.layoutConfig || {}), buttonTextColor: c },
+                }))
+              }
+            />
+          </div>
         </div>
       </section>
 
-      {/* ── 3. TIPOGRAFÍA Y TEXTOS ── */}
-      <section className="p-4 rounded-xl bg-surface-2 border border-border-default space-y-3">
+      {/* ── 3. TIPOGRAFÍAS (TÍTULOS, SUBTÍTULOS Y CUERPO) ── */}
+      <section className="p-4 rounded-xl bg-surface-2 border border-border-default space-y-3.5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Type className="w-4 h-4 text-accent" />
             <h3 className="text-xs font-bold uppercase tracking-wider text-fg">
-              Tipografía
+              Tipografías
             </h3>
           </div>
           <HelpTooltip
-            title="Tipografía de Marca"
-            description="Fuentes optimizadas de Google Fonts cargadas para máxima nitidez y rendimiento."
+            title="Tipografías Personalizadas"
+            description="Personaliza independientemente la fuente de títulos, subtítulos y párrafos para lograr una identidad visual única."
           />
         </div>
 
-        <select
-          value={biz.fontFamily || "'Inter', sans-serif"}
-          onChange={(e) =>
-            setBiz((prev: any) => (prev ? { ...prev, fontFamily: e.target.value } : prev))
-          }
-          className="w-full px-3 py-2 rounded-lg text-xs text-fg bg-surface-1 border border-border-default focus:border-accent focus:outline-none"
-        >
-          {FONT_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
+        <div className="space-y-3">
+          <div>
+            <label className="text-[11px] font-medium text-fg-subtle mb-1 block">
+              Fuente de Títulos y Encabezados
+            </label>
+            <select
+              value={layout.titleFontFamily || biz.fontFamily || "'Inter', sans-serif"}
+              onChange={(e) =>
+                setBiz((prev: any) =>
+                  prev
+                    ? {
+                        ...prev,
+                        layoutConfig: {
+                          ...(prev.layoutConfig || {}),
+                          titleFontFamily: e.target.value,
+                        },
+                      }
+                    : prev
+                )
+              }
+              className="w-full px-3 py-2 rounded-lg text-xs text-fg bg-surface-1 border border-border-default focus:border-accent focus:outline-none"
+            >
+              {FONT_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="text-[11px] font-medium text-fg-subtle mb-1 block">
+              Fuente de Subtítulos y Destacados
+            </label>
+            <select
+              value={layout.subtitleFontFamily || biz.fontFamily || "'Inter', sans-serif"}
+              onChange={(e) =>
+                setBiz((prev: any) =>
+                  prev
+                    ? {
+                        ...prev,
+                        layoutConfig: {
+                          ...(prev.layoutConfig || {}),
+                          subtitleFontFamily: e.target.value,
+                        },
+                      }
+                    : prev
+                )
+              }
+              className="w-full px-3 py-2 rounded-lg text-xs text-fg bg-surface-1 border border-border-default focus:border-accent focus:outline-none"
+            >
+              {FONT_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="text-[11px] font-medium text-fg-subtle mb-1 block">
+              Fuente de Cuerpo y Párrafos
+            </label>
+            <select
+              value={biz.fontFamily || "'Inter', sans-serif"}
+              onChange={(e) =>
+                setBiz((prev: any) => (prev ? { ...prev, fontFamily: e.target.value } : prev))
+              }
+              className="w-full px-3 py-2 rounded-lg text-xs text-fg bg-surface-1 border border-border-default focus:border-accent focus:outline-none"
+            >
+              {FONT_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
       </section>
 
       {/* ── 4. ESTILO DE BOTONES Y FONDO ── */}

@@ -391,7 +391,7 @@ Para crear una reserva confirmada cuando tengas servicio, fecha, hora, nombre y 
           role: msg.role === "user" ? "user" : "model",
           parts: [{ text: String(msg.content || "").substring(0, 500) }],
         }));
-        const modelName = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
+        const modelName = process.env.GEMINI_MODEL || "gemini-3.8-flash";
         const aiResponse = await ai.models.generateContent({
           model: modelName,
           contents: formattedMessages,
@@ -399,9 +399,6 @@ Para crear una reserva confirmada cuando tengas servicio, fecha, hora, nombre y 
             systemInstruction: systemPrompt,
             temperature: 0.2,
             maxOutputTokens: 350,
-            thinkingConfig: {
-              thinkingLevel: ThinkingLevel.MINIMAL,
-            },
           },
         });
         responseText = aiResponse.text || "";

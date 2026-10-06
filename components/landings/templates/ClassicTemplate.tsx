@@ -12,7 +12,19 @@ export interface TemplateProps {
 export default function ClassicTemplate({ data, bookingElement }: TemplateProps) {
   const { identity, contact, branding, hero, services, gallery, schedule, staff, testimonials, social, booking, design } = data;
   const theme = getThemeDefinition(design.themeId, "classic");
-  const themeVars = generateThemeVariables(theme, branding.primaryColor, branding.secondaryColor);
+  const themeVars = generateThemeVariables(theme, branding.primaryColor, branding.secondaryColor, {
+    bg: branding.backgroundColor,
+    surface: branding.cardColor,
+    textPrimary: branding.textColor,
+    textSecondary: branding.textMutedColor,
+    border: branding.borderColor,
+    font: branding.font,
+    titleFont: branding.titleFont,
+    subtitleFont: branding.subtitleFont,
+    accent: branding.accentColor,
+    buttonBg: branding.buttonBgColor,
+    buttonText: branding.buttonTextColor,
+  });
 
   const [selectedService, setSelectedService] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);

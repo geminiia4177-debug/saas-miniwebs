@@ -7,7 +7,8 @@ import { Field } from "@/components/ui/Field";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { AIAssistButton } from "@/components/ui/AIAssistButton";
-import { ArrowLeft, Trash2, Plus } from "lucide-react";
+import { ArrowLeft, Trash2, Plus, Video, Play, ExternalLink } from "lucide-react";
+import { extractYouTubeId } from "@/components/ui/VideoSection";
 
 export interface ContentPanelProps {
   biz: Biz;
@@ -62,6 +63,7 @@ export const ContentPanel: React.FC<ContentPanelProps> = ({
     const sec = activeSection;
     const isHero = sec.id === "hero";
     const isServices = sec.id === "services";
+    const isVideo = sec.id === "video";
 
     const updateConfig = (field: string, val: any) => {
       setSections((prev: Section[]) =>
@@ -75,6 +77,16 @@ export const ContentPanel: React.FC<ContentPanelProps> = ({
         setBiz((prev: any) => ({
           ...prev,
           layoutConfig: { ...(prev?.layoutConfig || {}), heroTitle: val },
+        }));
+      }
+      if (isVideo && (field === "youtubeUrl" || field === "videoUrl")) {
+        setBiz((prev: any) => ({
+          ...prev,
+          layoutConfig: {
+            ...(prev?.layoutConfig || {}),
+            videoUrl: val,
+            youtubeUrl: val,
+          },
         }));
       }
     };
@@ -234,7 +246,117 @@ export const ContentPanel: React.FC<ContentPanelProps> = ({
           </div>
         )}
 
-        {!isHero && !isServices && (
+        {isVideo && (
+          <div className="space-y-4">
+            <Field label="Título del Video">
+              <Input
+                value={sec.config?.title || "Video Institucional"}
+                onChange={(e) => updateConfig("title", e.target.value)}
+                placeholder="Ej: Conocé nuestro espacio"
+              />
+            </Field>
+
+            <Field
+              label="Descripción o Subtítulo"
+              action={
+                <AIAssistButton
+                  businessId={biz.id}
+                  fieldType="description"
+                  currentText={sec.config?.description || ""}
+                  context={`Sección de video para ${biz.name} (${biz.type})`}
+                  onSelect={(txt) => updateConfig("description", txt)}
+                  compact
+                />
+              }
+            >
+              <textarea
+                value={sec.config?.description || ""}
+                onChange={(e) => updateConfig("description", e.target.value)}
+                rows={3}
+                className="w-full px-3 py-2 rounded-xl bg-surface-1 border border-border-default text-xs text-fg focus:border-accent focus:outline-none resize-none"
+                placeholder="Breve texto que acompañe al video..."
+              />
+            </Field>
+
+            <Field label="Enlace del Video (YouTube o Vimeo)">
+              <div className="space-y-2">
+                <Input
+                  value={sec.config?.youtubeUrl || sec.config?.videoUrl || biz.layoutConfig?.videoUrl || ""}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    updateConfig("youtubeUrl", val);
+                    updateConfig("videoUrl", val);
+                  }}
+                  placeholder="https://www.youtube.com/watch?v=... o https://youtu.be/..."
+                />
+                <p className="text-[10px] text-fg-subtle">
+                  Admite enlaces de YouTube (videos normales o shorts) y enlaces directos.
+                </p>
+              </div>
+            </Field>
+
+            {/* Video Preview */}
+            {(() => {
+              const currentUrl = sec.config?.youtubeUrl || sec.config?.videoUrl || biz.layoutConfig?.videoUrl || "";
+              const ytId = extractYouTubeId(currentUrl);
+              if (!currentUrl) return null;
+
+              if (ytId) {
+                return (
+                  <div className="p-3 rounded-xl bg-surface-2 border border-border-default space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-semibold text-success flex items-center gap-1.5">
+                        <Video className="w-3.5 h-3.5" />
+                        <span>Video detectado ✓</span>
+                      </span>
+                      <a
+                        href={`https://www.youtube.com/watch?v=${ytId}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-fg-subtle hover:text-accent flex items-center gap-1 text-[11px]"
+                      >
+                        <span>Abrir</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+                    <div className="relative aspect-video rounded-lg overflow-hidden bg-black border border-border-subtle group">
+                      <img
+                        src={`https://img.youtube.com/vi/${ytId}/hqdefault.jpg`}
+                        alt="Preview video"
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                        <div className="w-10 h-10 rounded-full bg-accent text-white flex items-center justify-center shadow-lg">
+                          <Play className="w-4 h-4 ml-0.5" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="p-2.5 rounded-xl bg-surface-2 border border-border-subtle text-[11px] text-fg-muted">
+                  Ingresa un link válido de YouTube para visualizar la vista previa.
+                </div>
+              );
+            })()}
+
+            <div className="pt-2 border-t border-border-subtle">
+              <label className="flex items-center gap-2 text-xs text-fg cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={!!sec.config?.autoplay}
+                  onChange={(e) => updateConfig("autoplay", e.target.checked)}
+                  className="rounded border-border-default text-accent focus:ring-accent"
+                />
+                <span>Reproducción automática (silenciada)</span>
+              </label>
+            </div>
+          </div>
+        )}
+
+        {!isHero && !isServices && !isVideo && (
           <div className="space-y-4">
             <Field label="Título de la Sección">
               <Input

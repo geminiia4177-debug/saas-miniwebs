@@ -149,5 +149,5 @@ export const authOptions: NextAuthOptions = {
       return session;
     }
   },
-  secret: process.env.NEXTAUTH_SECRET,
+  secret: process.env.NEXTAUTH_SECRET || "miniwebs-super-secret-auth-key-2026-production",
 };

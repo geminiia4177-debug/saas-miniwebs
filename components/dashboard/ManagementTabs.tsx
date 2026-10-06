@@ -5,7 +5,7 @@ import { Biz, MediaItem, Appointment, Ico, DEFAULT_HOURS } from "@/lib/constants
 import { DropZone } from "./editor/DropZone";
 import IntelligenceTab from "./IntelligenceTab";
 import HelpTooltip from "@/components/ui/HelpTooltip";
-import { QRCodeSVG } from "qrcode.react";
+import { QRCodeSVG, QRCodeCanvas } from "qrcode.react";
 import { getPublicUrl, getPublicDomain } from "@/lib/urls";
 
 // ─────────────────────────────────────────────
@@ -1031,10 +1031,32 @@ export default function ManagementTabs({
                   <QRCodeSVG
                     id="store-qr-code"
                     value={getPublicUrl(biz)}
-                    size={120}
+                    size={130}
                     level="H"
                     includeMargin={false}
+                    imageSettings={biz.logoUrl ? {
+                      src: biz.logoUrl,
+                      height: 32,
+                      width: 32,
+                      excavate: true,
+                    } : undefined}
                   />
+                  {/* Hidden high-res canvas for PNG download with embedded logo */}
+                  <div className="hidden">
+                    <QRCodeCanvas
+                      id="store-qr-canvas"
+                      value={getPublicUrl(biz)}
+                      size={1024}
+                      level="H"
+                      includeMargin={true}
+                      imageSettings={biz.logoUrl ? {
+                        src: biz.logoUrl,
+                        height: 240,
+                        width: 240,
+                        excavate: true,
+                      } : undefined}
+                    />
+                  </div>
                 </div>
                 <div className="flex-1 space-y-2.5 text-center sm:text-left">
                   <div>
@@ -1044,7 +1066,9 @@ export default function ManagementTabs({
                     </p>
                   </div>
                   <p className="text-xs text-slate-400 leading-relaxed">
-                    Ideal para colocar en tu mostrador o vidriera. Tus clientes escanean el código y agendan su turno solos 24/7.
+                    {biz.logoUrl
+                      ? "Código QR personalizado con el logo de tu negocio en el centro. Listo para imprimir en vinilo, mostrador o vidriera."
+                      : "Ideal para colocar en tu mostrador o vidriera. Sube tu logo en Ajustes para que aparezca en el centro del código QR."}
                   </p>
                   <div className="flex flex-wrap gap-2 justify-center sm:justify-start pt-1">
                     <button
@@ -1061,6 +1085,22 @@ export default function ManagementTabs({
                     <button
                       type="button"
                       onClick={() => {
+                        const canvas = document.getElementById("store-qr-canvas") as HTMLCanvasElement;
+                        if (canvas) {
+                          try {
+                            const dataUrl = canvas.toDataURL("image/png");
+                            const downloadLink = document.createElement("a");
+                            downloadLink.href = dataUrl;
+                            downloadLink.download = `QR-${biz.subdomain || "negocio"}-con-logo.png`;
+                            document.body.appendChild(downloadLink);
+                            downloadLink.click();
+                            document.body.removeChild(downloadLink);
+                            showToast("Código QR con logo descargado en HD (PNG) ✓", "success");
+                            return;
+                          } catch {
+                            // Fallback to SVG if canvas tainted
+                          }
+                        }
                         const svg = document.getElementById("store-qr-code");
                         if (!svg) return;
                         const svgData = new XMLSerializer().serializeToString(svg);
@@ -1072,7 +1112,7 @@ export default function ManagementTabs({
                         document.body.appendChild(downloadLink);
                         downloadLink.click();
                         document.body.removeChild(downloadLink);
-                        showToast("Código QR descargado en alta calidad ✓", "success");
+                        showToast("Código QR descargado en alta calidad (SVG) ✓", "success");
                       }}
                       className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors shadow"
                     >

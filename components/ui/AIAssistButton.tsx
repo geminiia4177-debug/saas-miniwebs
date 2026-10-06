@@ -96,8 +96,8 @@ export const AIAssistButton: React.FC<AIAssistButtonProps> = ({
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 z-50 mt-2 w-80 sm:w-96 rounded-2xl bg-surface-1 border border-border-strong p-4 shadow-popover animate-in fade-in zoom-in-95 duration-150">
-          <div className="flex items-center justify-between pb-3 border-b border-border-subtle">
+        <div className="absolute right-0 z-50 mt-2 w-[295px] sm:w-[320px] max-w-[calc(100vw-2.5rem)] rounded-2xl bg-surface-1 border border-border-strong p-3.5 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+          <div className="flex items-center justify-between pb-2.5 border-b border-border-subtle">
             <div className="flex items-center gap-2">
               <div className="w-6 h-6 rounded-lg bg-accent/15 text-accent flex items-center justify-center">
                 <Sparkles className="w-3.5 h-3.5" />
@@ -124,14 +124,14 @@ export const AIAssistButton: React.FC<AIAssistButtonProps> = ({
             </div>
           </div>
 
-          <div className="mt-3 space-y-2">
+          <div className="mt-2.5 space-y-2">
             {loading ? (
-              <div className="py-8 flex flex-col items-center justify-center gap-2 text-fg-muted">
+              <div className="py-6 flex flex-col items-center justify-center gap-2 text-fg-muted">
                 <Loader2 className="w-5 h-5 animate-spin text-accent" />
-                <span className="text-xs">Redactando variaciones irresistibles...</span>
+                <span className="text-xs">Redactando sugerencias con IA...</span>
               </div>
             ) : error ? (
-              <div className="p-3 rounded-xl bg-danger/10 border border-danger/20 text-xs text-danger">
+              <div className="p-2.5 rounded-xl bg-danger/10 border border-danger/20 text-xs text-danger break-words">
                 {error}
               </div>
             ) : (
@@ -143,9 +143,9 @@ export const AIAssistButton: React.FC<AIAssistButtonProps> = ({
                     onSelect(sug);
                     setIsOpen(false);
                   }}
-                  className="w-full text-left p-3 rounded-xl bg-surface-2 hover:bg-accent/10 border border-border-subtle hover:border-accent/40 transition-all text-xs text-fg group flex items-start justify-between gap-3 cursor-pointer"
+                  className="w-full text-left p-2.5 rounded-xl bg-surface-2 hover:bg-accent/10 border border-border-subtle hover:border-accent/40 transition-all text-xs text-fg group flex items-start justify-between gap-2.5 cursor-pointer"
                 >
-                  <span className="leading-relaxed flex-1">{sug}</span>
+                  <span className="leading-relaxed flex-1 text-[11px]">{sug}</span>
                   <span className="text-[10px] font-bold text-accent opacity-0 group-hover:opacity-100 flex items-center gap-1 shrink-0 pt-0.5 transition-opacity">
                     <Check className="w-3 h-3" />
                     <span>Usar</span>
@@ -155,9 +155,9 @@ export const AIAssistButton: React.FC<AIAssistButtonProps> = ({
             )}
           </div>
 
-          <div className="mt-3 pt-2 border-t border-border-subtle flex items-center justify-between text-[10px] text-fg-subtle">
-            <span>Potenciado por Gemini 2.5</span>
-            <span>Haz clic para reemplazar</span>
+          <div className="mt-2.5 pt-2 border-t border-border-subtle flex items-center justify-between text-[10px] text-fg-subtle">
+            <span className="truncate">⚡ Asistente de IA Activo</span>
+            <span className="shrink-0">Clic para aplicar</span>
           </div>
         </div>
       )}

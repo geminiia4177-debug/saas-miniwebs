@@ -306,7 +306,17 @@ export default function OrdersTablesTab({
                   </div>
 
                   <div className="bg-white p-3 rounded-xl mx-auto w-32 h-32 flex items-center justify-center">
-                    <QRCodeCanvas value={tableUrl} size={110} />
+                    <QRCodeCanvas
+                      value={tableUrl}
+                      size={110}
+                      level="H"
+                      imageSettings={biz?.logoUrl ? {
+                        src: biz.logoUrl,
+                        height: 26,
+                        width: 26,
+                        excavate: true,
+                      } : undefined}
+                    />
                   </div>
 
                   <p className="text-[10px] text-slate-500 font-mono truncate">{tableUrl}</p>

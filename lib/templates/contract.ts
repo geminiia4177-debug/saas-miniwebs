@@ -31,9 +31,17 @@ export interface BusinessContact {
 export interface BusinessBranding {
   primaryColor: string;
   secondaryColor: string;
+  accentColor?: string;
   backgroundColor: string;
+  cardColor?: string;
   textColor: string;
+  textMutedColor?: string;
+  borderColor?: string;
+  buttonBgColor?: string;
+  buttonTextColor?: string;
   font: string;
+  titleFont?: string;
+  subtitleFont?: string;
   buttonStyle: "rounded" | "square" | "pill";
   footerBgColor?: string;
   footerTextColor?: string;
@@ -185,9 +193,17 @@ export function normalizeBusinessData(
   // 3. Branding & Colors
   const primaryColor = biz?.primaryColor || config.primaryColor || biz?.accentColor || "#3b82f6";
   const secondaryColor = biz?.secondaryColor || config.secondaryColor || "#db2777";
+  const accentColor = biz?.accentColor || config.accentColor || primaryColor;
   const backgroundColor = biz?.backgroundColor || config.backgroundColor || "";
+  const cardColor = config.cardColor || config.surfaceColor || "";
   const textColor = biz?.textColor || config.textColor || "#f8fafc";
+  const textMutedColor = config.textMutedColor || "";
+  const borderColor = config.borderColor || "";
+  const buttonBgColor = config.buttonBgColor || primaryColor;
+  const buttonTextColor = config.buttonTextColor || "";
   const font = biz?.fontFamily || config.fontFamily || "'Inter', sans-serif";
+  const titleFont = config.titleFontFamily || config.titleFont || font;
+  const subtitleFont = config.subtitleFontFamily || config.subtitleFont || font;
   const buttonStyle = (biz?.buttonStyle || config.buttonStyle || "rounded") as "rounded" | "square" | "pill";
   const footerBgColor = config.footerBgColor || undefined;
   const footerTextColor = config.footerTextColor || undefined;
@@ -411,7 +427,7 @@ export function normalizeBusinessData(
   return {
     identity: { name, logo, description, tagline },
     contact: { phone, whatsapp, email, address, location, mapUrl },
-    branding: { primaryColor, secondaryColor, backgroundColor, textColor, font, buttonStyle, footerBgColor, footerTextColor, bookingBgColor },
+    branding: { primaryColor, secondaryColor, accentColor, backgroundColor, cardColor, textColor, textMutedColor, borderColor, buttonBgColor, buttonTextColor, font, titleFont, subtitleFont, buttonStyle, footerBgColor, footerTextColor, bookingBgColor },
     hero: {
       title: heroTitle,
       subtitle: heroSubtitle,

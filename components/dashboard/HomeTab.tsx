@@ -224,8 +224,16 @@ export default function HomeTab({
           </p>
         </div>
 
-        {/* Live Site Shortcut */}
+        {/* Live Site Shortcut & Flyers */}
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setTab("flyers")}
+            className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition-all shadow-md cursor-pointer"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+            <span>Flyers con IA</span>
+          </button>
           <a
             href={publicUrl}
             target="_blank"
@@ -485,13 +493,22 @@ export default function HomeTab({
 
           <button
             type="button"
+            onClick={() => setTab("flyers")}
+            className="px-4 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition-all shadow-lg flex items-center gap-2 cursor-pointer"
+          >
+            <Sparkles className="w-4 h-4 text-amber-300" />
+            <span>Crear 3 Flyers con IA</span>
+          </button>
+
+          <button
+            type="button"
             onClick={handleGenerateStory}
             disabled={generatingStory}
             className="px-5 py-3 rounded-2xl text-white font-bold text-xs shadow-xl transition-all active:scale-95 flex items-center gap-2 cursor-pointer"
             style={{ background: primary }}
           >
             <InstagramIcon className="w-4 h-4" />
-            <span>{generatingStory ? "Generando..." : "Historia para Instagram"}</span>
+            <span>{generatingStory ? "Generando..." : "Historia Rápida"}</span>
             <Download className="w-3.5 h-3.5 opacity-80" />
           </button>
         </div>

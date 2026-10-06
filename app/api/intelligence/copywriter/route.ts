@@ -76,39 +76,114 @@ Reglas estrictas:
 - Longitud adecuada para un sitio web (títulos cortos e impactantes, subtítulos explicativos de 1 a 2 oraciones).
 - Responde ÚNICAMENTE en formato JSON con la clave "suggestions" como un array de 3 strings, sin texto adicional antes o después. Ejemplo: {"suggestions": ["Opcion 1", "Opcion 2", "Opcion 3"]}`;
 
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompt,
-    });
+    let outputText = "";
 
-    const outputText = response.text || "";
-    try {
-      const cleaned = outputText.replace(/```json/g, "").replace(/```/g, "").trim();
-      const parsed = JSON.parse(cleaned);
-      if (Array.isArray(parsed.suggestions) && parsed.suggestions.length > 0) {
-        return NextResponse.json({ suggestions: parsed.suggestions.slice(0, 3) });
-      }
-    } catch {
-      // Fallback extraction
-      const lines = outputText.split("\n").filter((l) => l.trim().length > 5).slice(0, 3);
-      if (lines.length > 0) {
-        return NextResponse.json({ suggestions: lines });
+    // 1. Try Gemini
+    if (process.env.GEMINI_API_KEY) {
+      try {
+        const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+        const geminiModels = ["gemini-3.8-flash", "gemini-2.5-flash", "gemini-flash-latest"];
+        for (const m of geminiModels) {
+          try {
+            const response = await ai.models.generateContent({
+              model: m,
+              contents: prompt,
+            });
+            if (response.text) {
+              outputText = response.text;
+              break;
+            }
+          } catch {
+            // try next model
+          }
+        }
+      } catch (geminiErr) {
+        console.warn("Gemini copywriter failed, falling back to Groq:", geminiErr);
       }
     }
 
-    return NextResponse.json({
-      suggestions: [
-        "Experiencia superior pensada para superar tus expectativas.",
-        "Calidad garantizada y atención personalizada en cada momento.",
-        "El servicio que buscas con la comodidad que mereces.",
+    // 2. Fallback to Groq if Gemini did not produce output
+    if (!outputText && process.env.GROQ_API_KEY) {
+      try {
+        const Groq = (await import("groq-sdk")).default;
+        const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+        const model = process.env.GROQ_MODEL || "openai/gpt-oss-120b";
+        const completion = await groq.chat.completions.create({
+          messages: [{ role: "user", content: prompt }],
+          model,
+          temperature: 0.7,
+        });
+        outputText = completion.choices[0]?.message?.content || "";
+      } catch (groqErr) {
+        console.warn("Groq copywriter failed:", groqErr);
+      }
+    }
+
+    // Parse suggestions from AI output
+    if (outputText) {
+      try {
+        const cleaned = outputText.replace(/```json/g, "").replace(/```/g, "").trim();
+        const parsed = JSON.parse(cleaned);
+        if (Array.isArray(parsed.suggestions) && parsed.suggestions.length > 0) {
+          return NextResponse.json({ suggestions: parsed.suggestions.slice(0, 3) });
+        }
+      } catch {
+        const lines = outputText
+          .split("\n")
+          .map((l) => l.replace(/^[-*•0-9.)\s]+/, "").replace(/^"|"$/g, "").trim())
+          .filter((l) => l.length > 8 && !l.startsWith("{") && !l.startsWith("}"));
+        if (lines.length > 0) {
+          return NextResponse.json({ suggestions: lines.slice(0, 3) });
+        }
+      }
+    }
+
+    // 3. Fallback high-converting templates tailored to business and field
+    const bizName = business.name || "Tu Negocio";
+    const type = business.type || "general";
+    const fallbackMap: Record<string, string[]> = {
+      heroTitle: [
+        `Experiencia y Estilo en ${bizName}`,
+        `Lo Mejor en ${type === "barberia" ? "Cortes y Barbería" : "Atención y Calidad"}`,
+        `Tu Espacio de Confianza en Cada Detalle`,
       ],
-    });
+      heroSubtitle: [
+        `Atención personalizada, profesionales dedicados y resultados garantizados.`,
+        `Transformá tu imagen con las mejores técnicas y un ambiente diseñado para vos.`,
+        `Reservá tu turno online en segundos y viví una experiencia premium.`,
+      ],
+      description: [
+        `En ${bizName} combinamos pasión, técnica de vanguardia y dedicación para ofrecerte una experiencia insuperable.`,
+        `Comprometidos con la excelencia y la satisfacción de cada cliente en un entorno cómodo y profesional.`,
+        `Descubrí la diferencia de un servicio hecho a tu medida con atención personalizada de primer nivel.`,
+      ],
+      service: [
+        `Servicio Exclusivo con Acabado Profesional`,
+        `Tratamiento Premium de Alta Gama`,
+        `Atención Completa y Personalizada`,
+      ],
+      tagline: [
+        `Calidad, estilo y excelencia en cada detalle`,
+        `Tu mejor versión empieza acá`,
+        `Profesionalismo que se nota a primera vista`,
+      ],
+    };
+
+    const tailoredSuggestions = fallbackMap[fieldType] || [
+      "Experiencia superior pensada para superar tus expectativas.",
+      "Calidad garantizada y atención personalizada en cada momento.",
+      "El servicio que buscas con la comodidad que mereces.",
+    ];
+
+    return NextResponse.json({ suggestions: tailoredSuggestions });
   } catch (err: any) {
     console.error("AI Copywriter error:", err);
-    return NextResponse.json(
-      { error: "Error al generar sugerencias con IA" },
-      { status: 500 }
-    );
+    return NextResponse.json({
+      suggestions: [
+        "Calidad superior, dedicación y estilo en cada detalle.",
+        "Transformá tu experiencia con atención profesional garantizada.",
+        "Tu lugar de confianza: reservas directas y servicio exclusivo.",
+      ],
+    });
   }
 }

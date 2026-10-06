@@ -421,25 +421,45 @@ export function getOptimalTextColor(hexColor: string): string {
 export function generateThemeVariables(
   theme: ThemeDefinition,
   customPrimary?: string,
-  customSecondary?: string
+  customSecondary?: string,
+  overrides?: {
+    accent?: string;
+    bg?: string;
+    surface?: string;
+    textPrimary?: string;
+    textSecondary?: string;
+    textMuted?: string;
+    border?: string;
+    font?: string;
+    titleFont?: string;
+    subtitleFont?: string;
+    buttonBg?: string;
+    buttonText?: string;
+  }
 ): Record<string, string> {
   const primary = customPrimary || theme.visuals.defaultPrimary;
   const secondary = customSecondary || theme.visuals.defaultSecondary;
+  const accent = overrides?.accent || primary;
   const primaryText = getOptimalTextColor(primary);
 
   return {
-    "--mw-bg": theme.visuals.bg,
-    "--mw-surface": theme.visuals.surface,
-    "--mw-surface-elevated": theme.visuals.surfaceElevated,
+    "--mw-bg": overrides?.bg || theme.visuals.bg,
+    "--mw-surface": overrides?.surface || theme.visuals.surface,
+    "--mw-surface-elevated": overrides?.surface || theme.visuals.surfaceElevated,
     "--mw-surface-glass": theme.visuals.surfaceGlass,
-    "--mw-text-primary": theme.visuals.textPrimary,
-    "--mw-text-secondary": theme.visuals.textSecondary,
-    "--mw-text-muted": theme.visuals.textMuted,
-    "--mw-border": theme.visuals.border,
+    "--mw-text-primary": overrides?.textPrimary || theme.visuals.textPrimary,
+    "--mw-text-secondary": overrides?.textSecondary || theme.visuals.textSecondary,
+    "--mw-text-muted": overrides?.textMuted || theme.visuals.textMuted,
+    "--mw-border": overrides?.border || theme.visuals.border,
     "--mw-border-highlight": theme.visuals.borderHighlight,
     "--mw-primary": primary,
     "--mw-primary-text": primaryText,
     "--mw-secondary": secondary,
-    "--mw-font": theme.visuals.fontFamily,
+    "--mw-accent": accent,
+    "--mw-button-bg": overrides?.buttonBg || primary,
+    "--mw-button-text": overrides?.buttonText || getOptimalTextColor(overrides?.buttonBg || primary),
+    "--mw-font": overrides?.font || theme.visuals.fontFamily,
+    "--mw-font-title": overrides?.titleFont || overrides?.font || theme.visuals.fontFamily,
+    "--mw-font-subtitle": overrides?.subtitleFont || overrides?.font || theme.visuals.fontFamily,
   };
 }

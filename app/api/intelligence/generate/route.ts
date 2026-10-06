@@ -96,25 +96,55 @@ Escribe un mensaje agradeciéndole por su fidelidad y regalándole un upgrade en
       prompt += `Contexto: Escribe una promoción atractiva para que el cliente reserve un turno esta semana.`;
     }
 
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    let text = "";
 
-    const modelName = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
-    const response = await ai.models.generateContent({
-      model: modelName,
-      contents: prompt,
-      config: {
-        temperature: 0.7,
-        maxOutputTokens: 300,
-        thinkingConfig: {
-          thinkingLevel: ThinkingLevel.MINIMAL,
-        },
+    if (process.env.GEMINI_API_KEY) {
+      try {
+        const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+        const models = ["gemini-3.8-flash", "gemini-2.5-flash", "gemini-flash-latest"];
+        for (const m of models) {
+          try {
+            const response = await ai.models.generateContent({
+              model: m,
+              contents: prompt,
+              config: {
+                temperature: 0.7,
+                maxOutputTokens: 300,
+              },
+            });
+            if (response.text) {
+              text = response.text;
+              break;
+            }
+          } catch {
+            // try next model
+          }
+        }
+      } catch (geminiErr) {
+        console.warn("Gemini campaign generation failed:", geminiErr);
       }
-    });
+    }
 
-    const text = response.text || "No se pudo generar el mensaje.";
+    if (!text && process.env.GROQ_API_KEY) {
+      try {
+        const Groq = (await import("groq-sdk")).default;
+        const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+        const comp = await groq.chat.completions.create({
+          messages: [{ role: "user", content: prompt }],
+          model: process.env.GROQ_MODEL || "openai/gpt-oss-120b",
+          temperature: 0.7,
+        });
+        text = comp.choices[0]?.message?.content || "";
+      } catch (groqErr) {
+        console.warn("Groq campaign generation failed:", groqErr);
+      }
+    }
+
+    if (!text) {
+      text = `¡Hola {{cliente}}! 👋 En ${business.name} tenemos una propuesta especial para vos esta semana. Reservá tu turno online acá: ${getPublicUrl(business)}`;
+    }
 
     return NextResponse.json({ message: text });
-
   } catch (error) {
     console.error("Error generating message:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

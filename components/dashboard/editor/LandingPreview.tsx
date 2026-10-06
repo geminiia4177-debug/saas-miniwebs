@@ -231,7 +231,7 @@ export const LandingPreview = ({
       {/* Screen container */}
       <div className="relative w-full flex-1 overflow-hidden bg-black">
         <div
-          className="h-full origin-top transition-transform duration-150"
+          className="h-full origin-top-left transition-transform duration-150"
           style={{
             transform: scale !== 1 ? `scale(${scale})` : undefined,
             width: scale !== 1 ? `${100 / scale}%` : "100%",

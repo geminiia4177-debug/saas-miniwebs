@@ -11,6 +11,7 @@ import CrmTab from "@/components/dashboard/CrmTab";
 import OrdersTablesTab from "@/components/dashboard/OrdersTablesTab";
 import BiolinksTab from "@/components/dashboard/BiolinksTab";
 import IntelligenceTab from "@/components/dashboard/IntelligenceTab";
+import FlyersTab from "@/components/dashboard/FlyersTab";
 import HomeTab from "@/components/dashboard/HomeTab";
 import SupportWidget from "@/components/dashboard/SupportWidget";
 import PayModal from "@/components/dashboard/PayModal";
@@ -509,6 +510,10 @@ export default function Dashboard() {
 
             {tab === "intelligence" && (
               <IntelligenceTab businessId={biz.id} bizName={biz.name} />
+            )}
+
+            {tab === "flyers" && (
+              <FlyersTab biz={biz} showToast={pushToast} />
             )}
           </div>
         </div>
