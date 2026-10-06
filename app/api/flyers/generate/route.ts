@@ -238,9 +238,10 @@ export function generateFlyerSvg(
         <svg width="1080" height="1080" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <linearGradient id="overlayEd" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stop-color="#020617" stop-opacity="0.88" />
-              <stop offset="40%" stop-color="#020617" stop-opacity="0.45" />
-              <stop offset="85%" stop-color="#020617" stop-opacity="0.94" />
+              <stop offset="0%" stop-color="#020617" stop-opacity="0.82" />
+              <stop offset="38%" stop-color="#020617" stop-opacity="0.18" />
+              <stop offset="68%" stop-color="#020617" stop-opacity="0.18" />
+              <stop offset="100%" stop-color="#020617" stop-opacity="0.88" />
             </linearGradient>
             <filter id="glowEd"><feDropShadow dx="0" dy="8" stdDeviation="16" flood-color="#000000" flood-opacity="0.85"/></filter>
           </defs>
@@ -286,9 +287,10 @@ export function generateFlyerSvg(
         <svg width="1080" height="1080" xmlns="http://www.w3.org/2000/svg">
           <defs>
             <linearGradient id="overlayAct" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stop-color="#020617" stop-opacity="0.92" />
-              <stop offset="45%" stop-color="#020617" stop-opacity="0.5" />
-              <stop offset="100%" stop-color="#020617" stop-opacity="0.96" />
+              <stop offset="0%" stop-color="#020617" stop-opacity="0.84" />
+              <stop offset="35%" stop-color="#020617" stop-opacity="0.18" />
+              <stop offset="65%" stop-color="#020617" stop-opacity="0.18" />
+              <stop offset="100%" stop-color="#020617" stop-opacity="0.90" />
             </linearGradient>
             <linearGradient id="btnGradAct" x1="0%" y1="0%" x2="100%" y2="100%">
               <stop offset="0%" stop-color="${primary}" />
@@ -335,10 +337,10 @@ export function generateFlyerSvg(
       <svg width="1080" height="1080" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <linearGradient id="overlayFeed" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stop-color="#020617" stop-opacity="0.86" />
-            <stop offset="35%" stop-color="#020617" stop-opacity="0.45" />
-            <stop offset="70%" stop-color="#020617" stop-opacity="0.78" />
-            <stop offset="100%" stop-color="#020617" stop-opacity="0.96" />
+            <stop offset="0%" stop-color="#020617" stop-opacity="0.80" />
+            <stop offset="35%" stop-color="#020617" stop-opacity="0.16" />
+            <stop offset="65%" stop-color="#020617" stop-opacity="0.16" />
+            <stop offset="100%" stop-color="#020617" stop-opacity="0.88" />
           </linearGradient>
           <linearGradient id="badgeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stop-color="${accent}" />
@@ -740,35 +742,40 @@ Responde en formato JSON con la siguiente estructura:
       concepts.map(async (concept, idx) => {
         let photoBuffer: Buffer | null = null;
 
-        // Paso A: Generar imagen de fondo con Pollinations.AI (model turbo con API Key oficial)
+        // Paso A: Generar imagen de fondo con Pollinations.AI (model flux con fallback a turbo)
         const pollinationKey = process.env.POLLINATIONS_API_KEY || "sk_yYIRTLHDWdurMwtxKH2RwYZ5SlMM4ZLV";
         if (pollinationKey) {
-          try {
-            const userStyle = customPrompt ? `${customPrompt}, ` : "";
-            const isArtistic = /anime|manga|cartoon|dibujo|comic|cyberpunk|pixel|3d|vector/i.test(customPrompt || "");
-            const baseSubject = concept.imagePrompt || (isArtistic ? `${customPrompt} ${bizType}` : `commercial advertising photography for ${bizType}`);
-            const lighting = "dramatic warm ambient lighting, festive bokeh background, commercial product aesthetic";
-            const composition = "centered subject, shallow depth of field, wide empty negative space at center and top for text placement";
-            const negative = "no text, no letters, no words, no watermark, no human hands, no logos, clean backdrop";
-            const finalPrompt = `${userStyle}${baseSubject}, ${lighting}, ${composition}, ${negative}`;
-            const encodedPrompt = encodeURIComponent(finalPrompt.slice(0, 380));
-            const pollUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?model=turbo&width=1024&height=1024&nologo=true&enhance=false&seed=${Math.floor(Math.random() * 999999)}&key=${pollinationKey}`;
+          const modelsToTry = ["flux", "turbo"];
+          for (const modelName of modelsToTry) {
+            if (photoBuffer) break;
+            try {
+              const userStyle = customPrompt ? `${customPrompt}, ` : "";
+              const isArtistic = /anime|manga|cartoon|dibujo|comic|cyberpunk|pixel|3d|vector/i.test(customPrompt || "");
+              const baseSubject = concept.imagePrompt || (isArtistic ? `${customPrompt} ${bizType}` : `commercial advertising photography for ${bizType}`);
+              const lighting = "dramatic warm ambient lighting, festive bokeh background, commercial product aesthetic";
+              const composition = "centered subject, shallow depth of field, wide empty space at center, top and bottom for text placement";
+              const negative = "no text, no letters, no words, no watermark, no human hands, no logos, clean backdrop";
+              const finalPrompt = `${userStyle}${baseSubject}, ${lighting}, ${composition}, ${negative}`;
+              const encodedPrompt = encodeURIComponent(finalPrompt.slice(0, 380));
+              const pollUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?model=${modelName}&width=1024&height=1024&nologo=true&enhance=false&seed=${Math.floor(Math.random() * 999999)}&key=${pollinationKey}`;
 
-            const res = await fetch(pollUrl, {
-              headers: {
-                Authorization: `Bearer ${pollinationKey}`,
-              },
-              signal: AbortSignal.timeout(16000),
-            });
+              const res = await fetch(pollUrl, {
+                headers: {
+                  Authorization: `Bearer ${pollinationKey}`,
+                },
+                signal: AbortSignal.timeout(18000),
+              });
 
-            if (res.ok) {
-              const ab = await res.arrayBuffer();
-              if (ab.byteLength > 2000) {
-                photoBuffer = Buffer.from(ab);
+              if (res.ok) {
+                const ab = await res.arrayBuffer();
+                if (ab.byteLength > 2000) {
+                  photoBuffer = Buffer.from(ab);
+                  break;
+                }
               }
+            } catch (pollErr) {
+              console.warn(`Pollinations AI (${modelName}) failed, checking next model:`, pollErr);
             }
-          } catch (pollErr) {
-            console.warn("Pollinations AI generation failed, checking fallbacks:", pollErr);
           }
         }
 
