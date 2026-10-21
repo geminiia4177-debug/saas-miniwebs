@@ -1,6 +1,6 @@
 export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
-import { checkRateLimit, getRateLimitRetryAfterMs } from "@/lib/rate-limit";
+import { checkRateLimit, getRateLimitRetryAfterMs, getClientIp } from "@/lib/rate-limit";
 import { AppointmentService } from "@/lib/appointment-service";
 
 const SLOTS_RATE_WINDOW_MS = 60_000;
@@ -8,8 +8,7 @@ const SLOTS_RATE_MAX = 60;
 
 export async function GET(req: Request) {
   // P1-001: Rate limiting with failClosed policy
-  const ip =
-    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const ip = getClientIp(req);
   const rawUrl = new URL(req.url);
   const businessId = rawUrl.searchParams.get("businessId");
 

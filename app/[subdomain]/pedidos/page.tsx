@@ -14,15 +14,24 @@ export default function PedidosPage() {
   const [business, setBusiness] = useState<any>(null);
   const [error, setError] = useState("");
   const prevOrdersCount = useRef(0);
+  const audioCtxRef = useRef<AudioContext | null>(null);
 
   const playBeep = () => {
     try {
-      const ctx = new window.AudioContext();
+      if (!audioCtxRef.current) {
+        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+        if (AudioCtx) audioCtxRef.current = new AudioCtx();
+      }
+      const ctx = audioCtxRef.current;
+      if (!ctx) return;
+      if (ctx.state === "suspended") ctx.resume();
       const o = ctx.createOscillator();
       o.connect(ctx.destination);
       o.frequency.value = 880;
       o.start();
-      setTimeout(() => o.stop(), 200);
+      setTimeout(() => {
+        try { o.stop(); } catch {}
+      }, 200);
     } catch (e) {
       // Audio might be blocked by browser policy until user interacts
     }
@@ -57,27 +66,29 @@ export default function PedidosPage() {
       .then(data => {
         if (data.error || !data.id) {
           setError("Negocio no encontrado");
-          setLoading(false);
           return;
         }
         setBusiness(data);
-        fetchOrders(data.id);
-        
-        // Polling every 10 seconds
-        const interval = setInterval(() => {
-          fetchOrders(data.id);
-        }, 10000);
-        return () => clearInterval(interval);
       })
+      .catch(() => setError("Error al conectar con el negocio"))
       .finally(() => setLoading(false));
-  }, [subdomain, token]);
+  }, [subdomain]);
+
+  useEffect(() => {
+    if (!business?.id) return;
+    fetchOrders(business.id);
+    const interval = setInterval(() => {
+      fetchOrders(business.id);
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [business?.id, token]);
 
   const updateOrderStatus = async (orderId: string, status: string) => {
     try {
       const res = await fetch("/api/orders", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId, status })
+        body: JSON.stringify({ orderId, status, businessId: business?.id, token })
       });
       if (res.ok) {
         if (status === "COMPLETED") {
@@ -107,6 +118,7 @@ export default function PedidosPage() {
     const minutos = Math.floor((Date.now() - new Date(order.createdAt).getTime()) / 60000);
     const urgente = order.status === "PENDING" && minutos > 15;
     
+    const isMesa = order.type === 'MESA' || Boolean(order.tableName || order.tableId || order.table?.number);
     let borderColor = "border-slate-700";
     let bgPulse = "";
     
@@ -115,8 +127,8 @@ export default function PedidosPage() {
       bgPulse = "animate-pulse bg-red-500/10";
     } else if (order.type === "DELIVERY") {
       borderColor = "border-orange-500";
-    } else if (order.type === "MESA") {
-      borderColor = "border-indigo-500";
+    } else if (isMesa) {
+      borderColor = "border-amber-500";
     } else if (order.type === "RETIRO") {
       borderColor = "border-purple-500";
     }
@@ -127,9 +139,9 @@ export default function PedidosPage() {
           <div>
             <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${
                order.type === "DELIVERY" ? "bg-orange-500/20 text-orange-400" :
-               order.type === "MESA" ? "bg-indigo-500/20 text-indigo-400" : "bg-purple-500/20 text-purple-400"
+               isMesa ? "bg-amber-500/20 text-amber-400" : "bg-purple-500/20 text-purple-400"
             }`}>
-              {order.type === "DELIVERY" ? "🛵 Delivery" : order.type === "MESA" ? `🍽️ Mesa ${order.table?.number || "?"}` : "🛍️ Retiro"}
+              {order.type === "DELIVERY" ? "🛵 Delivery" : isMesa ? `🍽️ Mesa ${order.table?.number || order.tableName || order.tableId || "?"}` : "🛍️ Retiro"}
             </span>
             <div className="text-white font-bold mt-2 text-lg">#{order.id.slice(-4).toUpperCase()}</div>
           </div>

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import BookingModal from "../ui/BookingModal";
 import OpenNowBadge from "../ui/OpenNowBadge";
 import VideoSection from "../ui/VideoSection";
+import { formatSocialUrl } from "@/components/landings/biolinks/utils";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface Business {
@@ -500,7 +501,7 @@ export default function GimnasioTemplate(props: { negocio?: any; media?: any[]; 
               </p>
               <div className="flex gap-4">
                 {layoutConfig.instagram && (
-                  <a href={`https://instagram.com/${layoutConfig.instagram.replace('@','')}`} className="w-12 h-12 bg-white/5 flex items-center justify-center hover:bg-[var(--accent)] hover:text-black transition-colors">
+                  <a href={formatSocialUrl("instagram", layoutConfig.instagram)} target="_blank" rel="noopener noreferrer" className="w-12 h-12 bg-white/5 flex items-center justify-center hover:bg-[var(--accent)] hover:text-black transition-colors">
                     IG
                   </a>
                 )}

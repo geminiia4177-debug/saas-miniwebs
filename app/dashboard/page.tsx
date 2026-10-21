@@ -194,7 +194,7 @@ export default function Dashboard() {
     return () => window.removeEventListener("saas-business-updated", handleAiUpdate as EventListener);
   }, []);
 
-  // â”€â”€ AUTOSAVE (UX-011) â”€â”€
+  // ── AUTOSAVE (UX-011) ──
   useEffect(() => {
     if (hasUnsavedChanges && !saving) {
       const timer = setTimeout(() => {
@@ -202,9 +202,9 @@ export default function Dashboard() {
       }, 3000); // 3 seconds debounce
       return () => clearTimeout(timer);
     }
-  }, [hasUnsavedChanges]);
+  }, [hasUnsavedChanges, biz, sections, media, saving]);
 
-  // â”€â”€ CARGAR TURNOS â”€â”€
+  // ── CARGAR TURNOS ──
   useEffect(() => {
     if (!biz?.id) return;
 
@@ -229,14 +229,43 @@ export default function Dashboard() {
     if (!isAutoSave) setSaving(true);
     try {
       const isPublish = typeof publish === 'boolean' ? publish : false;
+      const mergedMedia = Array.isArray(biz.layoutConfig?.media) ? biz.layoutConfig.media : media;
+      const instagram = biz.layoutConfig?.instagram ?? biz.instagram ?? '';
+      const facebook = biz.layoutConfig?.facebook ?? biz.facebook ?? '';
+      const tiktok = biz.layoutConfig?.tiktok ?? biz.tiktok ?? '';
+      const whatsapp = biz.whatsapp ?? biz.layoutConfig?.whatsapp ?? '';
+
+      const updatedLayoutConfig = {
+        ...(biz.layoutConfig || {}),
+        sections,
+        media: mergedMedia,
+        instagram,
+        facebook,
+        tiktok,
+        whatsapp,
+      };
+
+      const payload = {
+        ...biz,
+        instagram,
+        facebook,
+        tiktok,
+        whatsapp,
+        layoutConfig: updatedLayoutConfig,
+        publish: isPublish,
+      };
+
       const res = await fetch(`/api/businesses/${biz.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...biz, layoutConfig: { ...(biz.layoutConfig || {}), sections, media }, publish: isPublish }),
+        body: JSON.stringify(payload),
       });
       if (res.ok) {
         if (!isAutoSave) pushToast(isPublish ? "¡Web publicada con éxito! 🚀" : "Borrador guardado ✓", "success");
-        setInitialDataStr(JSON.stringify({ biz, sections, media }));
+        if (isPublish) {
+          setBiz((prev: any) => prev ? { ...prev, isPublished: true, publishedConfig: payload.layoutConfig } : prev);
+        }
+        setInitialDataStr(JSON.stringify({ biz: { ...biz, layoutConfig: updatedLayoutConfig }, sections, media: mergedMedia }));
       }
       else {
         let errMsg = "Error en el servidor";
@@ -402,6 +431,7 @@ export default function Dashboard() {
         copyUrl={copyUrl}
         copiedUrl={copiedUrl}
         unreadSupport={0}
+        onOpenPayModal={() => setPayModalOpen(true)}
       />
 
       <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-[#080a10]">
@@ -513,13 +543,14 @@ export default function Dashboard() {
             )}
 
             {tab === "flyers" && (
-              <FlyersTab biz={biz} showToast={pushToast} />
+              <FlyersTab biz={biz} showToast={pushToast} setBiz={setBiz} />
             )}
           </div>
         </div>
 
         {/* ── BOTTOM NAVIGATION BAR (Mobile Only) ── */}
-        <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-[#0b1020]/95 border-t border-white/10 backdrop-blur-xl flex items-center justify-around py-2 px-2 pb-[calc(env(safe-area-inset-bottom,0px)+0.5rem)] shadow-2xl">
+        {tab !== "editor" && (
+          <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-[#0b1020]/95 border-t border-white/10 backdrop-blur-xl flex items-center justify-around py-2 px-2 pb-[calc(env(safe-area-inset-bottom,0px)+0.5rem)] shadow-2xl">
           <button
             onClick={() => setTab("home")}
             className={`flex flex-col items-center gap-1 py-1 px-3 rounded-xl transition-all ${tab === "home" ? "text-indigo-400 font-bold" : "text-slate-400 hover:text-white"}`}
@@ -559,6 +590,7 @@ export default function Dashboard() {
             <span className="text-[10px]">Menú</span>
           </button>
         </nav>
+        )}
       </main>
 
       <SupportWidget biz={biz} />

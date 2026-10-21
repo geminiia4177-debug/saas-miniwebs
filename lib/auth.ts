@@ -147,7 +147,12 @@ export const authOptions: NextAuthOptions = {
         }
       }
       return session;
-    }
+    },
   },
-  secret: process.env.NEXTAUTH_SECRET || "miniwebs-super-secret-auth-key-2026-production",
+  secret: (() => {
+    if (process.env.NODE_ENV === "production" && !process.env.NEXTAUTH_SECRET) {
+      throw new Error("CRITICAL: NEXTAUTH_SECRET environment variable must be set in production.");
+    }
+    return process.env.NEXTAUTH_SECRET || "dev-only-local-secret-do-not-use-in-prod";
+  })(),
 };

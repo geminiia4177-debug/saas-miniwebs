@@ -86,6 +86,67 @@ export default function HomeTab({
       .sort((a, b) => (a.time || "").localeCompare(b.time || ""));
   }, [appointments]);
 
+  // ── Analítica Real Calculada en Tiempo Real ──
+  const analytics = useMemo(() => {
+    const biolinkClicks = (biz?.layoutConfig?.biolinks?.items || []).reduce(
+      (acc: number, it: any) => acc + (Number(it.clicks) || 0),
+      0
+    );
+    const totalActivity = biolinkClicks + (appointments?.length || 0);
+
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
+
+    const allServices = [
+      ...(biz.layoutConfig?.services || []),
+      ...(biz.layoutConfig?.barberiaServices || []),
+      ...(biz.layoutConfig?.esteticaServices || []),
+      ...(biz.layoutConfig?.servicios || []),
+    ];
+    const priceMap = new Map<string, number>();
+    allServices.forEach((s: any) => {
+      const p = Number(String(s.price || 0).replace(/[^0-9.]/g, "")) || 0;
+      if (s.name) priceMap.set(s.name.toLowerCase().trim(), p);
+    });
+
+    const confirmedApptsThisMonth = (appointments || []).filter((a) => {
+      const status = (a.status || "").toUpperCase();
+      const isConfirmed = status === "CONFIRMED" || status === "COMPLETED";
+      if (!isConfirmed) return false;
+      if (!a.date) return true;
+      const d = new Date(a.date);
+      return !isNaN(d.getTime()) && d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+    });
+
+    const apptsRevenue = confirmedApptsThisMonth.reduce((sum, a) => {
+      const sPrice = priceMap.get((a.serviceName || "").toLowerCase().trim()) || 5000;
+      return sum + sPrice;
+    }, 0);
+
+    const clientMap = new Map<string, string>();
+    (appointments || []).forEach((a) => {
+      const key = (a.clientPhone || a.clientName || "").trim();
+      if (key) clientMap.set(key, a.clientName);
+    });
+    const uniqueClientsCount = clientMap.size || (appointments?.length ? 1 : 0);
+
+    const totalConfirmed = (appointments || []).filter((a) => {
+      const st = (a.status || "").toUpperCase();
+      return st === "CONFIRMED" || st === "COMPLETED";
+    }).length;
+    const confirmationRate = appointments?.length
+      ? `${Math.round((totalConfirmed / appointments.length) * 100)}%`
+      : "100%";
+
+    return {
+      totalActivity,
+      biolinkClicks,
+      revenue: apptsRevenue,
+      uniqueClientsCount,
+      confirmationRate,
+    };
+  }, [biz, appointments]);
+
   // ── 3. Generar Historia de Instagram con Canvas ──
   const handleGenerateStory = async () => {
     setGeneratingStory(true);
@@ -248,18 +309,22 @@ export default function HomeTab({
 
       {/* ── 4 STAT CARDS CON SPARKLINES ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Card 1: Visitas */}
+        {/* Card 1: Actividad / Clics e Interacciones */}
         <div className="p-5 rounded-2xl bg-[#0E131F] border border-white/5 shadow-lg flex flex-col justify-between space-y-4">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Visitas (7d)</span>
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Actividad Total</span>
             <TrendingUp className="w-4 h-4 text-emerald-400" />
           </div>
           <div className="flex items-end justify-between">
             <div>
-              <div className="text-2xl font-black text-white tabular-nums">482</div>
-              <span className="text-[11px] text-emerald-400 font-bold">+14% vs sem. ant.</span>
+              <div className="text-2xl font-black text-white tabular-nums">
+                {analytics.totalActivity.toLocaleString("es-AR")}
+              </div>
+              <span className="text-[11px] text-emerald-400 font-bold">
+                {analytics.biolinkClicks} clics bio + {appointments.length} turnos
+              </span>
             </div>
-            {renderSparkline([20, 35, 42, 60, 55, 78, 95], "#2DD4A4")}
+            {renderSparkline([20, 35, 42, 60, 55, 78, Math.max(10, analytics.totalActivity)], "#2DD4A4")}
           </div>
         </div>
 
@@ -289,7 +354,7 @@ export default function HomeTab({
           </div>
         </div>
 
-        {/* Card 3: Facturación Estimada */}
+        {/* Card 3: Facturación Estimada del Mes */}
         <div className="p-5 rounded-2xl bg-[#0E131F] border border-white/5 shadow-lg flex flex-col justify-between space-y-4">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Facturación Est.</span>
@@ -297,25 +362,27 @@ export default function HomeTab({
           </div>
           <div className="flex items-end justify-between">
             <div>
-              <div className="text-2xl font-black text-white tabular-nums">$148.500</div>
+              <div className="text-2xl font-black text-white tabular-nums">
+                ${analytics.revenue.toLocaleString("es-AR")}
+              </div>
               <span className="text-[11px] text-indigo-400 font-bold">Cobros confirmados</span>
             </div>
-            {renderSparkline([40, 65, 80, 75, 110, 130, 148], "#7C6CFF")}
+            {renderSparkline([40, 65, 80, 75, 110, 130, Math.max(20, analytics.revenue / 1000)], "#7C6CFF")}
           </div>
         </div>
 
-        {/* Card 4: Tasa de Conversión */}
+        {/* Card 4: Clientes CRM & Tasa de Confirmación */}
         <div className="p-5 rounded-2xl bg-[#0E131F] border border-white/5 shadow-lg flex flex-col justify-between space-y-4">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Conversión</span>
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Tasa Confirmación</span>
             <Users className="w-4 h-4 text-purple-400" />
           </div>
           <div className="flex items-end justify-between">
             <div>
-              <div className="text-2xl font-black text-white tabular-nums">5.2%</div>
-              <span className="text-[11px] text-purple-400 font-bold">Visita a contacto</span>
+              <div className="text-2xl font-black text-white tabular-nums">{analytics.confirmationRate}</div>
+              <span className="text-[11px] text-purple-400 font-bold">{analytics.uniqueClientsCount} clientes en CRM</span>
             </div>
-            {renderSparkline([3.2, 3.8, 4.1, 4.5, 4.8, 5.0, 5.2], "#A855F7")}
+            {renderSparkline([3.2, 3.8, 4.1, 4.5, 4.8, 5.0, Math.min(10, Math.max(1, analytics.uniqueClientsCount))], "#A855F7")}
           </div>
         </div>
       </div>

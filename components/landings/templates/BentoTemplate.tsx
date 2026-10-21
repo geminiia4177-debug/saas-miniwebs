@@ -190,7 +190,7 @@ export default function BentoTemplate({ data, bookingElement }: TemplateProps) {
                 <div>
                   <span className="text-[10px] text-slate-500 block uppercase font-bold">Precio</span>
                   <span className="text-lg font-black text-white tabular-nums">
-                    {featuredService.price ? `$${featuredService.price}` : "A consultar"}
+                    {featuredService.price ? (String(featuredService.price).startsWith("$") ? featuredService.price : `$${featuredService.price}`) : "A consultar"}
                   </span>
                 </div>
                 {cleanPhone && (
@@ -309,7 +309,7 @@ export default function BentoTemplate({ data, bookingElement }: TemplateProps) {
                 >
                   <span className="font-semibold">{srv.name}</span>
                   <span className="font-bold text-white tabular-nums">
-                    {srv.price ? `$${srv.price}` : "Consultar"}
+                    {srv.price ? (String(srv.price).startsWith("$") ? srv.price : `$${srv.price}`) : "Consultar"}
                   </span>
                 </div>
               ))}
@@ -320,7 +320,9 @@ export default function BentoTemplate({ data, bookingElement }: TemplateProps) {
         {/* ── OPTIONAL BOOKING WIDGET INJECTOR ── */}
         {bookingElement && (
           <div className="p-6 sm:p-10 rounded-3xl bg-[#0E131F] border border-white/10 shadow-2xl">
-            {bookingElement}
+            {React.isValidElement(bookingElement)
+              ? React.cloneElement(bookingElement as React.ReactElement<any>, { preselectedService: selectedService })
+              : bookingElement}
           </div>
         )}
 

@@ -203,6 +203,26 @@ export default function MenuTemplate(props: { negocio: any; businessId?: string 
   const [checkoutExtra, setCheckoutExtra] = useState("");
   const [checkoutNotas, setCheckoutNotas] = useState("");
   const [isOrdering, setIsOrdering] = useState(false);
+  const [completedOrderWaUrl, setCompletedOrderWaUrl] = useState<string | null>(null);
+
+  // Cart LocalStorage persistence (CRO)
+  useEffect(() => {
+    if (!negocio?.id) return;
+    try {
+      const saved = localStorage.getItem(`mw_cart_${negocio.id}`);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === "object") setCart(parsed);
+      }
+    } catch {}
+  }, [negocio?.id]);
+
+  useEffect(() => {
+    if (!negocio?.id) return;
+    try {
+      localStorage.setItem(`mw_cart_${negocio.id}`, JSON.stringify(cart));
+    } catch {}
+  }, [cart, negocio?.id]);
   
   const availableTags = useMemo(() => {
     const tags = new Set<string>();
@@ -314,11 +334,16 @@ export default function MenuTemplate(props: { negocio: any; businessId?: string 
       };
 
       if ((businessId || negocio?.id) && businessId !== "demo") {
-        await fetch("/api/orders", {
+        const res = await fetch("/api/orders", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(orderPayload),
         });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          alert(err.error || "Error al procesar el pedido");
+          return;
+        }
       }
 
       // 2. Enviar a WhatsApp
@@ -332,7 +357,16 @@ export default function MenuTemplate(props: { negocio: any; businessId?: string 
       let totalStr = `\n💰 *Total:* $${cartTotal}`;
 
       const finalMsg = `${header}\n\n${itemsStr}${notasStr}\n${totalStr}`;
-      window.open(`https://wa.me/${negocio.whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(finalMsg)}`, '_blank');
+      const whatsappUrl = `https://wa.me/${negocio.whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(finalMsg)}`;
+
+      setCompletedOrderWaUrl(whatsappUrl);
+
+      // En móviles redirige de inmediato para evitar popup blocker de iOS Safari
+      if (typeof navigator !== "undefined" && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+        window.location.assign(whatsappUrl);
+      } else {
+        window.open(whatsappUrl, '_blank');
+      }
       
       // Clear cart
       setCart({});
@@ -720,7 +754,7 @@ export default function MenuTemplate(props: { negocio: any; businessId?: string 
         {isCartOpen && (
           <div className="fixed inset-0 z-50 flex xl:hidden justify-end flex-col">
             <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsCartOpen(false)}></div>
-            <div className="relative bg-white w-full h-[85vh] rounded-t-3xl shadow-2xl overflow-hidden flex flex-col animate-[slideUp_0.4s_cubic-bezier(0.34,1.56,0.64,1)]">
+            <div className="relative bg-white w-full h-[85dvh] rounded-t-3xl shadow-2xl overflow-hidden flex flex-col animate-[slideUp_0.4s_cubic-bezier(0.34,1.56,0.64,1)]">
               {/* Handle */}
               <div className="w-full flex justify-center py-3 bg-white absolute top-0 z-10" onClick={() => setIsCartOpen(false)}>
                 <div className="w-12 h-1.5 bg-gray-300 rounded-full"></div>
@@ -728,6 +762,38 @@ export default function MenuTemplate(props: { negocio: any; businessId?: string 
               <div className="pt-8 h-full">
                 {renderCartContent()}
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de Pedido Confirmado / Envío a WhatsApp */}
+        {completedOrderWaUrl && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+            <div className="w-full max-w-sm rounded-2xl bg-[#11131A] border border-white/10 p-6 text-center space-y-4 shadow-2xl">
+              <div className="w-16 h-16 rounded-full bg-[#10B981]/20 text-[#10B981] flex items-center justify-center mx-auto text-3xl font-black">
+                ✓
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white">¡Pedido Registrado!</h3>
+                <p className="text-xs text-slate-400 mt-1">
+                  Para completar tu pedido, confirma los detalles directamente con el local vía WhatsApp.
+                </p>
+              </div>
+              <a
+                href={completedOrderWaUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-4 rounded-xl bg-[#25D366] hover:bg-[#20bd5a] text-black font-bold text-center block transition-all shadow-lg active:scale-95"
+              >
+                📲 Enviar pedido por WhatsApp
+              </a>
+              <button
+                type="button"
+                onClick={() => setCompletedOrderWaUrl(null)}
+                className="w-full py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-semibold text-slate-400 hover:text-white transition-colors"
+              >
+                Cerrar
+              </button>
             </div>
           </div>
         )}

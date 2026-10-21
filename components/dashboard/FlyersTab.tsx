@@ -21,8 +21,9 @@ import {
 import { Button } from "@/components/ui/Button";
 import HelpTooltip from "@/components/ui/HelpTooltip";
 import { getPublicUrl } from "@/lib/urls";
-import { Ico } from "@/lib/constants";
+import { useSession } from "next-auth/react";
 import { FlyerFontFamily, FLYER_FONTS } from "@/lib/utils/flyer-fonts";
+import { Ico } from "@/lib/constants";
 
 export interface FlyerItem {
   id: string;
@@ -42,10 +43,15 @@ export interface FlyerItem {
 
 export interface FlyersTabProps {
   biz: any;
+  setBiz?: (updater: any) => void;
   showToast: (msg: string, type?: "success" | "error" | "info" | "warn") => void;
 }
 
-export default function FlyersTab({ biz, showToast }: FlyersTabProps) {
+export default function FlyersTab({ biz, setBiz, showToast }: FlyersTabProps) {
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === "ADMIN";
+  const canShowReset = isAdmin || process.env.NODE_ENV !== "production";
+
   const [loading, setLoading] = useState(false);
   const [goal, setGoal] = useState<"general" | "promo" | "services" | "turnos">("general");
   const [customPrompt, setCustomPrompt] = useState("");
@@ -280,6 +286,16 @@ export default function FlyersTab({ biz, showToast }: FlyersTabProps) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Error al destacar en BioLinks");
 
+      if (setBiz && data.biolinks) {
+        setBiz((prev: any) => ({
+          ...prev,
+          layoutConfig: {
+            ...(prev?.layoutConfig || {}),
+            biolinks: data.biolinks,
+          },
+        }));
+      }
+
       showToast("¡Promo destacada en BioLinks por 7 días! 🔥", "success");
     } catch (err: any) {
       showToast(err.message || "Error al destacar en BioLinks", "error");
@@ -294,14 +310,31 @@ export default function FlyersTab({ biz, showToast }: FlyersTabProps) {
     return f.instagramPost;
   };
 
-  const handleDownload = (imageUrl: string, filename: string) => {
-    const link = document.createElement("a");
-    link.href = imageUrl;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    showToast(`Flyer descargado (${filename}) ✓`, "success");
+  const handleDownload = async (url: string, filename: string) => {
+    try {
+      const res = await fetch(url);
+      const blob = await res.blob();
+      const file = new File([blob], filename, { type: blob.type || "image/jpeg" });
+      if (
+        typeof navigator !== "undefined" &&
+        /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) &&
+        navigator.canShare?.({ files: [file] })
+      ) {
+        await navigator.share({ files: [file], title: filename });
+        return;
+      }
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 3000);
+      showToast(`Flyer descargado (${filename}) ✓`, "success");
+    } catch {
+      window.open(url, "_blank", "noopener,noreferrer");
+    }
   };
 
   const handleDownloadAllFormats = () => {
@@ -402,16 +435,18 @@ export default function FlyersTab({ biz, showToast }: FlyersTabProps) {
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={handleResetQuota}
-            disabled={resettingQuota}
-            className="px-3.5 py-1.5 text-xs font-bold rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/40 transition-all flex items-center gap-1.5 shrink-0 cursor-pointer self-end sm:self-center"
-            title="Resetear cupo de flyers para pruebas"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${resettingQuota ? "animate-spin" : ""}`} />
-            <span>🔄 Resetear Cupo (Pruebas)</span>
-          </button>
+          {canShowReset && (
+            <button
+              type="button"
+              onClick={handleResetQuota}
+              disabled={resettingQuota}
+              className="px-3.5 py-1.5 text-xs font-bold rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/40 transition-all flex items-center gap-1.5 shrink-0 cursor-pointer self-end sm:self-center"
+              title="Resetear cupo de flyers para pruebas"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${resettingQuota ? "animate-spin" : ""}`} />
+              <span>🔄 Resetear Cupo (Pruebas)</span>
+            </button>
+          )}
         </div>
       ) : (
         <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between gap-3 shadow-sm">
@@ -513,7 +548,7 @@ export default function FlyersTab({ biz, showToast }: FlyersTabProps) {
             )}
           </Button>
 
-          {!canGenerate && (
+          {!canGenerate && canShowReset && (
             <button
               type="button"
               onClick={handleResetQuota}

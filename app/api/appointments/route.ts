@@ -4,7 +4,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { publicAppointmentCreateSchema } from "@/lib/validations";
 import { AppointmentService } from "@/lib/appointment-service";
-import { checkRateLimit, getRateLimitRetryAfterMs } from "@/lib/rate-limit";
+import { checkRateLimit, getRateLimitRetryAfterMs, getClientIp } from "@/lib/rate-limit";
 import {
   getBusinessDayName,
   getBusinessMinutesSinceMidnight,
@@ -135,8 +135,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     // P1-001: Rate limit by IP with failClosed
-    const ip =
-      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const ip = getClientIp(req);
     const ipKey = `appt:ip:${ip}`;
     if (!(await checkRateLimit(ipKey, APPT_RATE_MAX_IP, APPT_RATE_WINDOW_MS, { failClosed: true }))) {
       const retryAfter = Math.ceil(

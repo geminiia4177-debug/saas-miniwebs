@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 
-import { checkRateLimit, getRateLimitRetryAfterMs } from "@/lib/rate-limit";
+import { checkRateLimit, getRateLimitRetryAfterMs, getClientIp } from "@/lib/rate-limit";
 
 // ─── RATE LIMITER (Upload) ────────────────────────────────────────────────────
 // P1-001: Limit uploads per IP and per user to prevent ImgBB API abuse.
@@ -19,7 +19,7 @@ export async function POST(req: Request) {
     }
 
     // 2. P1-001: Rate limit by IP with failClosed
-    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const ip = getClientIp(req);
     const ipKey = `upload:ip:${ip}`;
     if (!(await checkRateLimit(ipKey, MAX_UPLOADS_PER_WINDOW, WINDOW_MS, { failClosed: true }))) {
       const retryAfter = Math.ceil(await getRateLimitRetryAfterMs(ipKey, WINDOW_MS) / 1000);

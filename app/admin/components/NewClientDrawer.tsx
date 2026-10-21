@@ -17,8 +17,6 @@ export const NewClientDrawer: React.FC<NewClientDrawerProps> = ({
   onCreate,
   showToast,
 }) => {
-  if (!isOpen) return null;
-
   const [name, setName] = useState("");
   const [subdomain, setSubdomain] = useState("");
   const [type, setType] = useState("general");
@@ -27,6 +25,8 @@ export const NewClientDrawer: React.FC<NewClientDrawerProps> = ({
   const [password, setPassword] = useState("");
   const [country, setCountry] = useState("MX");
   const [loading, setLoading] = useState(false);
+
+  if (!isOpen) return null;
 
   const handleGenRandomPwd = () => {
     const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";

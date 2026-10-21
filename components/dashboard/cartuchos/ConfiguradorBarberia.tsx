@@ -38,7 +38,7 @@ export default function ConfiguradorBarberia({ biz, setBiz }: { biz: any, setBiz
     setUploadingImg(null);
   };
 
-  // ── DRAG AND DROP LÓGICA ──
+  // ── DRAG AND DROP & TÁCTIL LÓGICA ──
   const handleDrop = (targetIdx: number, listType: "servicios" | "productos" | "reseñas" | "faqs") => {
     if (draggedIdx === null || draggedIdx === targetIdx) return;
     const currentList = listType === "servicios" ? [...servicios] : listType === "productos" ? [...productos] : listType === "reseñas" ? [...testimonios] : [...faqs];
@@ -46,6 +46,15 @@ export default function ConfiguradorBarberia({ biz, setBiz }: { biz: any, setBiz
     currentList.splice(targetIdx, 0, removed);
     updateLayoutConfig(listType === "servicios" ? "barberiaServices" : listType === "productos" ? "barberiaProducts" : listType === "reseñas" ? "barberiaTestimonios" : "faqs", currentList);
     setDraggedIdx(null);
+  };
+
+  const moveItem = (idx: number, direction: -1 | 1, listType: "servicios" | "productos" | "reseñas" | "faqs") => {
+    const targetIdx = idx + direction;
+    const currentList = listType === "servicios" ? [...servicios] : listType === "productos" ? [...productos] : listType === "reseñas" ? [...testimonios] : [...faqs];
+    if (targetIdx < 0 || targetIdx >= currentList.length) return;
+    const [removed] = currentList.splice(idx, 1);
+    currentList.splice(targetIdx, 0, removed);
+    updateLayoutConfig(listType === "servicios" ? "barberiaServices" : listType === "productos" ? "barberiaProducts" : listType === "reseñas" ? "barberiaTestimonios" : "faqs", currentList);
   };
 
   // ── ABM BÁSICO ──
@@ -115,7 +124,27 @@ export default function ConfiguradorBarberia({ biz, setBiz }: { biz: any, setBiz
                 </div>
                 
                 <div className="flex justify-between items-center mt-3 pt-2 border-t border-white/5">
-                  <div onMouseEnter={() => setDragEnabledIdx({list:"servicios", idx})} onMouseLeave={() => setDragEnabledIdx(null)} className="flex items-center gap-1 text-[9px] text-slate-600 cursor-grab"><Ico n="drag" s={10} /> Arrastrar</div>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      disabled={idx === 0}
+                      onClick={() => moveItem(idx, -1, "servicios")}
+                      className="min-w-[32px] min-h-[32px] rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center text-xs font-bold"
+                      title="Subir"
+                    >
+                      ↑
+                    </button>
+                    <button
+                      type="button"
+                      disabled={idx === servicios.length - 1}
+                      onClick={() => moveItem(idx, 1, "servicios")}
+                      className="min-w-[32px] min-h-[32px] rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center text-xs font-bold"
+                      title="Bajar"
+                    >
+                      ↓
+                    </button>
+                    <div onMouseEnter={() => setDragEnabledIdx({list:"servicios", idx})} onMouseLeave={() => setDragEnabledIdx(null)} className="hidden md:flex items-center gap-1 text-[9px] text-slate-600 cursor-grab ml-1"><Ico n="drag" s={10} /> Arrastrar</div>
+                  </div>
                   <button onClick={() => deleteServicio(s.id)} className="text-[10px] text-red-400 hover:text-red-300 transition-colors flex items-center gap-1">
                     <Ico n="trash" s={10} /> Quitar
                   </button>
@@ -162,7 +191,27 @@ export default function ConfiguradorBarberia({ biz, setBiz }: { biz: any, setBiz
                 </div>
 
                 <div className="flex justify-between items-center mt-3 pt-2 border-t border-white/5">
-                  <div onMouseEnter={() => setDragEnabledIdx({list:"productos", idx})} onMouseLeave={() => setDragEnabledIdx(null)} className="flex items-center gap-1 text-[9px] text-slate-600 cursor-grab"><Ico n="drag" s={10} /> Arrastrar</div>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      disabled={idx === 0}
+                      onClick={() => moveItem(idx, -1, "productos")}
+                      className="min-w-[32px] min-h-[32px] rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center text-xs font-bold"
+                      title="Subir"
+                    >
+                      ↑
+                    </button>
+                    <button
+                      type="button"
+                      disabled={idx === productos.length - 1}
+                      onClick={() => moveItem(idx, 1, "productos")}
+                      className="min-w-[32px] min-h-[32px] rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center text-xs font-bold"
+                      title="Bajar"
+                    >
+                      ↓
+                    </button>
+                    <div onMouseEnter={() => setDragEnabledIdx({list:"productos", idx})} onMouseLeave={() => setDragEnabledIdx(null)} className="hidden md:flex items-center gap-1 text-[9px] text-slate-600 cursor-grab ml-1"><Ico n="drag" s={10} /> Arrastrar</div>
+                  </div>
                   <button onClick={() => deleteProducto(p.id)} className="text-[10px] text-red-400 hover:text-red-300 transition-colors flex items-center gap-1">
                     <Ico n="trash" s={10} /> Quitar
                   </button>
@@ -201,7 +250,27 @@ export default function ConfiguradorBarberia({ biz, setBiz }: { biz: any, setBiz
                 </div>
                 
                 <div className="flex justify-between items-center mt-2 pt-2 border-t border-white/5">
-                  <div onMouseEnter={() => setDragEnabledIdx({list:"reseñas", idx})} onMouseLeave={() => setDragEnabledIdx(null)} className="flex items-center gap-1 text-[9px] text-slate-600 cursor-grab"><Ico n="drag" s={10} /> Arrastrar</div>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      disabled={idx === 0}
+                      onClick={() => moveItem(idx, -1, "reseñas")}
+                      className="min-w-[32px] min-h-[32px] rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center text-xs font-bold"
+                      title="Subir"
+                    >
+                      ↑
+                    </button>
+                    <button
+                      type="button"
+                      disabled={idx === testimonios.length - 1}
+                      onClick={() => moveItem(idx, 1, "reseñas")}
+                      className="min-w-[32px] min-h-[32px] rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center text-xs font-bold"
+                      title="Bajar"
+                    >
+                      ↓
+                    </button>
+                    <div onMouseEnter={() => setDragEnabledIdx({list:"reseñas", idx})} onMouseLeave={() => setDragEnabledIdx(null)} className="hidden md:flex items-center gap-1 text-[9px] text-slate-600 cursor-grab ml-1"><Ico n="drag" s={10} /> Arrastrar</div>
+                  </div>
                   <button onClick={() => deleteTestimonio(t.id)} className="text-[10px] text-red-400 hover:text-red-300 transition-colors flex items-center gap-1">
                     <Ico n="trash" s={10} /> Quitar
                   </button>
@@ -230,7 +299,27 @@ export default function ConfiguradorBarberia({ biz, setBiz }: { biz: any, setBiz
                 </div>
                 
                 <div className="flex justify-between items-center mt-2 pt-2 border-t border-white/5">
-                  <div onMouseEnter={() => setDragEnabledIdx({list:"faqs", idx})} onMouseLeave={() => setDragEnabledIdx(null)} className="flex items-center gap-1 text-[9px] text-slate-600 cursor-grab"><Ico n="drag" s={10} /> Arrastrar</div>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      disabled={idx === 0}
+                      onClick={() => moveItem(idx, -1, "faqs")}
+                      className="min-w-[32px] min-h-[32px] rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center text-xs font-bold"
+                      title="Subir"
+                    >
+                      ↑
+                    </button>
+                    <button
+                      type="button"
+                      disabled={idx === faqs.length - 1}
+                      onClick={() => moveItem(idx, 1, "faqs")}
+                      className="min-w-[32px] min-h-[32px] rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 disabled:opacity-30 disabled:pointer-events-none flex items-center justify-center text-xs font-bold"
+                      title="Bajar"
+                    >
+                      ↓
+                    </button>
+                    <div onMouseEnter={() => setDragEnabledIdx({list:"faqs", idx})} onMouseLeave={() => setDragEnabledIdx(null)} className="hidden md:flex items-center gap-1 text-[9px] text-slate-600 cursor-grab ml-1"><Ico n="drag" s={10} /> Arrastrar</div>
+                  </div>
                   <button onClick={() => deleteFaq(f.id)} className="text-[10px] text-red-400 hover:text-red-300 transition-colors flex items-center gap-1">
                     <Ico n="trash" s={10} /> Quitar
                   </button>

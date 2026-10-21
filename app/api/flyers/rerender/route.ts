@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { isSafeExternalImageUrl } from "@/lib/urls";
 import sharp from "sharp";
 import { z } from "zod";
 import { uploadBufferToImgBB } from "@/lib/utils/upload-server";
@@ -68,7 +69,7 @@ export async function POST(req: Request) {
     let photoBuffer: Buffer | null = null;
     const cleanPhotoUrl = existingFlyer.bgPhotoUrl;
 
-    if (cleanPhotoUrl && typeof cleanPhotoUrl === "string" && cleanPhotoUrl.startsWith("http")) {
+    if (cleanPhotoUrl && typeof cleanPhotoUrl === "string" && isSafeExternalImageUrl(cleanPhotoUrl)) {
       try {
         const res = await fetch(cleanPhotoUrl, { signal: AbortSignal.timeout(5000) });
         if (res.ok) {
@@ -207,6 +208,6 @@ export async function POST(req: Request) {
     });
   } catch (error: any) {
     console.error("Flyer rerender error:", error);
-    return NextResponse.json({ error: "Error al re-renderizar flyer", details: error?.message }, { status: 500 });
+    return NextResponse.json({ error: "Error al re-renderizar flyer" }, { status: 500 });
   }
 }

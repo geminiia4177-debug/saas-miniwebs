@@ -28,10 +28,12 @@ export const ThermalReceiptModal: React.FC<ThermalReceiptModalProps> = ({
     : new Date().toLocaleString("es-AR");
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn"
-      onClick={onClose}
-    >
+    <>
+      <style>{`@media print { body * { visibility: hidden !important; } #thermal-receipt, #thermal-receipt * { visibility: visible !important; } #thermal-receipt { position: fixed !important; left: 0 !important; top: 0 !important; width: 80mm !important; margin: 0 !important; padding: 4mm !important; box-shadow: none !important; background: #fff !important; color: #000 !important; } }`}</style>
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn"
+        onClick={onClose}
+      >
       <div
         className="bg-[#0F172A] border border-white/10 rounded-3xl w-full max-w-sm p-6 shadow-2xl relative space-y-4 animate-scaleIn text-slate-100"
         onClick={(e) => e.stopPropagation()}
@@ -112,5 +114,6 @@ export const ThermalReceiptModal: React.FC<ThermalReceiptModalProps> = ({
         </button>
       </div>
     </div>
+    </>
   );
 };

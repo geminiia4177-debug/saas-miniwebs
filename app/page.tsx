@@ -36,7 +36,7 @@ export default function PremiumLanding() {
             <a href="#pricing" className="hover:text-white transition-colors">Precios</a>
             <Link href="/login" className="text-white hover:text-indigo-400 transition-colors">Ingresar</Link>
           </div>
-          <Link href="/register" className="px-5 py-2.5 bg-white hover:bg-zinc-200 text-zinc-900 rounded-full text-sm font-semibold transition-all transform hover:scale-105 shadow-[0_0_20px_rgba(255,255,255,0.2)]">
+          <Link href="/login" className="px-5 py-2.5 bg-white hover:bg-zinc-200 text-zinc-900 rounded-full text-sm font-semibold transition-all transform hover:scale-105 shadow-[0_0_20px_rgba(255,255,255,0.2)]">
             Empezar gratis
           </Link>
         </div>
@@ -59,7 +59,7 @@ export default function PremiumLanding() {
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 items-center justify-center">
-          <Link href="/register" className="px-8 py-4 bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-400 hover:to-violet-500 rounded-full font-semibold text-lg text-white transition-all transform hover:scale-105 shadow-[0_0_30px_rgba(99,102,241,0.4)]">
+          <Link href="/login" className="px-8 py-4 bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-400 hover:to-violet-500 rounded-full font-semibold text-lg text-white transition-all transform hover:scale-105 shadow-[0_0_30px_rgba(99,102,241,0.4)]">
             Crear mi web ahora
           </Link>
           <a href="#demo" className="px-8 py-4 rounded-full font-semibold text-lg text-white border border-white/10 hover:bg-white/5 transition-all backdrop-blur-sm">
@@ -68,7 +68,7 @@ export default function PremiumLanding() {
         </div>
 
         {/* ── MOCKUP DASHBOARD INTERACTIVO ── */}
-        <div className="mt-20 relative w-full max-w-4xl mx-auto perspective-1000">
+        <div id="demo" className="mt-20 relative w-full max-w-4xl mx-auto perspective-1000">
           <div className="relative rounded-2xl border border-white/10 bg-[#09090b]/80 backdrop-blur-2xl shadow-2xl p-2 transform rotate-x-[5deg] scale-[0.98] hover:rotate-x-0 hover:scale-100 transition-all duration-700 ease-out group">
             {/* Header del Mockup */}
             <div className="flex items-center gap-2 px-4 py-3 border-b border-white/5">
@@ -167,7 +167,7 @@ export default function PremiumLanding() {
                 ))}
               </ul>
               
-              <Link href="/register" className="block w-full py-4 bg-white hover:bg-zinc-200 text-zinc-900 rounded-xl font-bold text-lg transition-colors text-center">
+              <Link href="/login" className="block w-full py-4 bg-white hover:bg-zinc-200 text-zinc-900 rounded-xl font-bold text-lg transition-colors text-center">
                 Comenzar Prueba Gratis
               </Link>
               <p className="text-zinc-500 text-xs mt-4">14 días de prueba. Cancela cuando quieras.</p>

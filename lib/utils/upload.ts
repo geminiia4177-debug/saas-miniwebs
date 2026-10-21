@@ -34,3 +34,5 @@ export const uploadToImgBB = async (file: File, businessId: string): Promise<str
   const data = await res.json();
   return data.url;
 };
+
+export const uploadImage = uploadToImgBB;

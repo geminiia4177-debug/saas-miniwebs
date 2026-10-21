@@ -164,7 +164,7 @@ export default function AppNativeTemplate({ data, bookingElement }: TemplateProp
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
                       <span className="text-xs font-bold text-white tabular-nums">
-                        {s.price ? `$${s.price}` : "Consultar"}
+                        {s.price ? (String(s.price).startsWith("$") ? s.price : `$${s.price}`) : "Consultar"}
                       </span>
                       <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-white" />
                     </div>
@@ -196,7 +196,7 @@ export default function AppNativeTemplate({ data, bookingElement }: TemplateProp
                   </div>
                   <div className="text-right shrink-0">
                     <span className="text-xs font-black text-white block tabular-nums">
-                      {s.price ? `$${s.price}` : "Consultar"}
+                      {s.price ? (String(s.price).startsWith("$") ? s.price : `$${s.price}`) : "Consultar"}
                     </span>
                     <button
                       type="button"
@@ -218,7 +218,9 @@ export default function AppNativeTemplate({ data, bookingElement }: TemplateProp
             <h2 className="text-base font-black text-white px-1">Reservar Turno Online</h2>
             {bookingElement ? (
               <div className="p-4 rounded-3xl bg-[#0E1526] border border-white/10 shadow-xl">
-                {bookingElement}
+                {React.isValidElement(bookingElement)
+                  ? React.cloneElement(bookingElement as React.ReactElement<any>, { preselectedService: selectedService?.name || "" })
+                  : bookingElement}
               </div>
             ) : (
               <div className="p-6 rounded-3xl bg-[#0E1526] border border-white/10 text-center space-y-4">
@@ -312,7 +314,7 @@ export default function AppNativeTemplate({ data, bookingElement }: TemplateProp
               <div>
                 <span className="text-[10px] text-slate-500 block uppercase font-bold">Total</span>
                 <span className="text-xl font-black text-white tabular-nums">
-                  {selectedService.price ? `$${selectedService.price}` : "Consultar"}
+                  {selectedService.price ? (String(selectedService.price).startsWith("$") ? selectedService.price : `$${selectedService.price}`) : "Consultar"}
                 </span>
               </div>
 

@@ -13,6 +13,7 @@ import HelpTooltip from "@/components/ui/HelpTooltip";
 export interface SectionsPanelProps {
   sections: Section[];
   setSections: (fn: (prev: Section[]) => Section[]) => void;
+  setBiz?: (updater: any) => void;
   onSelectSection: (section: Section) => void;
   activeSectionId?: string | null;
 }
@@ -20,24 +21,36 @@ export interface SectionsPanelProps {
 export const SectionsPanel: React.FC<SectionsPanelProps> = ({
   sections,
   setSections,
+  setBiz,
   onSelectSection,
   activeSectionId,
 }) => {
   const handleDragEnd = (result: DropResult) => {
     if (!result.destination) return;
-    setSections((prev: Section[]) => {
-      const next = Array.from(prev);
-      const [removed] = next.splice(result.source.index, 1);
-      next.splice(result.destination!.index, 0, removed);
-      return next;
-    });
+    const next = Array.from(sections);
+    const [removed] = next.splice(result.source.index, 1);
+    next.splice(result.destination!.index, 0, removed);
+    setSections(() => next);
+    if (setBiz) {
+      setBiz((prev: any) => ({
+        ...prev,
+        layoutConfig: { ...(prev?.layoutConfig || {}), sections: next },
+      }));
+    }
   };
 
   const toggleVisibility = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    setSections((prev: Section[]) =>
-      prev.map((s) => (s.id === id ? { ...s, visible: !s.visible } : s))
+    const updated = sections.map((s) =>
+      s.id === id ? { ...s, visible: !s.visible } : s
     );
+    setSections(() => updated);
+    if (setBiz) {
+      setBiz((prev: any) => ({
+        ...prev,
+        layoutConfig: { ...(prev?.layoutConfig || {}), sections: updated },
+      }));
+    }
   };
 
   const getItemCount = (sec: Section): number | null => {

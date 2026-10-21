@@ -34,12 +34,14 @@ export default function VCardShare({
   };
 
   const handleVCard = () => {
+    const phone = negocio.phone || negocio.whatsapp || negocio.layoutConfig?.phone || negocio.layoutConfig?.whatsapp || "";
+    const email = negocio.email || negocio.layoutConfig?.email || "";
     const vCardData = `BEGIN:VCARD
 VERSION:3.0
 FN:${negocio.name}
 ORG:${negocio.name}
-TEL;TYPE=WORK,VOICE:${negocio.phone || negocio.whatsapp || ""}
-EMAIL;TYPE=WORK:${negocio.email || ""}
+TEL;TYPE=WORK,VOICE:${phone}
+EMAIL;TYPE=WORK:${email}
 URL:${window.location.href}
 END:VCARD`;
 

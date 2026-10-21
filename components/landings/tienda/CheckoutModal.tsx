@@ -69,7 +69,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
       onClick={onClose}
     >
       <div
-        className="bg-[#0F172A] border border-white/10 rounded-3xl w-full max-w-lg p-6 sm:p-8 shadow-2xl relative animate-scaleIn my-auto max-h-[95vh] overflow-y-auto custom-scrollbar"
+        className="bg-[#0F172A] border border-white/10 rounded-3xl w-full max-w-lg p-6 sm:p-8 shadow-2xl relative animate-scaleIn my-auto max-h-[90dvh] overflow-y-auto custom-scrollbar"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

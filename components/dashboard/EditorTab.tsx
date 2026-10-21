@@ -41,6 +41,7 @@ export default function EditorTab({
   saveAll,
   saving = false,
   showToast,
+  setTab,
 }: EditorTabProps) {
   return (
     <EditorShell
@@ -53,6 +54,7 @@ export default function EditorTab({
       saveAll={saveAll}
       saving={saving}
       showToast={showToast}
+      onBackToPanel={() => setTab?.("home")}
     />
   );
 }

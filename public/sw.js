@@ -1,7 +1,7 @@
 // ─── SaaS MiniWebs Service Worker ───
 // Strategy: Cache-first for static assets, Network-first for API/pages
 
-const CACHE_NAME = 'miniwebs-v1';
+const CACHE_NAME = 'miniwebs-v2';
 const STATIC_CACHE = 'miniwebs-static-v1';
 const IMAGE_CACHE = 'miniwebs-images-v1';
 
@@ -41,17 +41,23 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
+  if (
+    url.pathname.startsWith('/api/') ||
+    url.pathname.startsWith('/dashboard') ||
+    url.pathname.startsWith('/admin') ||
+    url.pathname.startsWith('/login') ||
+    url.pathname.startsWith('/whatsapp') ||
+    url.searchParams.has('token') ||
+    url.searchParams.has('preview')
+  ) {
+    return;
+  }
+
   // Skip non-GET requests
   if (request.method !== 'GET') return;
 
   // Skip chrome-extension and other non-http(s) requests
   if (!url.protocol.startsWith('http')) return;
-
-  // API calls → Network-first
-  if (url.pathname.startsWith('/api/')) {
-    event.respondWith(networkFirst(request));
-    return;
-  }
 
   // Images → Cache-first with expiration
   if (

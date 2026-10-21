@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
 const CLICK_RATE_WINDOW_MS = 60_000;
 const CLICK_RATE_MAX = 30;
@@ -25,7 +25,7 @@ interface BusinessLayout {
 
 export async function POST(req: Request) {
   try {
-    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const ip = getClientIp(req);
     const rateLimitKey = `biolink:click:${ip}`;
     if (!(await checkRateLimit(rateLimitKey, CLICK_RATE_MAX, CLICK_RATE_WINDOW_MS, { failClosed: true }))) {
       return NextResponse.json({ error: "Demasiadas solicitudes" }, { status: 429 });

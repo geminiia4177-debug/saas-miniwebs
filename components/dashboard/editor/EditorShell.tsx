@@ -37,6 +37,7 @@ export interface EditorShellProps {
   saveAll: (publish?: boolean) => Promise<void> | void;
   saving?: boolean;
   showToast: (msg: string, type?: "success" | "error" | "info" | "warn") => void;
+  onBackToPanel?: () => void;
 }
 
 export const EditorShell: React.FC<EditorShellProps> = ({
@@ -49,12 +50,14 @@ export const EditorShell: React.FC<EditorShellProps> = ({
   saveAll,
   saving = false,
   showToast,
+  onBackToPanel,
 }) => {
   const [activeTab, setActiveTab] = useState<EditorTabId | null>("design");
   const [activeSection, setActiveSection] = useState<Section | null>(null);
   const [previewDevice, setPreviewDevice] = useState<"desktop" | "tablet" | "mobile">("desktop");
   const [isPublishDiffOpen, setIsPublishDiffOpen] = useState(false);
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(false);
+  const [mobileMode, setMobileMode] = useState<"edit" | "preview">("edit");
 
   // Undo / Redo history engine
   const { canUndo, canRedo, undo, redo } = useEditorHistory(
@@ -120,11 +123,21 @@ export const EditorShell: React.FC<EditorShellProps> = ({
   ];
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4.5rem)] -m-4 md:-m-6 bg-bg overflow-hidden select-none">
+    <div className="flex flex-col h-[calc(100dvh-3.5rem)] -m-4 md:-m-6 bg-bg overflow-hidden select-none">
       {/* ── TOPBAR DEL EDITOR ── */}
       <header className="h-14 bg-surface-1 border-b border-border-default px-3 sm:px-4 flex items-center justify-between gap-3 z-30 flex-shrink-0">
         {/* Left: Store title & status */}
         <div className="flex items-center gap-3 min-w-0">
+          {onBackToPanel && (
+            <button
+              type="button"
+              onClick={onBackToPanel}
+              className="md:hidden flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-xs font-bold text-white border border-white/10 shrink-0"
+              title="Volver al panel"
+            >
+              ← Panel
+            </button>
+          )}
           <div className="flex flex-col min-w-0">
             <span className="text-xs font-bold text-fg truncate">{biz.name}</span>
             <span className="text-[10px] text-fg-subtle truncate font-mono">
@@ -212,7 +225,7 @@ export const EditorShell: React.FC<EditorShellProps> = ({
         {/* Contextual Side Panel (340px) */}
         <div
           className={`fixed md:relative inset-y-14 md:inset-y-0 left-0 md:left-auto z-30 md:z-10 w-full sm:w-[360px] md:w-[350px] bg-surface-1 border-r border-border-default flex flex-col transition-all duration-200 ease-[cubic-bezier(0.2,0.8,0.2,1)] ${
-            isPanelCollapsed
+            isPanelCollapsed || mobileMode === "preview"
               ? "hidden md:flex md:w-0 md:border-r-0 md:overflow-hidden md:opacity-0 pointer-events-none"
               : "flex"
           }`}
@@ -252,6 +265,7 @@ export const EditorShell: React.FC<EditorShellProps> = ({
               <SectionsPanel
                 sections={sections}
                 setSections={setSections}
+                setBiz={setBiz}
                 activeSectionId={activeSection?.id}
                 onSelectSection={(sec) => {
                   setActiveSection(sec);
@@ -303,6 +317,32 @@ export const EditorShell: React.FC<EditorShellProps> = ({
             onSelectSection={handleSelectSectionFromPreview}
           />
         </main>
+      </div>
+
+      {/* ── SEGMENTED PILL FLOTANTE MÓVIL [ ✏️ Editar | 👁️ Ver Web ] ── */}
+      <div className="md:hidden fixed bottom-20 left-1/2 -translate-x-1/2 z-50 flex items-center p-1 rounded-full bg-[#11131A]/90 backdrop-blur-xl border border-white/15 shadow-[0_10px_30px_rgba(0,0,0,0.6)]">
+        <button
+          type="button"
+          onClick={() => setMobileMode("edit")}
+          className={`px-3.5 py-1.5 rounded-full text-xs transition-all ${
+            mobileMode === "edit"
+              ? "bg-[#6366F1] text-white font-semibold shadow-sm"
+              : "text-[#94A3B8] hover:text-white"
+          }`}
+        >
+          ✏️ Editar
+        </button>
+        <button
+          type="button"
+          onClick={() => setMobileMode("preview")}
+          className={`px-3.5 py-1.5 rounded-full text-xs transition-all ${
+            mobileMode === "preview"
+              ? "bg-[#6366F1] text-white font-semibold shadow-sm"
+              : "text-[#94A3B8] hover:text-white"
+          }`}
+        >
+          👁️ Ver Web
+        </button>
       </div>
 
       {/* ── PUBLISH DIFF SHEET MODAL ── */}

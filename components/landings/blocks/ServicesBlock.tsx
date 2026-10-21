@@ -76,7 +76,7 @@ export const ServicesBlock: React.FC<ServicesBlockProps> = ({
                 <div>
                   <span className="text-[10px] text-slate-500 block uppercase font-bold">Precio</span>
                   <span className="text-base font-black text-white tabular-nums">
-                    {service.price ? `$${service.price}` : "A consultar"}
+                    {service.price ? (String(service.price).startsWith("$") ? service.price : `$${service.price}`) : "A consultar"}
                   </span>
                 </div>
                 <button

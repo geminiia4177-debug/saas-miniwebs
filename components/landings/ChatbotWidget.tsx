@@ -65,7 +65,7 @@ export default function ChatbotWidget({ businessId, bizName, primaryColor = "#63
       {/* Botón flotante */}
       <button 
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-6 right-4 sm:right-6 z-[9999] w-14 h-14 rounded-full flex items-center justify-center text-white shadow-2xl transition-transform hover:scale-110 mb-[env(safe-area-inset-bottom)]"
+        className="fixed bottom-24 md:bottom-6 right-4 sm:right-6 z-[90] w-14 h-14 rounded-full flex items-center justify-center text-white shadow-2xl transition-transform hover:scale-110 mb-[env(safe-area-inset-bottom)]"
         style={{ background: primaryColor }}
         aria-label={isOpen ? "Cerrar chat" : "Abrir chat"}
       >
@@ -75,7 +75,7 @@ export default function ChatbotWidget({ businessId, bizName, primaryColor = "#63
       {/* Ventana de Chat */}
       {isOpen && (
         <div 
-          className="fixed bottom-24 right-4 sm:right-6 z-[9999] w-[350px] h-[500px] max-h-[calc(80vh-env(safe-area-inset-bottom))] max-w-[calc(100vw-32px)] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-slideUp mb-[env(safe-area-inset-bottom)]"
+          className="fixed bottom-40 md:bottom-24 right-4 sm:right-6 z-[90] w-[350px] h-[500px] max-h-[calc(80dvh-env(safe-area-inset-bottom))] max-w-[calc(100vw-32px)] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-slideUp mb-[env(safe-area-inset-bottom)]"
           style={{ border: "1px solid rgba(0,0,0,0.1)" }}
         >
           {/* Header */}

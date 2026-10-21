@@ -50,7 +50,7 @@ export async function POST(
     } else {
       // Generar contraseña legible y segura: ej. "Turno7492-Sol" o aleatoria segura de 10 caracteres
       const randomSuffix = crypto.randomBytes(4).toString("hex");
-      plainPassword = `Pass-${Math.floor(1000 + Math.random() * 9000)}-${randomSuffix.slice(0, 4)}`;
+      plainPassword = `Pass-${crypto.randomInt(1000, 10000)}-${randomSuffix.slice(0, 4)}`;
     }
 
     const hashedPassword = await bcrypt.hash(plainPassword, 12);

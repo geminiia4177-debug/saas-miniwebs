@@ -10,41 +10,60 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  const hostname = req.headers.get("host") || "";
-
-  // 1. Detectamos si es el dominio principal de la plataforma
-  const isLocalBase = hostname === "localhost:3000";
-  const isProdBase = hostname === "saas-miniwebs.com" || hostname === "www.saas-miniwebs.com" || hostname === "saas-miniwebs.vercel.app";
-  // Vercel project domain suele tener 3 partes (ej: mi-proyecto.vercel.app)
-  const isVercelBase = hostname.endsWith(".vercel.app") && hostname.split('.').length === 3;
-
-  // Si estamos en la página principal o panel admin de la plataforma
-  if (isLocalBase || isProdBase || isVercelBase) {
-    // Si intenta acceder al dashboard, verificamos cambio de contraseña
-    if (url.pathname.startsWith("/dashboard") && url.pathname !== "/dashboard/force-password-change") {
-      const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
-      if (token?.forcePasswordChange) {
-        return NextResponse.redirect(new URL("/dashboard/force-password-change", req.url));
-      }
+  // 1. Proteger /dashboard y /admin si se exige cambio de contraseña
+  if (
+    (url.pathname.startsWith("/dashboard") && url.pathname !== "/dashboard/force-password-change") ||
+    (url.pathname.startsWith("/admin") && url.pathname !== "/dashboard/force-password-change")
+  ) {
+    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+    if (token?.forcePasswordChange) {
+      return NextResponse.redirect(new URL("/dashboard/force-password-change", req.url));
     }
+  }
+
+  const hostname = req.headers.get("host") || "";
+  const hostNoPort = hostname.split(":")[0];
+
+  const rootDomains = [
+    "localhost",
+    "saas-miniwebs.com",
+    "saas-miniwebs.vercel.app",
+    process.env.NEXT_PUBLIC_APP_DOMAIN,
+    process.env.NEXT_PUBLIC_ROOT_DOMAIN?.split(":")[0],
+  ].filter(Boolean) as string[];
+
+  // 2. Si es dominio raíz exacto o con www
+  const isExactRoot = rootDomains.some(
+    (rd) => hostNoPort === rd || hostNoPort === `www.${rd}`
+  );
+  if (isExactRoot) {
     return NextResponse.next();
   }
 
-  // 2. Si es un subdominio de localhost (ej: juan.localhost:3000)
-  if (hostname.endsWith(".localhost:3000")) {
-    const subdomain = hostname.replace(".localhost:3000", "");
-    return NextResponse.rewrite(new URL(`/${subdomain}${url.pathname}`, req.url));
+  // 3. Si termina en .${rootDomain} (ej: barberia.saas-miniwebs.com o barberia.localhost)
+  for (const rd of rootDomains) {
+    if (hostNoPort.endsWith(`.${rd}`)) {
+      const subdomain = hostNoPort.slice(0, -(rd.length + 1));
+      if (subdomain && subdomain !== "www") {
+        return NextResponse.rewrite(
+          new URL(`/${subdomain}${url.pathname}${url.search}`, req.url)
+        );
+      }
+    }
   }
 
-  // 3. Si es un subdominio de Vercel (ej: juan.mi-proyecto.vercel.app)
-  if (hostname.endsWith(".vercel.app") && hostname.split('.').length > 3) {
-    const subdomain = hostname.split('.')[0];
-    return NextResponse.rewrite(new URL(`/${subdomain}${url.pathname}`, req.url));
+  // 4. Si es subdominio de Vercel con más de 3 segmentos (ej: barberia.mi-proyecto.vercel.app)
+  if (hostNoPort.endsWith(".vercel.app") && hostNoPort.split(".").length > 3) {
+    const subdomain = hostNoPort.split(".")[0];
+    return NextResponse.rewrite(
+      new URL(`/${subdomain}${url.pathname}${url.search}`, req.url)
+    );
   }
 
-  // 4. Si es un dominio personalizado (ej: www.peluqueriajuan.com)
-  // Reescribimos hacia /[subdomain] usando el hostname completo
-  return NextResponse.rewrite(new URL(`/${hostname}${url.pathname}`, req.url));
+  // 5. Dominio personalizado real (ej: www.mipeluqueria.com)
+  return NextResponse.rewrite(
+    new URL(`/${hostNoPort}${url.pathname}${url.search}`, req.url)
+  );
 }
 
 // Esto evita que el proxy rompa imágenes o archivos del sistema

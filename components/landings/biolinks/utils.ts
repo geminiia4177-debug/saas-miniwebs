@@ -24,3 +24,29 @@ export function getTextColor(config: any): string {
   // If gradient, check primaryColor
   return getContrastColor(config.primaryColor || "#1e1b4b");
 }
+
+export function formatSocialUrl(platform: "instagram" | "tiktok" | "facebook" | "twitter" | "youtube", handleOrUrl?: string | null): string {
+  if (!handleOrUrl) return "#";
+  const trimmed = handleOrUrl.trim();
+  if (!trimmed) return "#";
+  
+  if (trimmed.includes(".com") || trimmed.includes("http://") || trimmed.includes("https://")) {
+    if (/^https?:\/\//i.test(trimmed)) {
+      return trimmed;
+    }
+    return `https://${trimmed}`;
+  }
+
+  const cleanHandle = trimmed.replace("@", "");
+  
+  switch (platform) {
+    case "instagram":
+      return `https://instagram.com/${cleanHandle}`;
+    case "tiktok":
+      return `https://tiktok.com/@${cleanHandle}`;
+    case "facebook":
+      return `https://facebook.com/${cleanHandle}`;
+    default:
+      return `https://${trimmed}`;
+  }
+}

@@ -34,5 +34,11 @@ jobs:
     - name: Run local security tests
       run: npx tsx scripts/test-security.ts
 
+    - name: Run template contract tests
+      run: npx tsx scripts/test-templates.ts
+
     - name: Build Next.js app
+      env:
+        NEXTAUTH_SECRET: 'ci-build-secret-32-chars-minimum-12345'
+        NEXTAUTH_URL: 'http://localhost:3000'
       run: npm run build

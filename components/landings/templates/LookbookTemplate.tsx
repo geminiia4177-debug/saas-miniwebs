@@ -121,7 +121,7 @@ export default function LookbookTemplate({ data }: TemplateProps) {
                 <div>
                   <h4 className="text-sm font-bold text-white leading-tight">{item.name}</h4>
                   <span className="text-xs text-indigo-300 font-bold tabular-nums">
-                    ${item.price}
+                    {String(item.price).startsWith("$") ? item.price : `$${item.price}`}
                   </span>
                 </div>
                 <button
@@ -177,7 +177,7 @@ export default function LookbookTemplate({ data }: TemplateProps) {
               <div>
                 <span className="text-[10px] text-slate-400 block uppercase font-bold">Precio</span>
                 <span className="text-2xl font-black text-white tabular-nums">
-                  ${selectedHotspot.price}
+                  {String(selectedHotspot.price).startsWith("$") ? selectedHotspot.price : `$${selectedHotspot.price}`}
                 </span>
               </div>
 

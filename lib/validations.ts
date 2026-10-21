@@ -66,6 +66,14 @@ const MenuCategoriaSchema = z.object({
   products: z.array(MenuProductSchema).max(100).optional().default([]),
 });
 
+const safeUrlOrEmpty = z
+  .string()
+  .max(500)
+  .refine(
+    (v) => !v || /^https?:\/\//i.test(v) || v.startsWith("/"),
+    "URL inválida (debe iniciar con https:// o http://)"
+  );
+
 const SectionConfigSchema = z.object({
   title: z.string().max(300).optional().nullable(),
   subtitle: z.string().max(500).optional().nullable(),
@@ -87,18 +95,18 @@ const SectionConfigSchema = z.object({
     required: z.boolean().optional(),
     options: z.array(z.string().max(100)).optional(),
   })).max(20).optional(),
-  youtubeUrl: z.union([z.string().max(500), z.literal("")]).optional().nullable(),
-  videoUrl: z.union([z.string().max(500), z.literal("")]).optional().nullable(),
+  youtubeUrl: safeUrlOrEmpty.optional().nullable(),
+  videoUrl: safeUrlOrEmpty.optional().nullable(),
   autoplay: z.boolean().optional(),
   showMap: z.boolean().optional(),
-  mapUrl: z.union([z.string().max(500), z.literal("")]).optional().nullable(),
+  mapUrl: safeUrlOrEmpty.optional().nullable(),
   address: z.string().max(500).optional().nullable(),
   showSocial: z.boolean().optional(),
   showWhatsapp: z.boolean().optional(),
   // Extra display options
   showPrices: z.boolean().optional(),
   showEmployees: z.boolean().optional(),
-  backgroundUrl: z.union([z.string().max(500), z.literal("")]).optional().nullable(),
+  backgroundUrl: safeUrlOrEmpty.optional().nullable(),
 }).passthrough();
 
 const SectionSchema = z.object({
@@ -171,16 +179,16 @@ const StorePaymentSchema = z.object({
   instruccionesAcordar: z.string().max(1000).optional().nullable(),
   mercadoPago: z.object({
     enabled: z.boolean().optional(),
-    paymentLink: z.string().max(500).optional().nullable(),
+    paymentLink: safeUrlOrEmpty.optional().nullable(),
     alias: z.string().max(100).optional().nullable(),
   }).optional(),
   stripe: z.object({
     enabled: z.boolean().optional(),
-    paymentLink: z.string().max(500).optional().nullable(),
+    paymentLink: safeUrlOrEmpty.optional().nullable(),
   }).optional(),
   paypal: z.object({
     enabled: z.boolean().optional(),
-    meLink: z.string().max(500).optional().nullable(),
+    meLink: safeUrlOrEmpty.optional().nullable(),
   }).optional(),
 });
 
@@ -234,7 +242,7 @@ const BiolinkItemSchema = z.object({
   id: z.string().max(100),
   title: z.string().max(200).optional(),
   titulo: z.string().max(200).optional(),
-  url: z.string().max(500),
+  url: safeUrlOrEmpty,
   icon: z.string().max(100).optional(),
   clicks: z.number().int().min(0).optional(),
   active: z.boolean().optional(),
@@ -252,8 +260,8 @@ export const LayoutConfigSchema = z.object({
   animationIntensity: z.string().max(50).optional().nullable(),
   onboarded: z.boolean().optional(),
   // Video and Links
-  videoUrl: z.string().max(500).optional().nullable(),
-  bookingUrl: z.string().max(500).optional().nullable(),
+  videoUrl: safeUrlOrEmpty.optional().nullable(),
+  bookingUrl: safeUrlOrEmpty.optional().nullable(),
   heroText: z.string().max(2000).optional().nullable(),
   heroSubtitle: z.string().max(500).optional().nullable(),
   heroBadge: z.string().max(100).optional().nullable(),
@@ -268,7 +276,7 @@ export const LayoutConfigSchema = z.object({
     y: z.number().min(0).max(100),
     label: z.string().max(200).optional(),
   })).max(50).optional(),
-  mapUrl: z.string().max(1000).optional().nullable(),
+  mapUrl: safeUrlOrEmpty.optional().nullable(),
   // Social links (URLs must be reasonable, no javascript: scheme)
   instagram: z.string().max(300).optional().nullable(),
   facebook: z.string().max(300).optional().nullable(),
@@ -292,7 +300,7 @@ export const LayoutConfigSchema = z.object({
   backgroundColor: z.union([z.string().regex(/^#[0-9a-fA-F]{3,8}$/).max(9), z.literal("")]).optional().nullable(),
   buttonStyle: z.string().max(50).optional().nullable(),
   backgroundType: z.string().max(50).optional().nullable(),
-  backgroundImageUrl: z.string().max(500).optional().nullable(),
+  backgroundImageUrl: safeUrlOrEmpty.optional().nullable(),
   reservaMesaActiva: z.boolean().optional(),
   // Menu
   menuCategorias: z.array(MenuCategoriaSchema).max(50).optional(),
@@ -313,15 +321,36 @@ export const LayoutConfigSchema = z.object({
   barberiaProducts: z.array(ProductItemSchema).max(100).optional(),
   clinicaServices: z.array(ServiceItemSchema).max(100).optional(),
   tallerServices: z.array(ServiceItemSchema).max(100).optional(),
-  canchaTarifas: z.array(ServiceItemSchema).max(100).optional(),
-  vehiculos: z.array(VehicleItemSchema).max(50).optional(),
-  lavaderoVehiculos: z.array(VehicleItemSchema).max(50).optional(),
-  canchas: z.array(CourtItemSchema).max(50).optional(),
-  especialidades: z.array(SpecialityItemSchema).max(50).optional(),
-  profesionalesConfig: z.array(ProfessionalItemSchema).max(50).optional(),
-  esteticaServices: z.array(ServiceItemSchema).max(50).optional(),
+  canchaTarifas: z.any().optional(),
+  vehiculos: z.any().optional(),
+  lavaderoVehiculos: z.any().optional(),
+  canchas: z.any().optional(),
+  especialidades: z.any().optional(),
+  profesionalesConfig: z.any().optional(),
+  esteticaServices: z.any().optional(),
   products: z.array(ProductItemSchema).max(100).optional(),
   items: z.array(ServiceItemSchema).max(100).optional(),
+  planes: z.any().optional().nullable(),
+  gimnasioPlanes: z.any().optional().nullable(),
+  clases: z.any().optional().nullable(),
+  gimnasioClases: z.any().optional().nullable(),
+  entrenadores: z.any().optional().nullable(),
+  productos: z.any().optional().nullable(),
+  pilares: z.any().optional().nullable(),
+  precios: z.any().optional().nullable(),
+  coberturas: z.any().optional().nullable(),
+  aboutText: z.string().max(5000).optional().nullable(),
+  aboutImage: safeUrlOrEmpty.optional().nullable(),
+  heroImage: safeUrlOrEmpty.optional().nullable(),
+  servicios: z.any().optional().nullable(),
+  testimonios: z.any().optional().nullable(),
+  testimonials: z.any().optional().nullable(),
+  quoteText: z.string().max(2000).optional().nullable(),
+  quoteImage: safeUrlOrEmpty.optional().nullable(),
+  founderName: z.string().max(200).optional().nullable(),
+  gallery: z.any().optional().nullable(),
+  flyersUsage: z.any().optional().nullable(),
+  kdsToken: z.string().max(200).optional().nullable(),
   // Delivery
   deliveryRadio: z.number().min(0).max(1000).optional(),
   modosDisponibles: z.array(z.string().max(50)).max(10).optional(),
@@ -353,15 +382,15 @@ export const LayoutConfigSchema = z.object({
   fontFamily: z.string().max(200).optional().nullable(),
   videoTitle: z.string().max(300).optional().nullable(),
   videoDescription: z.string().max(2000).optional().nullable(),
-  youtubeUrl: z.union([z.string().max(500), z.literal("")]).optional().nullable(),
+  youtubeUrl: safeUrlOrEmpty.optional().nullable(),
   // Biolinks and Stats configuration
   biolinks: z.object({
     title: z.string().max(200).optional().nullable(),
     description: z.string().max(500).optional().nullable(),
-    avatarUrl: z.string().max(500).optional().nullable(),
+    avatarUrl: safeUrlOrEmpty.optional().nullable(),
     theme: z.string().max(50).optional().nullable(),
     links: z.array(BiolinkItemSchema).max(100).optional(),
-  }).optional().nullable(),
+  }).passthrough().optional().nullable(),
   stats: z.record(z.string(), z.union([z.number(), z.string(), z.boolean()])).optional().nullable(),
 }).passthrough();
 

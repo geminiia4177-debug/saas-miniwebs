@@ -7,6 +7,24 @@ import { prisma } from "@/lib/db";
  * This limits traffic globally across all deployment instances.
  */
 
+export function getClientIp(req: Request): string {
+  const directIp =
+    req.headers.get("x-real-ip") ||
+    req.headers.get("cf-connecting-ip") ||
+    req.headers.get("x-vercel-forwarded-for");
+  if (directIp) return directIp.trim();
+
+  const forwarded = req.headers.get("x-forwarded-for");
+  if (forwarded) {
+    const parts = forwarded.split(",").map((p) => p.trim()).filter(Boolean);
+    if (parts.length > 0) {
+      return parts[parts.length - 1];
+    }
+  }
+
+  return "127.0.0.1";
+}
+
 export async function checkRateLimit(
   key: string,
   maxRequests: number,
@@ -17,37 +35,19 @@ export async function checkRateLimit(
   const expiresAt = new Date(now.getTime() + windowMs);
 
   try {
-    // 1. Transactional rate limit check with window reset
-    const record = await prisma.$transaction(async (tx) => {
-      const existing = await tx.rateLimit.findUnique({
-        where: { key },
-      });
+    const result = await prisma.$queryRaw<Array<{ count: number }>>`
+      INSERT INTO "RateLimit" ("id", "key", "count", "expiresAt")
+      VALUES (gen_random_uuid()::text, ${key}, 1, ${expiresAt})
+      ON CONFLICT ("key") DO UPDATE
+      SET "count" = CASE WHEN "RateLimit"."expiresAt" < NOW() THEN 1 ELSE "RateLimit"."count" + 1 END,
+          "expiresAt" = CASE WHEN "RateLimit"."expiresAt" < NOW() THEN ${expiresAt} ELSE "RateLimit"."expiresAt" END
+      RETURNING "count";
+    `;
 
-      if (!existing || existing.expiresAt < now) {
-        return await tx.rateLimit.upsert({
-          where: { key },
-          create: {
-            key,
-            count: 1,
-            expiresAt,
-          },
-          update: {
-            count: 1,
-            expiresAt,
-          },
-        });
-      }
-
-      return await tx.rateLimit.update({
-        where: { key },
-        data: {
-          count: { increment: 1 },
-        },
-      });
-    });
+    const count = result?.[0]?.count ?? 1;
 
     // 2. Evaluate limit
-    if (record.count > maxRequests) {
+    if (count > maxRequests) {
       return false;
     }
     return true;

@@ -56,3 +56,93 @@ export function getPublicUrl(
   const qs = params.toString() ? `?${params.toString()}` : "";
   return `https://${domain}${cleanPath}${qs}`;
 }
+
+export function sanitizeHttpUrl(input?: string | null, fallback = ""): string {
+  if (typeof input !== "string") return fallback;
+  const trimmed = input.trim();
+  if (!trimmed) return fallback;
+
+  // Relative path starting with / but not protocol-relative //
+  if (trimmed.startsWith("/") && !trimmed.startsWith("//")) {
+    return trimmed;
+  }
+
+  // Reject dangerous pseudo-protocols
+  if (/^(javascript|data|vbscript):/i.test(trimmed)) {
+    return fallback;
+  }
+
+  try {
+    const parsed = new URL(trimmed);
+    if (["https:", "http:", "mailto:", "tel:"].includes(parsed.protocol)) {
+      return trimmed;
+    }
+  } catch {
+    if (/^(https?|mailto|tel):/i.test(trimmed)) {
+      return trimmed;
+    }
+  }
+
+  return fallback;
+}
+
+export function sanitizeEmbedUrl(
+  input?: string | null,
+  allowedHosts: string[] = ["www.google.com", "maps.google.com", "open.spotify.com"]
+): string | null {
+  if (typeof input !== "string" || !input.trim()) return null;
+  try {
+    const parsed = new URL(input.trim());
+    if (parsed.protocol !== "https:") return null;
+    if (allowedHosts.includes(parsed.hostname)) {
+      return parsed.toString();
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export function isSafeExternalImageUrl(input?: string | null): boolean {
+  if (typeof input !== "string" || !input.trim()) return false;
+  try {
+    const parsed = new URL(input.trim());
+    if (parsed.protocol !== "https:") return false;
+
+    const host = parsed.hostname.toLowerCase();
+
+    // Reject localhost and loopback/link-local/metadata
+    if (
+      host === "localhost" ||
+      host === "127.0.0.1" ||
+      host === "0.0.0.0" ||
+      host === "169.254.169.254"
+    ) {
+      return false;
+    }
+
+    // Reject private IP ranges
+    if (
+      /^10\./.test(host) ||
+      /^192\.168\./.test(host) ||
+      /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(host)
+    ) {
+      return false;
+    }
+
+    // Validate hostname ends with allowed domains
+    const allowedSuffixes = ["ibb.co", "unsplash.com", "pollinations.ai", "supabase.co"];
+    const isAllowed = allowedSuffixes.some(
+      (suffix) => host === suffix || host.endsWith("." + suffix)
+    );
+
+    return isAllowed;
+  } catch {
+    return false;
+  }
+}
+
+export function sanitizeCssToken(input?: string | null, fallback = ""): string {
+  return String(input || fallback).replace(/[<>{};"'`\\]/g, "").trim();
+}
+

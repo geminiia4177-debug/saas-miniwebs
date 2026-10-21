@@ -374,14 +374,40 @@ export default function ManagementTabs({
       {/* ── TURNOS ── */}
       {tab === "appointments" && (
         <div className="p-8 animate-fadeIn">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
             <div>
               <h1 className="text-2xl font-extrabold text-white tracking-tight mb-0.5">Mis Turnos</h1>
               <p className="text-sm text-slate-500">{pending.length} pendiente{pending.length !== 1 ? "s" : ""} de confirmación</p>
             </div>
-            <button onClick={() => setManualModalOpen(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-white transition-opacity hover:opacity-80" style={{ background: "linear-gradient(135deg,#6366f1,#a855f7)" }}>
-              <Ico n="plus" s={14} /> Nuevo Turno Manual
-            </button>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center p-1 rounded-xl bg-white/5 border border-white/10 text-xs font-bold">
+                <button
+                  type="button"
+                  onClick={() => setApptsViewMode("list")}
+                  className={`px-3 py-1.5 rounded-lg transition-colors ${
+                    apptsViewMode === "list"
+                      ? "bg-[#6366F1] text-white shadow-sm"
+                      : "text-slate-400 hover:text-white"
+                  }`}
+                >
+                  📋 Lista
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setApptsViewMode("calendar")}
+                  className={`px-3 py-1.5 rounded-lg transition-colors ${
+                    apptsViewMode === "calendar"
+                      ? "bg-[#6366F1] text-white shadow-sm"
+                      : "text-slate-400 hover:text-white"
+                  }`}
+                >
+                  📅 Calendario
+                </button>
+              </div>
+              <button onClick={() => setManualModalOpen(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-white transition-opacity hover:opacity-80" style={{ background: "linear-gradient(135deg,#6366f1,#a855f7)" }}>
+                <Ico n="plus" s={14} /> Nuevo Turno Manual
+              </button>
+            </div>
           </div>
 
           {appointments.length === 0 ? (
@@ -425,8 +451,8 @@ export default function ManagementTabs({
                         </p>
                       )}
                     </div>
-                    {a.clientphone && (
-                      <a href={`tel:${a.clientphone}`} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:text-white transition-colors flex-shrink-0" style={{ background: "rgba(255,255,255,0.04)" }}>
+                    {(a.clientPhone || (a as any).clientphone) && (
+                      <a href={`tel:${a.clientPhone || (a as any).clientphone}`} className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:text-white transition-colors flex-shrink-0" style={{ background: "rgba(255,255,255,0.04)" }}>
                         <Ico n="phone" s={14} />
                       </a>
                     )}
@@ -1023,7 +1049,17 @@ export default function ManagementTabs({
                     <div className="flex items-center gap-0 rounded-xl overflow-hidden border border-white/10 focus-within:border-indigo-500/50 transition-colors">
                       <span className="px-3 py-2.5 text-xs text-slate-500 bg-white/5 border-r border-white/10 whitespace-nowrap">{prefix}</span>
                       <input type="text" value={(biz as any)[key] || ""} placeholder={ph}
-                        onChange={e => setBiz((prev: any) => prev ? { ...prev, [key]: e.target.value } : prev)}
+                        onChange={e => {
+                          const val = e.target.value;
+                          setBiz((prev: any) => prev ? {
+                            ...prev,
+                            [key]: val,
+                            layoutConfig: {
+                              ...(prev.layoutConfig || {}),
+                              [key]: val,
+                            }
+                          } : prev);
+                        }}
                         className="flex-1 px-3 py-2.5 text-sm text-white bg-transparent focus:outline-none" />
                     </div>
                   </div>

@@ -3,6 +3,7 @@
 import React from "react";
 import Image from "next/image";
 import { Ico } from "@/lib/constants";
+import { sanitizeEmbedUrl, sanitizeHttpUrl } from "@/lib/urls";
 
 function formatExternalUrl(url?: string): string {
   if (!url) return "#";
@@ -56,11 +57,14 @@ export default function LinkButton({
     if (spotifyEmbedUrl && !spotifyEmbedUrl.includes("/embed/")) {
       spotifyEmbedUrl = spotifyEmbedUrl.replace("spotify.com/", "spotify.com/embed/");
     }
+    const safeSpotifyUrl = sanitizeEmbedUrl(spotifyEmbedUrl, ["open.spotify.com"]);
+    if (!safeSpotifyUrl) return null;
+
     return (
       <div className="w-full relative animate-slideUp motion-reduce:animate-none">
         <iframe 
           style={{ borderRadius: buttonStyle === "square" ? "8px" : "12px" }}
-          src={spotifyEmbedUrl} 
+          src={safeSpotifyUrl} 
           width="100%" 
           height="152" 
           frameBorder="0" 
@@ -98,7 +102,7 @@ export default function LinkButton({
 
   return (
     <a
-      href={formatExternalUrl(item.url)}
+      href={sanitizeHttpUrl(formatExternalUrl(item.url), "#")}
       target="_blank"
       rel="noopener noreferrer"
       aria-label={item.label}

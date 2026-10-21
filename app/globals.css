@@ -67,7 +67,7 @@
   --glass-surface: color-mix(in oklab, #11141B 72%, transparent);
 
   /* Typography Scale */
-  --font-display: clamp(2.5rem, 5vw, 4rem);
+  --text-display: clamp(2.5rem, 5vw, 4rem);
   --font-h1: clamp(2rem, 4vw, 3rem);
   --font-h2: clamp(1.5rem, 3vw, 2rem);
   --font-h3: 1.25rem;
@@ -200,4 +200,18 @@ body {
   outline: 2px solid var(--accent, #7C6CFF);
   outline-offset: 2px;
   border-radius: 6px;
+}
+
+/* Prevención de auto-zoom en iOS Safari al enfocar inputs */
+@media screen and (max-width: 768px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Utilidad para barras inferiores fijas en iPhone (Home Indicator) */
+.pb-safe-bottom {
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
 }

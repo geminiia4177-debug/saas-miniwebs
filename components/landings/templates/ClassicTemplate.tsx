@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { BusinessDataContract } from "@/lib/templates/contract";
 import { getThemeDefinition, generateThemeVariables, getOptimalTextColor } from "@/lib/templates/themes";
 import VideoSection from "@/components/ui/VideoSection";
+import { formatSocialUrl } from "@/components/landings/biolinks/utils";
 
 export interface TemplateProps {
   data: BusinessDataContract;
@@ -49,9 +50,9 @@ export default function ClassicTemplate({ data, bookingElement }: TemplateProps)
   const isBusinessOpenNow = () => {
     try {
       const now = new Date();
-      const days = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+      const days = ["domingo", "lunes", "martes", "miercoles", "jueves", "viernes", "sabado"];
       const currentDayKey = days[now.getDay()];
-      const todaySchedule = schedule.find(s => s.day === currentDayKey);
+      const todaySchedule = schedule.find(s => s.day === currentDayKey || s.day === ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"][now.getDay()]);
       if (!todaySchedule || !todaySchedule.enabled) return { open: false, text: "Cerrado hoy • Turnos online" };
 
       const [openH, openM] = todaySchedule.open.split(":").map(Number);
@@ -524,17 +525,17 @@ export default function ClassicTemplate({ data, bookingElement }: TemplateProps)
         <div className="max-w-6xl mx-auto space-y-4">
           <div className="flex items-center justify-center gap-4">
             {social.instagram && (
-              <a href={social.instagram} target="_blank" rel="noopener noreferrer" className="hover:opacity-75">
+              <a href={formatSocialUrl("instagram", social.instagram)} target="_blank" rel="noopener noreferrer" className="hover:opacity-75">
                 Instagram
               </a>
             )}
             {social.facebook && (
-              <a href={social.facebook} target="_blank" rel="noopener noreferrer" className="hover:opacity-75">
+              <a href={formatSocialUrl("facebook", social.facebook)} target="_blank" rel="noopener noreferrer" className="hover:opacity-75">
                 Facebook
               </a>
             )}
             {social.tiktok && (
-              <a href={social.tiktok} target="_blank" rel="noopener noreferrer" className="hover:opacity-75">
+              <a href={formatSocialUrl("tiktok", social.tiktok)} target="_blank" rel="noopener noreferrer" className="hover:opacity-75">
                 TikTok
               </a>
             )}

@@ -43,12 +43,12 @@ export default function BookingModal({
   return (
     <div
       className={`fixed inset-0 z-50 flex items-end md:items-center justify-center bg-black/60 backdrop-blur-sm transition-opacity duration-300 ${
-        isOpen ? "opacity-100" : "opacity-0"
+        isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
       }`}
       onTransitionEnd={handleAnimationEnd}
     >
       <div
-        className={`w-full md:max-w-lg md:rounded-2xl max-h-[90vh] overflow-y-auto transform transition-transform duration-300 ${
+        className={`w-full md:max-w-lg md:rounded-2xl max-h-[90dvh] overflow-y-auto transform transition-transform duration-300 ${
           isOpen ? "translate-y-0 scale-100" : "translate-y-full md:translate-y-0 md:scale-95"
         } ${theme === "dark" ? "bg-[#1A1A1A] text-white" : "bg-white text-black"}`}
       >

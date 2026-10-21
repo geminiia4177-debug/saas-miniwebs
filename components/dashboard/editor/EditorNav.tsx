@@ -115,7 +115,7 @@ export const EditorNav: React.FC<EditorNavProps> = ({
       </aside>
 
       {/* ── MOBILE BOTTOM NAVIGATION (4 touch targets) ── */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-surface-1/95 backdrop-blur-md border-t border-border-default px-2 py-1.5 flex items-center justify-around">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#11131A]/95 backdrop-blur-xl border-t border-white/10 px-2 py-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom))] flex items-center justify-around">
         {navItems.map((item) => {
           const isActive = activeTab === item.id;
           return (

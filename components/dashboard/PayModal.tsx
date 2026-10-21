@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { Biz, Ico } from "@/lib/constants";
+import { uploadImage } from "@/lib/utils/upload";
 
 interface PayModalProps {
   biz: Biz;
@@ -11,6 +12,28 @@ interface PayModalProps {
 
 export default function PayModal({ biz, open, onClose }: PayModalProps) {
   const [payStatus, setPayStatus] = useState<"idle" | "sending" | "sent">("idle");
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setPayStatus("sending");
+    try {
+      const uploadedUrl = await uploadImage(file, biz.id);
+      await fetch("/api/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          businessId: biz.id,
+          content: `🧾 Comprobante de pago adjunto: ${uploadedUrl}`,
+        }),
+      });
+      setPayStatus("sent");
+    } catch {
+      alert("Error al subir el comprobante. Por favor intenta de nuevo.");
+      setPayStatus("idle");
+    }
+  };
 
   if (!open) return null;
 
@@ -76,12 +99,7 @@ export default function PayModal({ biz, open, onClose }: PayModalProps) {
                   <p className="mb-1 text-sm text-slate-300 font-semibold">Click para subir comprobante</p>
                   <p className="text-xs text-slate-500">PNG, JPG o PDF</p>
                 </div>
-                <input type="file" className="hidden" accept="image/*,.pdf" onChange={(e) => {
-                  if (e.target.files?.length) {
-                    setPayStatus("sending");
-                    setTimeout(() => setPayStatus("sent"), 2000);
-                  }
-                }} />
+                <input type="file" className="hidden" accept="image/*,.pdf" onChange={handleFileUpload} />
               </label>
             </div>
           )}

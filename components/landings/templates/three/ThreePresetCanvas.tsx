@@ -46,7 +46,6 @@ export default function ThreePresetCanvas({
 }: ThreePresetCanvasProps) {
   const mountRef = useRef<HTMLDivElement>(null);
   const [hasWebGL, setHasWebGL] = useState<boolean>(true);
-  const [reducedMotion, setReducedMotion] = useState<boolean>(false);
 
   useEffect(() => {
     // 1. Check WebGL support
@@ -55,14 +54,21 @@ export default function ThreePresetCanvas({
       return;
     }
 
-    // 2. Check prefers-reduced-motion
-    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setReducedMotion(mediaQuery.matches);
-    const handleMotionChange = (e: MediaQueryListEvent) => setReducedMotion(e.matches);
-    mediaQuery.addEventListener("change", handleMotionChange);
+    // 2. Check prefers-reduced-motion & compact viewport
+    const reducedMotion = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const isCompact = typeof window !== "undefined" && window.innerWidth <= 768;
 
     const container = mountRef.current;
     if (!container) return;
+
+    // Observe visibility to pause rendering when offscreen
+    let isVisible = true;
+    const intersectionObserver = new IntersectionObserver((entries) => {
+      if (entries[0]) {
+        isVisible = entries[0].isIntersecting;
+      }
+    });
+    intersectionObserver.observe(container);
 
     // 3. Three.js Scene Setup
     let animationFrameId: number;
@@ -118,7 +124,9 @@ export default function ThreePresetCanvas({
 
     // ── PRESET 1: FLOW (Wave Plane) ──
     if (preset === "flow") {
-      const geometry = new THREE.PlaneGeometry(60, 45, 48, 48);
+      const geometry = isCompact
+        ? new THREE.PlaneGeometry(16, 10, 24, 24)
+        : new THREE.PlaneGeometry(60, 45, 48, 48);
       const positionAttribute = geometry.attributes.position;
       const initialPositions = positionAttribute.array.slice();
 
@@ -327,7 +335,7 @@ export default function ThreePresetCanvas({
 
       updatePreset(elapsedTime, mouse);
 
-      if (renderer) {
+      if (renderer && isVisible && !document.hidden) {
         renderer.render(scene, camera);
       }
     };
@@ -339,7 +347,7 @@ export default function ThreePresetCanvas({
       cancelAnimationFrame(animationFrameId);
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("resize", handleResize);
-      mediaQuery.removeEventListener("change", handleMotionChange);
+      intersectionObserver.disconnect();
       resizeObserver.disconnect();
 
       cleanupCallbacks.forEach((fn) => fn());
@@ -354,7 +362,7 @@ export default function ThreePresetCanvas({
         }
       }
     };
-  }, [preset, primaryColor, secondaryColor, intensity, reducedMotion]);
+  }, [preset, primaryColor, secondaryColor, intensity]);
 
   // If WebGL is unavailable, render an ultra-rich CSS gradient fallback
   if (!hasWebGL) {

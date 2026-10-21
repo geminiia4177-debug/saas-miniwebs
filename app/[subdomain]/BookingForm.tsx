@@ -67,6 +67,8 @@ export default function BookingForm({ businessId, primaryColor, secondaryColor, 
   const [slotsFetched, setSlotsFetched] = useState(false);
   const [calendarDays, setCalendarDays] = useState<Date[]>([]);
   const [bankDetails, setBankDetails] = useState<string | null>(null);
+  const [bizPhone, setBizPhone] = useState<string | null>(null);
+  const [copiedBank, setCopiedBank] = useState(false);
 
   const isDark = theme === "dark";
   const pColor = primaryColor || "#4f46e5";
@@ -82,8 +84,13 @@ export default function BookingForm({ businessId, primaryColor, secondaryColor, 
       fetch(`/api/businesses/${businessId}`)
         .then(res => res.json())
         .then(data => {
-          if (data?.hasBankDetails || data?.layoutConfig?.bankDetails) {
-            setBankDetails(data.hasBankDetails ? 'enabled' : data.layoutConfig.bankDetails);
+          if (data?.bankDetails || data?.layoutConfig?.bankDetails) {
+            setBankDetails(data.bankDetails || data.layoutConfig?.bankDetails);
+          } else if (data?.hasBankDetails) {
+            setBankDetails("Datos bancarios disponibles al agendar");
+          }
+          if (data?.whatsapp || data?.phone) {
+            setBizPhone(data.whatsapp || data.phone);
           }
         })
         .catch(() => {});
@@ -132,24 +139,7 @@ export default function BookingForm({ businessId, primaryColor, secondaryColor, 
   }, [form.date, form.serviceName, form.employeeId, businessId]);
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let val = e.target.value.replace(/\D/g, "");
-    if (val.length > 0 && !val.startsWith("54")) {
-      val = "54" + val;
-    }
-    let formatted = val;
-    if (val.length > 2) {
-      formatted = "+" + val.substring(0, 2) + " " + val.substring(2);
-    }
-    if (val.length > 3) {
-      formatted = "+" + val.substring(0, 2) + " " + val.substring(2, 3) + " " + val.substring(3);
-    }
-    if (val.length > 5) {
-      formatted = "+" + val.substring(0, 2) + " " + val.substring(2, 3) + " " + val.substring(3, 5) + " " + val.substring(5);
-    }
-    if (val.length > 9) {
-      formatted = "+" + val.substring(0, 2) + " " + val.substring(2, 3) + " " + val.substring(3, 5) + " " + val.substring(5, 9) + "-" + val.substring(9, 13);
-    }
-    setForm({ ...form, phone: formatted.substring(0, 19) });
+    setForm({ ...form, phone: e.target.value });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -519,13 +509,13 @@ export default function BookingForm({ businessId, primaryColor, secondaryColor, 
                 autoComplete="tel"
                 value={form.phone}
                 onChange={handlePhoneChange}
-                placeholder="+52 55 1234 5678" 
+                placeholder="+54 9 11 1234-5678" 
                 className={inputClass} 
               />
             </div>
 
             {bankDetails && (
-              <div>
+              <div className="space-y-3">
                 <label className={labelClass}><CheckCircle2 className="w-4 h-4" /> Forma de Pago / Seña</label>
                 <div className="grid grid-cols-2 gap-3">
                   <button
@@ -555,6 +545,38 @@ export default function BookingForm({ businessId, primaryColor, secondaryColor, 
                     <span className={`block text-xs mt-1 ${isDark ? "text-white/50" : "text-slate-500"}`}>Seña para confirmar</span>
                   </button>
                 </div>
+
+                {form.paymentMethod === 'TRANSFER' && (
+                  <div
+                    className="p-3.5 rounded-xl border text-xs"
+                    style={{
+                      backgroundColor: "rgba(99,102,241,0.08)",
+                      borderColor: "rgba(99,102,241,0.25)",
+                    }}
+                  >
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="font-bold text-indigo-300 flex items-center gap-1.5">
+                        <span>🏦</span> Datos de Transferencia
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (typeof navigator !== "undefined" && navigator.clipboard) {
+                            navigator.clipboard.writeText(bankDetails);
+                            setCopiedBank(true);
+                            setTimeout(() => setCopiedBank(false), 2000);
+                          }
+                        }}
+                        className="px-2.5 py-1 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 font-bold text-[11px] transition-colors"
+                      >
+                        {copiedBank ? "✓ Copiado" : "Copiar CBU/Alias"}
+                      </button>
+                    </div>
+                    <p className={`whitespace-pre-line font-mono text-xs ${isDark ? "text-slate-200" : "text-slate-700"}`}>
+                      {bankDetails}
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 
@@ -568,7 +590,7 @@ export default function BookingForm({ businessId, primaryColor, secondaryColor, 
               </button>
               <button 
                 onClick={handleSubmit}
-                disabled={loading || !form.name || form.phone.length < 10}
+                disabled={loading || !form.name || form.phone.length < 8}
                 className="flex-1 py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-transform active:scale-[0.98] disabled:opacity-50 relative overflow-hidden group"
                 style={{ backgroundColor: pColor, color: isDark ? "#000" : "#fff" }}
               >
@@ -584,11 +606,18 @@ export default function BookingForm({ businessId, primaryColor, secondaryColor, 
             </div>
             
             {/* WhatsApp Fallback */}
-            <div className="text-center mt-6">
-              <a href="#" className={`text-xs font-bold uppercase tracking-widest hover:underline ${isDark ? "text-white/40 hover:text-white" : "text-slate-400 hover:text-slate-700"}`}>
-                O reservar por WhatsApp
-              </a>
-            </div>
+            {bizPhone ? (
+              <div className="text-center mt-6">
+                <a
+                  href={`https://wa.me/${bizPhone.replace(/\D/g, "")}?text=${encodeURIComponent("Hola! Quiero consultar por un turno.")}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`text-xs font-bold uppercase tracking-widest hover:underline ${isDark ? "text-white/40 hover:text-white" : "text-slate-400 hover:text-slate-700"}`}
+                >
+                  O reservar por WhatsApp
+                </a>
+              </div>
+            ) : null}
 
           </div>
         )}

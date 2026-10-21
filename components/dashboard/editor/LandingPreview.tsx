@@ -6,7 +6,7 @@ import TemplateRenderer from "@/components/landings/templates/TemplateRenderer";
 import EditModeWrapper from "@/components/landings/EditModeWrapper";
 import { IframePreview } from "./IframePreview";
 import { resolveTemplateKind } from "@/lib/templates/resolver";
-import { getPublicUrl } from "@/lib/urls";
+import { getPublicUrl, sanitizeCssToken } from "@/lib/urls";
 
 import BarberiaTemplate from "@/components/landings/BarberiaTemplate";
 import CanchaTemplate from "@/components/landings/CanchaTemplate";
@@ -44,6 +44,7 @@ export const LandingPreview = ({
   // Escuchar mensajes de click-to-edit si se provee callback
   useEffect(() => {
     const handleMsg = (e: MessageEvent) => {
+      if (e.origin !== window.location.origin) return;
       if (e.data?.type === "EDIT_SECTION" && onSelectSection) {
         onSelectSection(e.data.section);
       }
@@ -163,15 +164,15 @@ export const LandingPreview = ({
       <div className="w-full min-h-screen bg-transparent select-text">
         <style>{`
           :root, html, body {
-            --mw-font-title: ${titleFont} !important;
-            --mw-font-subtitle: ${subtitleFont} !important;
-            --mw-font-body: ${bodyFont} !important;
-            ${cardBg ? `--mw-surface: ${cardBg} !important;` : ''}
-            ${borderCol ? `--mw-border: ${borderCol} !important;` : ''}
-            ${textCol ? `--mw-text-primary: ${textCol} !important;` : ''}
-            ${textMutedCol ? `--mw-text-muted: ${textMutedCol} !important;` : ''}
-            ${buttonBg ? `--mw-button-bg: ${buttonBg} !important;` : ''}
-            ${buttonText ? `--mw-button-text: ${buttonText} !important;` : ''}
+            --mw-font-title: ${sanitizeCssToken(titleFont)} !important;
+            --mw-font-subtitle: ${sanitizeCssToken(subtitleFont)} !important;
+            --mw-font-body: ${sanitizeCssToken(bodyFont)} !important;
+            ${cardBg ? `--mw-surface: ${sanitizeCssToken(cardBg)} !important;` : ''}
+            ${borderCol ? `--mw-border: ${sanitizeCssToken(borderCol)} !important;` : ''}
+            ${textCol ? `--mw-text-primary: ${sanitizeCssToken(textCol)} !important;` : ''}
+            ${textMutedCol ? `--mw-text-muted: ${sanitizeCssToken(textMutedCol)} !important;` : ''}
+            ${buttonBg ? `--mw-button-bg: ${sanitizeCssToken(buttonBg)} !important;` : ''}
+            ${buttonText ? `--mw-button-text: ${sanitizeCssToken(buttonText)} !important;` : ''}
           }
         `}</style>
         {renderContent()}

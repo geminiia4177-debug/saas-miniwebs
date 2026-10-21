@@ -19,6 +19,7 @@ export async function generateMetadata({ params }: { params: Promise<{ subdomain
     },
     select: {
       name: true,
+      description: true,
       logoUrl: true,
       customDomain: true,
       status: true,
@@ -33,9 +34,12 @@ export async function generateMetadata({ params }: { params: Promise<{ subdomain
 
   if (!linksConfig || !linksConfig.active) return {};
 
-  const title = linksConfig.title || `${biz.name} | Enlaces`;
-  const description = linksConfig.subtitle || `Enlaces oficiales de ${biz.name}`;
-  const image = linksConfig.coverUrl || linksConfig.profileUrl || biz.logoUrl;
+  const profileTitle = linksConfig.title || linksConfig.profileTitle;
+  const profileBio = linksConfig.subtitle || linksConfig.description || linksConfig.profileBio || biz.description;
+  const avatar = linksConfig.avatarUrl || linksConfig.coverUrl || linksConfig.profileUrl || biz.logoUrl;
+
+  const title = `${profileTitle || biz.name} | Enlaces Oficiales`;
+  const description = profileBio || biz.description || `Enlaces oficiales de ${biz.name}`;
 
   return {
     title,
@@ -45,13 +49,13 @@ export async function generateMetadata({ params }: { params: Promise<{ subdomain
       description,
       url: getPublicUrl(biz, { path: "/links" }),
       siteName: biz.name,
-      images: image ? [{ url: image }] : [],
+      images: avatar ? [{ url: avatar }] : [],
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
-      images: image ? [image] : [],
+      images: avatar ? [avatar] : [],
     },
   };
 }
@@ -78,6 +82,7 @@ export default async function BiolinksPage({ params }: { params: Promise<{ subdo
       name: true,
       subdomain: true,
       customDomain: true,
+      phone: true,
       status: true,
       logoUrl: true,
       primaryColor: true,
@@ -92,9 +97,20 @@ export default async function BiolinksPage({ params }: { params: Promise<{ subdo
     return notFound();
   }
   
-  // Public biolinks page consumes publishedConfig
+  // Public biolinks page consumes publishedConfig (safe subset)
   const published = (bizData.publishedConfig as any) || {};
-  const biz: any = { ...bizData, layoutConfig: published };
+  const biz: any = {
+    ...bizData,
+    layoutConfig: {
+      biolinks: published.biolinks || null,
+      phone: published.phone || bizData.phone || "",
+      whatsapp: published.whatsapp || bizData.phone || "",
+      email: published.email || "",
+      instagram: published.instagram || "",
+      facebook: published.facebook || "",
+      tiktok: published.tiktok || "",
+    },
+  };
 
   // If biolinks is not active, return 404
   const config = published?.biolinks;

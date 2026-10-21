@@ -27,7 +27,7 @@ export async function requireBusinessOwner(businessId: string) {
 
   const business = await prisma.business.findUnique({
     where: { id: businessId },
-    select: { id: true, userId: true, customDomain: true }
+    select: { id: true, userId: true, customDomain: true, layoutConfig: true }
   });
 
   if (!business) {

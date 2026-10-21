@@ -81,6 +81,7 @@ export const IframePreview = forwardRef<HTMLIFrameElement, IframePreviewProps>(
         // Reenviar mensajes de postMessage desde el iframe hacia la ventana principal
         if (iframe.contentWindow) {
           iframe.contentWindow.addEventListener("message", (event) => {
+            if (event.origin !== window.location.origin) return;
             if (event.data?.type === "EDIT_SECTION") {
               const targetOrigin = window.location.origin || "*";
               window.postMessage(event.data, targetOrigin);

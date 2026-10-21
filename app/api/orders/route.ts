@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireSession, requireBusinessOwner } from "@/lib/auth-helpers";
-import { checkRateLimit, getRateLimitRetryAfterMs } from "@/lib/rate-limit";
+import { checkRateLimit, getRateLimitRetryAfterMs, getClientIp } from "@/lib/rate-limit";
 import { normalizePhoneToE164 } from "@/lib/phone";
 import { decryptSecret } from "@/lib/encryption";
 import { z } from "zod";
@@ -52,7 +52,7 @@ const OrderStatusEnum = z.enum(["PENDING", "CONFIRMED", "COMPLETED", "CANCELLED"
 // ─── POST: CREATE ORDER ────────────────────────────────────────────────────────
 export async function POST(req: Request) {
   try {
-    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const ip = getClientIp(req);
     const body = await req.json();
     const { businessId } = body;
 
@@ -90,7 +90,7 @@ export async function POST(req: Request) {
     // Verify business exists and is not blocked
     const business = await prisma.business.findUnique({
       where: { id: data.businessId },
-      select: { layoutConfig: true, status: true, phone: true, callMeBotApiKey: true, name: true },
+      select: { layoutConfig: true, publishedConfig: true, status: true, phone: true, callMeBotApiKey: true, name: true },
     });
     if (!business) {
       return NextResponse.json({ error: "Negocio no encontrado" }, { status: 404 });
@@ -103,7 +103,7 @@ export async function POST(req: Request) {
     }
 
     // P1-018: Build server-authoritative product catalog
-    const layoutConfig: any = business.layoutConfig || {};
+    const layoutConfig: any = business.publishedConfig || business.layoutConfig || {};
     const validProducts = new Map<string, { nombre: string; precio: number }>();
 
     // 1. Menu Categorias
@@ -241,7 +241,7 @@ export async function POST(req: Request) {
       data: {
         businessId: data.businessId,
         tableId: actualTableId,
-        type: data.deliveryType || (data.type === "MESA" ? "LOCAL" : data.type),
+        type: (data.type === "MESA" || data.deliveryType === "MESA" || actualTableId) ? "MESA" : (data.deliveryType || data.type),
         status: "PENDING",
         items: finalItems,
         total: calculatedTotal, // <-- server-calculated, never client-submitted
@@ -363,31 +363,46 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     let businessId = searchParams.get("businessId");
+    const token = searchParams.get("token");
 
-    // Authentication required
-    const { session, error: sessionError } = await requireSession();
-    if (sessionError) return sessionError;
-
-    if (!businessId) {
-      const business = await prisma.business.findFirst({
-        where: { userId: session.user.id },
-        select: { id: true },
+    let isKdsAuthorized = false;
+    if (businessId && token) {
+      const biz = await prisma.business.findUnique({
+        where: { id: businessId },
+        select: { layoutConfig: true },
       });
-      if (!business) {
-        return NextResponse.json({ error: "Negocio no encontrado" }, { status: 404 });
+      const kdsToken = (biz?.layoutConfig as any)?.kdsToken;
+      if (kdsToken && kdsToken === token) {
+        isKdsAuthorized = true;
       }
-      businessId = business.id;
     }
 
-    // Ensure the logged-in user owns this business
-    const { error: authError } = await requireBusinessOwner(businessId);
-    if (authError) return authError;
+    if (!isKdsAuthorized) {
+      // Authentication required
+      const { session, error: sessionError } = await requireSession();
+      if (sessionError) return sessionError;
+
+      if (!businessId) {
+        const business = await prisma.business.findFirst({
+          where: { userId: session.user.id },
+          select: { id: true },
+        });
+        if (!business) {
+          return NextResponse.json({ error: "Negocio no encontrado" }, { status: 404 });
+        }
+        businessId = business.id;
+      }
+
+      // Ensure the logged-in user owns this business
+      const { error: authError } = await requireBusinessOwner(businessId);
+      if (authError) return authError;
+    }
 
     const limit = Math.min(parseInt(searchParams.get("limit") || "50"), 200);
     const offset = parseInt(searchParams.get("offset") || "0");
 
     const orders = await prisma.order.findMany({
-      where: { businessId },
+      where: { businessId: businessId! },
       orderBy: { createdAt: "desc" },
       include: { table: true },
       take: limit,
@@ -405,7 +420,7 @@ export async function GET(req: Request) {
 export async function PATCH(req: Request) {
   try {
     const data = await req.json();
-    const { orderId, status } = data;
+    const { orderId, status, token } = data;
 
     if (!orderId || !status) {
       return NextResponse.json({ error: "Faltan datos" }, { status: 400 });
@@ -426,8 +441,22 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: "Orden no encontrada" }, { status: 404 });
     }
 
-    const { error: authError } = await requireBusinessOwner(order.businessId);
-    if (authError) return authError;
+    let isKdsAuthorized = false;
+    if (token) {
+      const biz = await prisma.business.findUnique({
+        where: { id: order.businessId },
+        select: { layoutConfig: true },
+      });
+      const kdsToken = (biz?.layoutConfig as any)?.kdsToken;
+      if (kdsToken && kdsToken === token) {
+        isKdsAuthorized = true;
+      }
+    }
+
+    if (!isKdsAuthorized) {
+      const { error: authError } = await requireBusinessOwner(order.businessId);
+      if (authError) return authError;
+    }
 
     const updated = await prisma.order.update({
       where: { id: orderId },

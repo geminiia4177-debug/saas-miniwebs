@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import Groq from "groq-sdk";
 import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 import { AppointmentService } from "@/lib/appointment-service";
-import { checkRateLimit, getRateLimitRetryAfterMs } from "@/lib/rate-limit";
+import { checkRateLimit, getRateLimitRetryAfterMs, getClientIp } from "@/lib/rate-limit";
 import {
   getBusinessDayName,
   getBusinessMinutesSinceMidnight,
@@ -61,7 +61,7 @@ export async function POST(req: Request) {
     }
 
     // P1-001: Rate limiting per IP + business with failClosed
-    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const ip = getClientIp(req);
     const rateLimitKey = `chat:${ip}:${businessId}`;
     if (!(await checkRateLimit(rateLimitKey, CHAT_RATE_MAX, CHAT_RATE_WINDOW_MS, { failClosed: true }))) {
       const retryAfter = Math.ceil(

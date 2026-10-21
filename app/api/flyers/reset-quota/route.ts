@@ -32,6 +32,9 @@ export async function POST(req: Request) {
     }
 
     const isAdmin = session.user.role === "ADMIN";
+    if (!isAdmin && process.env.NODE_ENV === "production") {
+      return NextResponse.json({ error: "Solo administradores pueden resetear el cupo" }, { status: 403 });
+    }
     if (business.userId !== session.user.id && !isAdmin) {
       return NextResponse.json({ error: "Prohibido" }, { status: 403 });
     }

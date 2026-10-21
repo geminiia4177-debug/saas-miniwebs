@@ -42,7 +42,7 @@ export const ProductSheet: React.FC<ProductSheetProps> = ({
       onClick={onClose}
     >
       <div
-        className="bg-[#0F172A] border border-white/10 rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl relative animate-scaleIn max-h-[90vh] flex flex-col md:flex-row"
+        className="bg-[#0F172A] border border-white/10 rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl relative animate-scaleIn max-h-[90dvh] flex flex-col md:flex-row"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close Button */}

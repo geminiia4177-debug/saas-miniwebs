@@ -48,7 +48,7 @@ export default function ListTheme(props: { negocio: any; media?: any[]; business
 
   const getBackground = () => {
     if (bgType === "image" && negocio.backgroundImageUrl) {
-      return { backgroundImage: `url(${negocio.backgroundImageUrl})`, backgroundSize: "cover", backgroundPosition: "center", backgroundAttachment: "fixed" as const };
+      return { backgroundImage: `url(${negocio.backgroundImageUrl})`, backgroundSize: "cover", backgroundPosition: "center", backgroundAttachment: "scroll" as const };
     }
     if (bgType === "gradient") {
       return { background: `linear-gradient(135deg, ${primary}15, ${secondary}25)`, backgroundColor: "#f8fafc" };

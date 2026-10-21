@@ -26,3 +26,9 @@ export const FLYER_FONTS: FontOption[] = [
   { id: "montserrat", name: "Montserrat", category: "Geométrico Urbano", description: "Moderno, vanguardista y equilibrado", sample: "URBANO" },
   { id: "russo", name: "Russo One", category: "Bloque Deportivo", description: "Robusto para gimnasios, autos y potencia", sample: "POTENCIA" },
 ];
+
+import path from "path";
+
+export function getFontPath(fileName: string): string {
+  return path.join(process.cwd(), "public", "fonts", fileName);
+}

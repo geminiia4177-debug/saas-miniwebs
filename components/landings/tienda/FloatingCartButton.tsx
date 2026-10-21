@@ -20,11 +20,11 @@ export const FloatingCartButton: React.FC<FloatingCartButtonProps> = ({
   if (!isVisible || cartTotalQty <= 0) return null;
 
   return (
-    <div className="fixed bottom-6 inset-x-0 px-4 sm:hidden z-40 pointer-events-none flex justify-center">
+    <div className="fixed bottom-[max(1.5rem,env(safe-area-inset-bottom))] inset-x-0 px-4 sm:hidden z-40 pointer-events-none flex justify-center">
       <button
         type="button"
         onClick={onClick}
-        className="pointer-events-auto w-full max-w-sm flex items-center justify-between px-5 py-3.5 rounded-2xl text-white font-bold text-sm shadow-2xl transition-all active:scale-95 animate-bounce cursor-pointer"
+        className="pointer-events-auto w-full max-w-sm flex items-center justify-between px-5 py-3.5 rounded-2xl text-white font-bold text-sm shadow-2xl transition-transform active:scale-95 cursor-pointer"
         style={{
           background: `linear-gradient(135deg, ${primaryColor}, #8B5CF6)`,
         }}

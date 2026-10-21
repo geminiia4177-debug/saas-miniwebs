@@ -6,11 +6,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const session = await getServerSession(authOptions);
 
   if (!session) {
-    redirect("/api/auth/signin");
+    redirect("/login");
   }
 
   if (session.user?.forcePasswordChange) {
-    redirect("/change-password");
+    redirect("/dashboard/force-password-change");
   }
 
   if (session.user?.role !== "ADMIN") {

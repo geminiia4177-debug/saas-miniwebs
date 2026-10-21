@@ -5,6 +5,7 @@ import OpenNowBadge from "../ui/OpenNowBadge";
 import WhatsAppFAB from "../ui/WhatsAppFAB";
 import VideoSection from "../ui/VideoSection";
 import styles from "./TallerTemplate.module.css";
+import { formatSocialUrl } from "@/components/landings/biolinks/utils";
 
 // ─── HELPER COMPONENTS ───
 
@@ -383,7 +384,7 @@ function BeforeAfterSlider({ before, after, titulo }: { before: string, after: s
     <div className="flex flex-col gap-2">
       <div 
         ref={containerRef}
-        className="relative w-full aspect-video rounded-xl overflow-hidden select-none cursor-ew-resize group border border-white/10 shadow-xl"
+        className="relative w-full aspect-video rounded-xl overflow-hidden select-none cursor-ew-resize group border border-white/10 shadow-xl touch-none"
         onPointerMove={(e) => { if(e.buttons === 1) handleMove(e.clientX); }}
         onPointerDown={(e) => handleMove(e.clientX)}
       >
@@ -643,8 +644,8 @@ export default function TallerTemplate(props: { negocio: any; media?: any[]; bus
               <p className="text-sm text-gray-500 font-['Inter'] mb-6">{negocio?.description || heroText}</p>
               <div className="flex gap-4">
                 {/* Redes simplificadas */}
-                {negocio?.instagram && <a href={`https://instagram.com/${negocio.instagram}`} target="_blank" rel="noreferrer" className="text-gray-400 hover:text-[var(--accent)] transition-colors">IG</a>}
-                {negocio?.facebook && <a href={`https://facebook.com/${negocio.facebook}`} target="_blank" rel="noreferrer" className="text-gray-400 hover:text-[var(--accent)] transition-colors">FB</a>}
+                {negocio?.instagram && <a href={formatSocialUrl("instagram", negocio.instagram)} target="_blank" rel="noreferrer" className="text-gray-400 hover:text-[var(--accent)] transition-colors">IG</a>}
+                {negocio?.facebook && <a href={formatSocialUrl("facebook", negocio.facebook)} target="_blank" rel="noreferrer" className="text-gray-400 hover:text-[var(--accent)] transition-colors">FB</a>}
               </div>
             </div>
 

@@ -7,6 +7,7 @@ import SectionHeader from "../ui/SectionHeader";
 import StatsRow from "../ui/StatsRow";
 import VideoSection from "../ui/VideoSection";
 import { getScheduleStatus } from "@/lib/utils/schedule";
+import { formatSocialUrl } from "@/components/landings/biolinks/utils";
 
 export default function GeneralTemplate(props: { negocio?: any; media?: any[]; businessId?: string; sections?: any[] }) {
   const { negocio, businessId, media = [] } = props;
@@ -312,7 +313,7 @@ export default function GeneralTemplate(props: { negocio?: any; media?: any[]; b
               </p>
               <div className="flex gap-4">
                 {negocio?.instagram && (
-                  <a href={`https://instagram.com/${negocio.instagram.replace('@','')}`} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-[var(--accent)] hover:text-white transition-all text-gray-400">
+                  <a href={formatSocialUrl("instagram", negocio.instagram)} target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-[var(--accent)] hover:text-white transition-all text-gray-400">
                     IG
                   </a>
                 )}

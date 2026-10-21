@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { AdminBusiness, RUBRO_META, formatCurrency, formatDate } from "./adminTypes";
 import {
   X,
@@ -33,10 +33,8 @@ export const ClientDetailSheet: React.FC<ClientDetailSheetProps> = ({
   onAddNote,
   showToast,
 }) => {
-  if (!isOpen || !business) return null;
-
   const [activeTab, setActiveTab] = useState<"info" | "payment" | "security" | "notes">("info");
-  const [formData, setFormData] = useState<AdminBusiness>({ ...business });
+  const [formData, setFormData] = useState<AdminBusiness | null>(business ? { ...business } : null);
   const [saving, setSaving] = useState(false);
 
   // Security password reset
@@ -48,6 +46,14 @@ export const ClientDetailSheet: React.FC<ClientDetailSheetProps> = ({
   // Notes
   const [newNote, setNewNote] = useState("");
   const [addingNote, setAddingNote] = useState(false);
+
+  useEffect(() => {
+    if (business) {
+      setFormData({ ...business });
+    }
+  }, [business]);
+
+  if (!isOpen || !business || !formData) return null;
 
   const handleGeneratePassword = () => {
     const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%";

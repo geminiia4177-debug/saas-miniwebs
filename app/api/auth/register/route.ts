@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
-import { checkRateLimit } from "@/lib/rate-limit";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
 const REG_WINDOW_MS = 60 * 60 * 1000; // 1 hour
 const REG_MAX_IP = 5;
@@ -10,7 +10,7 @@ const REG_MAX_EMAIL = 3;
 
 export async function POST(req: Request) {
   try {
-    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown_ip";
+    const ip = getClientIp(req);
 
     // P1-004: Rate limit by IP
     const ipAllowed = await checkRateLimit(`reg:ip:${ip}`, REG_MAX_IP, REG_WINDOW_MS, { failClosed: true });

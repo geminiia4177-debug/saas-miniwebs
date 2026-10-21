@@ -9,6 +9,7 @@ import { z } from "zod";
 import { uploadBufferToImgBB } from "@/lib/utils/upload-server";
 import { getDerivedFlyerColors } from "@/lib/utils/colorExtractor";
 import { FlyerFontFamily, renderVectorText, renderVectorTextLines } from "@/lib/utils/vector-text";
+import { isSafeExternalImageUrl } from "@/lib/urls";
 
 const RATE_WINDOW_MS = 60_000;
 const RATE_MAX = 5;
@@ -570,8 +571,8 @@ export async function POST(req: Request) {
     // ── VERIFICACIÓN DE CUPO MENSUAL (3 POR TIENDA POR MES) ──
     const currentLayout = (business.layoutConfig as any) || {};
     const existingUsage = currentLayout.flyersUsage || {};
-
-    if (existingUsage.nextAvailableAt && !isAdmin && !adminForce) {
+    const canForce = isAdmin && Boolean(adminForce);
+    if (existingUsage.nextAvailableAt && !canForce) {
       const nextDate = new Date(existingUsage.nextAvailableAt);
       const now = new Date();
       if (now < nextDate) {
@@ -770,7 +771,7 @@ Responde en formato JSON con la siguiente estructura:
       let photoBuffer: Buffer | null = null;
 
       // Paso A: Generar imagen de fondo con Pollinations.AI authenticated endpoint
-      const pollinationKey = process.env.POLLINATIONS_API_KEY || "sk_yYIRTLHDWdurMwtxKH2RwYZ5SlMM4ZLV";
+      const pollinationKey = process.env.POLLINATIONS_API_KEY || "";
       if (pollinationKey) {
         const modelsToTry = ["flux", "tongyi-mai/z-image-turbo"];
         for (const modelName of modelsToTry) {
@@ -846,7 +847,7 @@ Responde en formato JSON con la siguiente estructura:
       }
 
       // Paso C: Foto real del negocio si existe en su galería
-      if (!photoBuffer && businessGallery[idx]) {
+      if (!photoBuffer && businessGallery[idx] && isSafeExternalImageUrl(businessGallery[idx])) {
         try {
           const res = await fetch(businessGallery[idx], { signal: AbortSignal.timeout(5000) });
           if (res.ok) {
@@ -988,12 +989,19 @@ Responde en formato JSON con la siguiente estructura:
     const nextAvailableAt = new Date(now);
     nextAvailableAt.setMonth(nextAvailableAt.getMonth() + 1);
 
+    const freshBiz = await prisma.business.findUnique({
+      where: { id: business.id },
+      select: { layoutConfig: true },
+    });
+    const freshLayout = (freshBiz?.layoutConfig as Record<string, any>) || {};
+    const freshUsage = freshLayout.flyersUsage || {};
+
     const updatedLayoutConfig = {
-      ...currentLayout,
+      ...freshLayout,
       flyersUsage: {
         lastGeneratedAt: now.toISOString(),
         nextAvailableAt: nextAvailableAt.toISOString(),
-        generationCount: (existingUsage.generationCount || 0) + 1,
+        generationCount: (freshUsage.generationCount || existingUsage.generationCount || 0) + 1,
         savedFlyers: generatedFlyers,
       },
     };
@@ -1014,7 +1022,7 @@ Responde en formato JSON con la siguiente estructura:
   } catch (error: any) {
     console.error("Flyer generator error:", error);
     return NextResponse.json(
-      { error: "Error al generar flyers con IA", details: error?.message },
+      { error: "Error al generar flyers con IA" },
       { status: 500 }
     );
   }

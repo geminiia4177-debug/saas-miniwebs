@@ -20,19 +20,14 @@ const FONT_FILENAMES: Record<FlyerFontFamily, string> = {
 };
 
 function loadFontFile(filename: string): opentype.Font | null {
-  const candidates = [
-    path.join(process.cwd(), "public", "fonts", filename),
-    path.join(process.cwd(), "lib", "fonts", filename),
-  ];
-  for (const p of candidates) {
-    try {
-      if (fs.existsSync(/*turbopackIgnore: true*/ p)) {
-        const buf = fs.readFileSync(/*turbopackIgnore: true*/ p);
-        return opentype.parse(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
-      }
-    } catch (e) {
-      console.warn("Failed to load font from", p, e);
+  const p = path.join(process.cwd(), "public", "fonts", filename);
+  try {
+    if (fs.existsSync(/*turbopackIgnore: true*/ p)) {
+      const buf = fs.readFileSync(/*turbopackIgnore: true*/ p);
+      return opentype.parse(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
     }
+  } catch (e) {
+    console.warn("Failed to load font from", p, e);
   }
   return null;
 }

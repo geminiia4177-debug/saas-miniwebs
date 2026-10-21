@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { StoreProduct, StoreShipping, StorePayment } from "@/lib/types";
 import { CartItem, DEMO_PRODUCTS } from "./tienda/tiendaTypes";
 import { StoreHeader } from "./tienda/StoreHeader";
@@ -71,6 +71,25 @@ export default function TiendaTemplate({
     enviosConfig.permitirEnvio !== false ? "ENVIO" : "RETIRO"
   );
 
+  // Cart LocalStorage persistence (CRO)
+  useEffect(() => {
+    if (!negocio?.id) return;
+    try {
+      const saved = localStorage.getItem(`mw_cart_${negocio.id}`);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) setCart(parsed);
+      }
+    } catch {}
+  }, [negocio?.id]);
+
+  useEffect(() => {
+    if (!negocio?.id) return;
+    try {
+      localStorage.setItem(`mw_cart_${negocio.id}`, JSON.stringify(cart));
+    } catch {}
+  }, [cart, negocio?.id]);
+
   // Product detail modal state
   const [detailProduct, setDetailProduct] = useState<StoreProduct | null>(null);
   const [selectedTalle, setSelectedTalle] = useState<string | null>(null);
@@ -103,7 +122,7 @@ export default function TiendaTemplate({
   // Filtered & sorted products
   const filteredProducts = useMemo(() => {
     let list = rawProducts.filter((p) => {
-      const isAvailable = p.disponible !== false && p.active !== false;
+      const isAvailable = p.disponible !== false && p.active !== false && (p.stock === undefined || p.stock === null || Number(p.stock) > 0);
       const cat = p.categoria || p.category || "";
       const matchesCat = selectedCategory === "all" || cat.toLowerCase() === selectedCategory.toLowerCase();
       const name = (p.nombre || p.name || "").toLowerCase();
@@ -176,13 +195,18 @@ export default function TiendaTemplate({
     const chosenColor = color || (product.colores && product.colores[0]) || null;
     const key = `${product.id}_${chosenTalle || "none"}_${chosenColor || "none"}`;
 
+    const maxStock = product.stock != null ? Number(product.stock) : Infinity;
+
     setCart((prev) => {
       const idx = prev.findIndex((item) => item.cartKey === key);
       if (idx >= 0) {
+        const nextQty = prev[idx].qty + qty;
+        if (nextQty > maxStock) return prev;
         const next = [...prev];
-        next[idx] = { ...next[idx], qty: next[idx].qty + qty };
+        next[idx] = { ...next[idx], qty: nextQty };
         return next;
       }
+      if (qty > maxStock) return prev;
       return [
         ...prev,
         {
@@ -208,6 +232,9 @@ export default function TiendaTemplate({
         .map((item) => {
           if (item.cartKey === cartKey) {
             const nextQty = item.qty + delta;
+            const originalProduct = rawProducts.find((p) => String(p.id) === String(item.id));
+            const maxStock = originalProduct?.stock != null ? Number(originalProduct.stock) : Infinity;
+            if (nextQty > maxStock) return item;
             return nextQty > 0 ? { ...item, qty: nextQty } : null;
           }
           return item;

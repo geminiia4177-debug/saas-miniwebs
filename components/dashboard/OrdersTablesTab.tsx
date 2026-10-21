@@ -36,8 +36,19 @@ export default function OrdersTablesTab({
   const [printOrder, setPrintOrder] = useState<any | null>(null);
   const prevOrdersCount = useRef<number>(0);
 
-  // Sound alert using Web Audio API synthesis
+  // Sound alert using Web Audio API synthesis + Mobile Vibration & Web Notification
   const playAlertSound = () => {
+    if (typeof navigator !== "undefined" && navigator.vibrate) {
+      try {
+        navigator.vibrate([200, 100, 200]);
+      } catch {}
+    }
+    if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+      try {
+        new Notification("¡Nuevo pedido recibido!", { body: "Revisa el tablero de comandas." });
+      } catch {}
+    }
+
     if (!soundEnabled) return;
     try {
       const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -52,6 +63,9 @@ export default function OrdersTablesTab({
       gain.connect(audioCtx.destination);
       osc.start();
       osc.stop(audioCtx.currentTime + 0.35);
+      setTimeout(() => {
+        audioCtx.close().catch(() => {});
+      }, 500);
     } catch {}
   };
 
@@ -222,55 +236,57 @@ export default function OrdersTablesTab({
       {/* ── LIST VIEW ── */}
       {viewMode === "list" && (
         <div className="bg-[#0E131F] border border-white/5 rounded-2xl overflow-hidden shadow-xl">
-          <table className="w-full text-left text-xs text-slate-300">
-            <thead className="bg-[#121A2C] text-slate-400 font-bold uppercase text-[10px] tracking-wider border-b border-white/5">
-              <tr>
-                <th className="p-4">ID</th>
-                <th className="p-4">Cliente</th>
-                <th className="p-4">Tipo</th>
-                <th className="p-4">Total</th>
-                <th className="p-4">Estado</th>
-                <th className="p-4 text-right">Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/5">
-              {orders.length === 0 ? (
+          <div className="w-full overflow-x-auto">
+            <table className="w-full min-w-[640px] text-left text-xs text-slate-300">
+              <thead className="bg-[#121A2C] text-slate-400 font-bold uppercase text-[10px] tracking-wider border-b border-white/5">
                 <tr>
-                  <td colSpan={6} className="text-center py-12 text-slate-500">
-                    No hay pedidos registrados
-                  </td>
+                  <th className="p-4">ID</th>
+                  <th className="p-4">Cliente</th>
+                  <th className="p-4">Tipo</th>
+                  <th className="p-4">Total</th>
+                  <th className="p-4">Estado</th>
+                  <th className="p-4 text-right">Acciones</th>
                 </tr>
-              ) : (
-                orders.map((ord) => (
-                  <tr key={ord.id} className="hover:bg-white/5 transition-colors">
-                    <td className="p-4 font-mono font-bold text-white">
-                      #{String(ord.id).slice(-5).toUpperCase()}
-                    </td>
-                    <td className="p-4 font-semibold text-white">{ord.customerName}</td>
-                    <td className="p-4 capitalize">{ord.type || ord.deliveryType || "Local"}</td>
-                    <td className="p-4 font-bold text-white tabular-nums">
-                      ${Number(ord.total || 0).toLocaleString("es-AR")}
-                    </td>
-                    <td className="p-4">
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
-                        {ord.status}
-                      </span>
-                    </td>
-                    <td className="p-4 text-right space-x-2">
-                      <button
-                        type="button"
-                        onClick={() => setPrintOrder(ord)}
-                        className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white"
-                        title="Imprimir ticket"
-                      >
-                        <Printer className="w-3.5 h-3.5" />
-                      </button>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {orders.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="text-center py-12 text-slate-500">
+                      No hay pedidos registrados
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  orders.map((ord) => (
+                    <tr key={ord.id} className="hover:bg-white/5 transition-colors">
+                      <td className="p-4 font-mono font-bold text-white">
+                        #{String(ord.id).slice(-5).toUpperCase()}
+                      </td>
+                      <td className="p-4 font-semibold text-white">{ord.customerName}</td>
+                      <td className="p-4 capitalize">{ord.type || ord.deliveryType || "Local"}</td>
+                      <td className="p-4 font-bold text-white tabular-nums">
+                        ${Number(ord.total || 0).toLocaleString("es-AR")}
+                      </td>
+                      <td className="p-4">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
+                          {ord.status}
+                        </span>
+                      </td>
+                      <td className="p-4 text-right space-x-2">
+                        <button
+                          type="button"
+                          onClick={() => setPrintOrder(ord)}
+                          className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white"
+                          title="Imprimir ticket"
+                        >
+                          <Printer className="w-3.5 h-3.5" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 

@@ -5,7 +5,7 @@ import { getTheme } from "@/lib/themes";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import BookingForm from "./BookingForm";
-import { getPublicUrl } from "@/lib/urls";
+import { getPublicUrl, sanitizeEmbedUrl } from "@/lib/urls";
 import { resolveTemplateKind } from "@/lib/templates/resolver";
 
 export const revalidate = 0; // Disable aggressive caching for public lands
@@ -172,7 +172,8 @@ export default async function PublicLandingPage({ params, searchParams }: { para
     },
     include: {
       employees: {
-        where: { isPublic: true }
+        where: { isPublic: true },
+        select: { id: true, name: true, role: true }
       }
     }
   });
@@ -268,6 +269,43 @@ export default async function PublicLandingPage({ params, searchParams }: { para
     tiendaEnvios: typeof activeConfig.tiendaEnvios === "object" && activeConfig.tiendaEnvios !== null ? activeConfig.tiendaEnvios : undefined,
     tiendaPagos: typeof activeConfig.tiendaPagos === "object" && activeConfig.tiendaPagos !== null ? activeConfig.tiendaPagos : undefined,
     hotspots: Array.isArray(activeConfig.hotspots) ? activeConfig.hotspots : undefined,
+
+    // Gimnasio
+    planes: activeConfig.planes || activeConfig.gimnasioPlanes || null,
+    productos: activeConfig.productos || null,
+    clases: activeConfig.clases || activeConfig.gimnasioClases || null,
+    entrenadores: activeConfig.entrenadores || null,
+
+    // Clínica
+    especialidades: activeConfig.especialidades || activeConfig.clinicaServices || null,
+    profesionalesConfig: activeConfig.profesionalesConfig || activeConfig.clinicaDoctors || null,
+    pilares: activeConfig.pilares || null,
+    precios: activeConfig.precios || null,
+    coberturas: activeConfig.coberturas || null,
+    aboutText: activeConfig.aboutText || null,
+    aboutImage: activeConfig.aboutImage || null,
+
+    // Estética
+    esteticaServices: activeConfig.esteticaServices || null,
+    servicios: activeConfig.servicios || null,
+    testimonios: activeConfig.testimonios || activeConfig.testimonials || null,
+    quoteText: activeConfig.quoteText || null,
+    quoteImage: activeConfig.quoteImage || null,
+    founderName: activeConfig.founderName || null,
+
+    // Canchas
+    canchas: activeConfig.canchas || null,
+
+    // Barbería y Lavadero
+    barberiaProducts: activeConfig.barberiaProducts || null,
+    products: activeConfig.products || null,
+    vehiculos: activeConfig.vehiculos || activeConfig.lavaderoVehiculos || null,
+
+    // Comunes a todos los templates
+    heroImage: activeConfig.heroImage || null,
+    mapUrl: sanitizeEmbedUrl(activeConfig.mapUrl) || null,
+    stats: activeConfig.stats || null,
+    gallery: Array.isArray(activeConfig.gallery) ? activeConfig.gallery : [],
   };
 
   const biz = {
@@ -303,6 +341,7 @@ export default async function PublicLandingPage({ params, searchParams }: { para
     "@context": "https://schema.org",
     "@type": biz.type === "tienda" ? "Store" : biz.type === "barberia" ? "HairSalon" : biz.type === "menu" ? "Restaurant" : biz.type === "clinica" ? "MedicalClinic" : biz.type === "estetica" ? "BeautySalon" : biz.type === "gimnasio" ? "ExerciseGym" : biz.type === "taller" ? "AutoRepair" : biz.type === "lavadero" ? "AutoWash" : "LocalBusiness",
     "name": biz.name,
+    "description": biz.description || "",
     "image": biz.logoUrl || DEFAULT_LOGO,
     "url": publicPageUrl,
     "telephone": biz.whatsapp || "",

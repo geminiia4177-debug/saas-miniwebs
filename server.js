@@ -7,7 +7,8 @@ const QRCode = require('qrcode');
 const fs = require('fs');
 const cron = require('node-cron');
 const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = global.prisma || new PrismaClient();
+global.prisma = prisma;
 const crypto = require('crypto');
 const { phoneToWhatsAppJid } = require('./lib/phone-core.js');
 const dev = process.env.NODE_ENV !== 'production';
@@ -30,7 +31,12 @@ Object.defineProperty(global, 'waClient', {
 });
 
 async function connectToWhatsApp(businessId) {
+  if (!businessId || !/^[a-zA-Z0-9_-]+$/.test(String(businessId))) {
+    console.error('Invalid businessId for WhatsApp:', businessId);
+    return;
+  }
   const sessionFolder = `baileys_auth_info_${businessId}`;
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   const { state, saveCreds } = await useMultiFileAuthState(sessionFolder);
 
   const sock = makeWASocket({
@@ -74,7 +80,12 @@ async function connectToWhatsApp(businessId) {
       if (shouldReconnect) {
         poolEntry.status = 'STARTING';
         global.waStatus.set(businessId, 'STARTING');
-        connectToWhatsApp(businessId);
+        try {
+          sock.ev.removeAllListeners();
+        } catch (_) {}
+        setTimeout(() => {
+          connectToWhatsApp(businessId);
+        }, 5000);
       } else {
         console.log(`> [Business ${businessId}] WhatsApp Logged Out! Sesión borrada.`);
         fs.rmSync(sessionFolder, { recursive: true, force: true });

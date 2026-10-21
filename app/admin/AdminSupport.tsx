@@ -48,6 +48,8 @@ export default function AdminSupport({ showToast }: { showToast: (msg: string, t
 
   useEffect(() => {
     if (!selectedBiz) return;
+    const hasUnread = messages.some((m) => m.businessId === selectedBiz && (m.sender === 'USER' || m.senderType === 'USER') && (!m.read && !m.isRead));
+    if (!hasUnread) return;
     const markRead = async () => {
       try {
         await fetch("/api/messages/read", {
@@ -103,9 +105,12 @@ export default function AdminSupport({ showToast }: { showToast: (msg: string, t
   const currentMsgs = messages.filter(m => m.businessId === selectedBiz);
 
   return (
-    <div style={{ display: "flex", gap: "24px", height: "calc(100vh - 200px)" }}>
+    <div className="flex flex-col md:flex-row gap-6 h-[calc(100dvh-200px)] min-h-[500px]">
       {/* Sidebar de chats */}
-      <div style={{ width: "300px", background: "var(--bg)", border: "1px solid var(--border)", borderRadius: "16px", overflowY: "auto" }}>
+      <div 
+        className={`${selectedBiz ? "hidden md:flex" : "flex"} w-full md:w-[300px] flex-col shrink-0 overflow-y-auto rounded-2xl`}
+        style={{ background: "var(--bg)", border: "1px solid var(--border)" }}
+      >
         <div style={{ padding: "16px", borderBottom: "1px solid var(--border)", fontWeight: "bold" }}>Conversaciones</div>
         {businesses.length === 0 ? (
           <div style={{ padding: "20px", textAlign: "center", color: "var(--t2)" }}>No hay chats activos.</div>
@@ -131,11 +136,23 @@ export default function AdminSupport({ showToast }: { showToast: (msg: string, t
       </div>
 
       {/* Ventana de chat */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", background: "var(--bg)", border: "1px solid var(--border)", borderRadius: "16px" }}>
+      <div 
+        className={`${!selectedBiz ? "hidden md:flex" : "flex"} flex-1 flex-col rounded-2xl overflow-hidden`}
+        style={{ background: "var(--bg)", border: "1px solid var(--border)" }}
+      >
         {selectedBiz ? (
           <>
-            <div style={{ padding: "16px", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div style={{ fontWeight: "bold" }}>Chat con {businesses.find(b => b.id === selectedBiz)?.name}</div>
+            <div style={{ padding: "16px", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <button
+                  onClick={() => setSelectedBiz(null)}
+                  className="md:hidden text-xs px-2.5 py-1.5 rounded-lg border border-white/10 bg-white/5 text-zinc-300 hover:text-white"
+                  title="Volver"
+                >
+                  ← Volver a conversaciones
+                </button>
+                <div style={{ fontWeight: "bold" }}>Chat con {businesses.find(b => b.id === selectedBiz)?.name}</div>
+              </div>
               <button 
                 onClick={handleEndConsultation}
                 disabled={loading}

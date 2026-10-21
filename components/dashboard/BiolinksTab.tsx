@@ -120,6 +120,7 @@ function ColorPickerPopup({ color, onChange }: { color: string; onChange: (c: st
 export default function BiolinksTab({ biz, setBiz, saveAll, saving, showToast, copyUrl, copiedUrl }: any) {
   const [subTab, setSubTab] = useState("diseno");
   const [generatingAi, setGeneratingAi] = useState(false);
+  const [mobileView, setMobileView] = useState<"editor" | "preview">("editor");
 
   // Initialize biolinks if it doesn't exist
   const biolinks = biz.layoutConfig?.biolinks || {
@@ -225,10 +226,10 @@ export default function BiolinksTab({ biz, setBiz, saveAll, saving, showToast, c
   const totalClicks = (biolinks.items || []).reduce((acc: number, item: any) => acc + (Number(item.clicks) || 0), 0);
 
   return (
-    <div className="flex h-screen animate-fadeIn bg-[#080a10]">
+    <div className="flex flex-col lg:flex-row min-h-[100dvh] lg:h-[100dvh] lg:overflow-hidden relative animate-fadeIn bg-[#080a10]">
       {/* ──────────── LEFT PANEL ──────────── */}
       <div
-        className="w-[460px] flex-shrink-0 flex flex-col border-r overflow-hidden relative z-10"
+        className={`w-full lg:w-[460px] shrink-0 ${mobileView === 'preview' ? 'hidden lg:flex' : 'flex'} flex-col border-r overflow-hidden relative z-10`}
         style={{ borderColor: "rgba(255,255,255,0.05)", background: "rgba(255,255,255,0.02)" }}
       >
         {/* HEADER */}
@@ -804,7 +805,7 @@ export default function BiolinksTab({ biz, setBiz, saveAll, saving, showToast, c
       </div>
 
       {/* ──────────── RIGHT PANEL (PREVIEW) ──────────── */}
-      <div className="flex-1 bg-[#050810] relative flex items-center justify-center p-4 sm:p-8">
+      <div className={`${mobileView === 'preview' ? 'flex' : 'hidden lg:flex'} flex-1 bg-[#050810] relative items-center justify-center p-4 pb-28 lg:p-8`}>
         <div className="absolute top-4 right-4 z-20">
           <button
             onClick={copyUrl}
@@ -835,6 +836,17 @@ export default function BiolinksTab({ biz, setBiz, saveAll, saving, showToast, c
             />
           </div>
         </div>
+      </div>
+
+      {/* Botón flotante móvil para alternar entre Editor y Vista Previa */}
+      <div className="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
+        <button
+          type="button"
+          onClick={() => setMobileView(mobileView === "editor" ? "preview" : "editor")}
+          className="bg-[#6366F1] hover:bg-[#4F46E5] text-white px-5 py-2.5 rounded-full font-bold text-xs shadow-[0_10px_25px_rgba(99,102,241,0.5)] flex items-center gap-2 transition-all active:scale-95 cursor-pointer"
+        >
+          {mobileView === "editor" ? "📱 Ver Vista Previa" : "✏️ Volver al Editor"}
+        </button>
       </div>
     </div>
   );

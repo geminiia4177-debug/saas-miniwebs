@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { BusinessDataContract } from "@/lib/templates/contract";
 import { getThemeDefinition, generateThemeVariables } from "@/lib/templates/themes";
 import { TemplateProps } from "./ClassicTemplate";
+import { formatSocialUrl } from "@/components/landings/biolinks/utils";
 
 // Lazy load ThreePresetCanvas to avoid blocking initial HTML render (FCP optimization)
 const ThreePresetCanvas = dynamic(
@@ -375,9 +376,9 @@ export default function ImmersiveTemplate({ data, bookingElement }: TemplateProp
       <footer className="relative py-16 px-6 border-t border-white/10 text-center text-xs text-slate-500 z-10">
         <div className="max-w-6xl mx-auto space-y-4">
           <div className="flex items-center justify-center gap-6 text-slate-400">
-            {social.instagram && <a href={social.instagram} target="_blank" rel="noopener noreferrer" className="hover:text-white">Instagram</a>}
-            {social.facebook && <a href={social.facebook} target="_blank" rel="noopener noreferrer" className="hover:text-white">Facebook</a>}
-            {social.tiktok && <a href={social.tiktok} target="_blank" rel="noopener noreferrer" className="hover:text-white">TikTok</a>}
+            {social.instagram && <a href={formatSocialUrl("instagram", social.instagram)} target="_blank" rel="noopener noreferrer" className="hover:text-white">Instagram</a>}
+            {social.facebook && <a href={formatSocialUrl("facebook", social.facebook)} target="_blank" rel="noopener noreferrer" className="hover:text-white">Facebook</a>}
+            {social.tiktok && <a href={formatSocialUrl("tiktok", social.tiktok)} target="_blank" rel="noopener noreferrer" className="hover:text-white">TikTok</a>}
           </div>
           <p>&copy; {new Date().getFullYear()} {identity.name}. Experiencia visual 3D interactiva.</p>
         </div>

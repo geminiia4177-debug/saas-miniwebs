@@ -5,6 +5,7 @@ import { BusinessDataContract } from "@/lib/templates/contract";
 import { getThemeDefinition, generateThemeVariables } from "@/lib/templates/themes";
 import { TemplateProps } from "./ClassicTemplate";
 import VideoSection from "@/components/ui/VideoSection";
+import { formatSocialUrl } from "@/components/landings/biolinks/utils";
 
 export default function MotionTemplate({ data, bookingElement }: TemplateProps) {
   const { identity, contact, branding, hero, services, gallery, schedule, staff, testimonials, social, booking, design } = data;
@@ -56,9 +57,9 @@ export default function MotionTemplate({ data, bookingElement }: TemplateProps) 
   const isBusinessOpenNow = () => {
     try {
       const now = new Date();
-      const days = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+      const days = ["domingo", "lunes", "martes", "miercoles", "jueves", "viernes", "sabado"];
       const currentDayKey = days[now.getDay()];
-      const todaySchedule = schedule.find(s => s.day === currentDayKey);
+      const todaySchedule = schedule.find(s => s.day === currentDayKey || s.day === ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"][now.getDay()]);
       if (!todaySchedule || !todaySchedule.enabled) return { open: false, text: "Cerrado hoy • Turnos online" };
 
       const [openH, openM] = todaySchedule.open.split(":").map(Number);
@@ -587,9 +588,9 @@ export default function MotionTemplate({ data, bookingElement }: TemplateProps) 
       >
         <div className="max-w-6xl mx-auto space-y-4">
           <div className="flex items-center justify-center gap-6 text-slate-400">
-            {social.instagram && <a href={social.instagram} target="_blank" rel="noopener noreferrer" className="hover:text-white">Instagram</a>}
-            {social.facebook && <a href={social.facebook} target="_blank" rel="noopener noreferrer" className="hover:text-white">Facebook</a>}
-            {social.tiktok && <a href={social.tiktok} target="_blank" rel="noopener noreferrer" className="hover:text-white">TikTok</a>}
+            {social.instagram && <a href={formatSocialUrl("instagram", social.instagram)} target="_blank" rel="noopener noreferrer" className="hover:text-white">Instagram</a>}
+            {social.facebook && <a href={formatSocialUrl("facebook", social.facebook)} target="_blank" rel="noopener noreferrer" className="hover:text-white">Facebook</a>}
+            {social.tiktok && <a href={formatSocialUrl("tiktok", social.tiktok)} target="_blank" rel="noopener noreferrer" className="hover:text-white">TikTok</a>}
           </div>
           <p>&copy; {new Date().getFullYear()} {identity.name}. Desarrollado con tecnología de alta velocidad.</p>
         </div>

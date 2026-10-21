@@ -6,6 +6,7 @@ import BackgroundLayer from "./biolinks/BackgroundLayer";
 import ProfileHeader from "./biolinks/ProfileHeader";
 import LinkButton from "./biolinks/LinkButton";
 import VCardShare from "./biolinks/VCardShare";
+import SocialBar from "./biolinks/SocialBar";
 import { getTextColor } from "./biolinks/utils";
 import { getFontClass } from "./biolinks/fonts";
 import { parseBiolinksConfig } from "./biolinks/schema";
@@ -73,8 +74,16 @@ export default function PremiumLinks({ negocio, isPreview = false }: { negocio: 
           
           <VCardShare negocio={negocio} primaryColor={primaryColor || undefined} textColor={textColor} />
 
+          {/* Social Bar (Top) */}
+          <SocialBar
+            negocio={negocio}
+            textColor={textColor}
+            position="top"
+            configuredPosition={socialPosition as any}
+          />
+
           {/* Links List */}
-          <div className="w-full flex flex-col gap-4 mb-10">
+          <div className="w-full flex flex-col gap-4 mb-6">
             {(items || []).map((item: any, i: number) => (
               <LinkButton
                 key={item.id || i}
@@ -86,6 +95,14 @@ export default function PremiumLinks({ negocio, isPreview = false }: { negocio: 
               />
             ))}
           </div>
+
+          {/* Social Bar (Bottom) */}
+          <SocialBar
+            negocio={negocio}
+            textColor={textColor}
+            position="bottom"
+            configuredPosition={socialPosition as any}
+          />
 
         </div>
         

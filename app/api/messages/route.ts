@@ -6,6 +6,7 @@ import { authOptions } from "@/lib/auth";
 import { requireBusinessOwner } from "@/lib/auth-helpers";
 import { checkRateLimit, getRateLimitRetryAfterMs } from "@/lib/rate-limit";
 import { getPublicDomain } from "@/lib/urls";
+import { toSafeBusinessDTO } from "@/lib/dtos";
 
 // ─── RATE LIMITING: Messages ──────────────────────────────────────────────────
 // P1-004: Prevent abuse of the message system and AI bot.
@@ -579,10 +580,13 @@ REGLAS GENERALES:
               updatePayload.layoutConfig = mergedLayout;
 
               // P0-001/SYNC: Si el negocio ya tiene publishedConfig (ya fue publicado),
-              // sincronizamos los cambios visuales para que la web pública (ej: /horcus)
-              // se actualice de inmediato en vivo sin requerir clic manual en Publicar.
+              // sincronizamos los cambios visuales aplicando solo el parche de la IA sobre publishedConfig.
               if (bizInfo.publishedConfig) {
-                updatePayload.publishedConfig = mergedLayout;
+                const existingPub = (bizInfo.publishedConfig as Record<string, any>) || {};
+                updatePayload.publishedConfig = {
+                  ...existingPub,
+                  ...incomingLayout,
+                };
               }
 
               // Apply update to business in database
@@ -620,7 +624,11 @@ REGLAS GENERALES:
                 };
                 updatePayload.layoutConfig = mergedLayout;
                 if (bizInfo.publishedConfig) {
-                  updatePayload.publishedConfig = mergedLayout;
+                  const existingPub = (bizInfo.publishedConfig as Record<string, any>) || {};
+                  updatePayload.publishedConfig = {
+                    ...existingPub,
+                    ...(promptColor.bg ? { backgroundColor: promptColor.bg, footerBgColor: promptColor.bg } : {})
+                  };
                 }
                 updatedBusiness = await prisma.business.update({
                   where: { id: businessId },
@@ -668,7 +676,7 @@ REGLAS GENERALES:
             aiMsg: aiMsg,
             actionApplied,
             changes: appliedChanges || undefined,
-            updatedBusiness: updatedBusiness || undefined
+            updatedBusiness: updatedBusiness ? toSafeBusinessDTO(updatedBusiness, true) : undefined
           });
         } catch (aiBlockError) {
           console.error("Critical error in AI assistant execution:", aiBlockError);

@@ -185,6 +185,7 @@ export async function PUT(
     // Build layoutConfig: merge with social links and UI fields from top-level
     let newLayoutConfig: Record<string, unknown> | undefined = undefined;
     if (data.layoutConfig !== undefined || data.instagram !== undefined || data.facebook !== undefined || data.buttonStyle !== undefined || data.backgroundType !== undefined || data.backgroundImageUrl !== undefined) {
+      const existingLayout = (existingBusiness.layoutConfig as Record<string, unknown>) || {};
       newLayoutConfig = {
         ...((data.layoutConfig as Record<string, unknown>) || {}),
         ...(data.instagram !== undefined && { instagram: data.instagram }),
@@ -195,6 +196,14 @@ export async function PUT(
         ...(data.backgroundType !== undefined && { backgroundType: data.backgroundType }),
         ...(data.backgroundImageUrl !== undefined && { backgroundImageUrl: data.backgroundImageUrl }),
       };
+
+      if (!isAdmin) {
+        if (existingLayout.flyersUsage !== undefined) {
+          newLayoutConfig.flyersUsage = existingLayout.flyersUsage;
+        } else {
+          delete newLayoutConfig.flyersUsage;
+        }
+      }
     }
 
     // Build update payload — only include fields that were explicitly provided
@@ -282,14 +291,6 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const data = await req.json();
-    
-    const parsed = ownerBusinessUpdateSchema.safeParse(data);
-    if (!parsed.success) {
-      console.error("ZOD ERROR ON UPDATE:", JSON.stringify(parsed.error.format(), null, 2));
-      return NextResponse.json({ error: parsed.error.message }, { status: 400 });
-    }
-
     const { id } = await params;
 
     const session = await getServerSession(authOptions);
