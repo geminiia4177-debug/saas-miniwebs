@@ -269,6 +269,116 @@ export const DesignPanel: React.FC<DesignPanelProps> = ({
         </div>
       </section>
 
+      {/* ── 1.5. PLANTILLAS ESPECIALIZADAS POR RUBRO (MÉXICO 🇲🇽) ── */}
+      <section className="p-4 rounded-xl bg-surface-2 border border-border-default space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-accent" />
+            <h3 className="text-xs font-bold uppercase tracking-wider text-fg">
+              Plantillas por Rubro (Pares 🇲🇽)
+            </h3>
+          </div>
+          <HelpTooltip
+            title="Catálogo Especializado"
+            description="2 estilos complementarios por rubro: uno tradicional/barrio y uno premium/tendencia. Cambia en 1 toque sin perder datos."
+          />
+        </div>
+
+        <div className="space-y-3">
+          {[
+            {
+              category: "💈 Barberías & Peluquerías",
+              options: [
+                { id: "el_patron", name: "El Patrón", badge: "Clásica", desc: "Madera oscura, navaja tradicional y Bebas Neue.", color: "#C5A254" },
+                { id: "urban_fade", name: "Urban Fade", badge: "Streetwear", desc: "Cian neón, selector de fade y estilo trap.", color: "#06B6D4" },
+              ]
+            },
+            {
+              category: "🌮 Comida & Gastronomía",
+              options: [
+                { id: "trompo", name: "El Trompo", badge: "Taquería", desc: "Pastor al trompo, carrito y comanda a WhatsApp.", color: "#D32F2F" },
+                { id: "cantina_gourmet", name: "Cantina Gourmet", badge: "Gastrobar", desc: "Smash burgers, selector de picante y mixología.", color: "#F59E0B" },
+              ]
+            },
+            {
+              category: "💅 Uñas, Pestañas & Belleza",
+              options: [
+                { id: "unas", name: "Boutique Nude", badge: "Delicada", desc: "Rosa cuarzo, acrílicas y atención cuidada.", color: "#EC4899" },
+                { id: "glitz_lash", name: "Glitz & Lash", badge: "Dark Glam", desc: "Selector de forma/largo, foxy eyes y cristales.", color: "#F43F5E" },
+              ]
+            },
+            {
+              category: "🩺 Salud & Sonrisa Dental",
+              options: [
+                { id: "dental", name: "Clínica Dental", badge: "Médica", desc: "Consultorio odontológico y urgencias.", color: "#0284C7" },
+                { id: "holistic_spa", name: "Holistic Dental Spa", badge: "Estética 3D", desc: "Diseño de sonrisa digital y carillas E-Max.", color: "#0D9488" },
+              ]
+            },
+            {
+              category: "🐾 Mascotas & Veterinaria",
+              options: [
+                { id: "veterinaria", name: "Veterinaria", badge: "Clínica", desc: "Consultas, vacunas y estética preventiva.", color: "#10B981" },
+                { id: "pet_resort", name: "Rancho Canino", badge: "Hotel VIP", desc: "Guardería campestre sin jaulas y alberca.", color: "#059669" },
+              ]
+            },
+          ].map((cat, cIdx) => (
+            <div key={cIdx} className="space-y-1.5">
+              <span className="text-[10px] font-black uppercase text-fg-subtle tracking-wider block">
+                {cat.category}
+              </span>
+              <div className="grid grid-cols-2 gap-2">
+                {cat.options.map((opt) => {
+                  const isSelected = biz.layoutConfig?.themeVariant === opt.id;
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => {
+                        setBiz((prev: any) => ({
+                          ...prev,
+                          primaryColor: opt.color,
+                          layoutConfig: {
+                            ...(prev.layoutConfig || {}),
+                            templateLevel: undefined,
+                            themeVariant: opt.id,
+                            colors: {
+                              ...(prev.layoutConfig?.colors || {}),
+                              primary: opt.color,
+                            }
+                          }
+                        }));
+                        showToast(`Plantilla "${opt.name}" activada ✓`, "success");
+                      }}
+                      className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                        isSelected
+                          ? "bg-accent/15 border-accent shadow-card ring-1 ring-accent/30"
+                          : "bg-surface-1 hover:bg-surface-3 border-border-default text-fg-muted hover:text-fg"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-1 mb-1">
+                        <span className={`text-xs font-bold truncate ${isSelected ? "text-accent" : "text-fg"}`}>
+                          {opt.name}
+                        </span>
+                        <span
+                          className="w-2.5 h-2.5 rounded-full shrink-0"
+                          style={{ backgroundColor: opt.color }}
+                        />
+                      </div>
+                      <Badge variant={isSelected ? "accent" : "secondary"} size="sm" className="mb-1">
+                        {opt.badge}
+                      </Badge>
+                      <p className="text-[10px] text-fg-subtle line-clamp-2 leading-tight">
+                        {opt.desc}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* ── 2. PALETA DE COLORES DE MARCA ── */}
       <section className="p-4 rounded-xl bg-surface-2 border border-border-default space-y-3">
         <div className="flex items-center justify-between">

@@ -1,193 +1,437 @@
 "use client";
 
-import React, { useState } from "react";
-import BookingForm from "@/app/[subdomain]/BookingForm";
-import VideoSection from "@/components/ui/VideoSection";
+import React, { useState, useEffect, useMemo } from "react";
+import { Instrument_Serif, Inter, JetBrains_Mono } from "next/font/google";
+import { 
+  Phone, 
+  ChevronDown, 
+  ChevronUp, 
+  ArrowRight, 
+  Star, 
+  MapPin, 
+  CheckCircle2,
+  Calendar
+} from "lucide-react";
 
-const Ico = ({ n, s = 24, c = "currentColor", stroke = 2 }: any) => {
+function InstagramIcon({ className = "w-4 h-4" }: { className?: string }) {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round">
-      {n === "map-pin" && <><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></>}
-      {n === "phone" && <><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></>}
-      {n === "calendar" && <><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></>}
-      {n === "star" && <><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></>}
-      {n === "instagram" && <><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/></>}
-      {n === "facebook" && <><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></>}
-      {n === "chevron-down" && <><polyline points="6 9 12 15 18 9"/></>}
-      {n === "chevron-up" && <><polyline points="18 15 12 9 6 15"/></>}
-      {n === "arrow-right" && <><line x1="5" x2="19" y1="12" y2="12"/><polyline points="12 5 19 12 12 19"/></>}
+    <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24" className={className}>
+      <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
     </svg>
   );
-};
+}
 
-export default function ListTheme(props: { negocio: any; media?: any[]; businessId?: string; sections?: any[] }) {
+function FacebookIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24" className={className}>
+      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+    </svg>
+  );
+}
+import BookingForm from "@/app/[subdomain]/BookingForm";
+import VideoSection from "@/components/ui/VideoSection";
+import { formatSocialUrl } from "@/components/landings/biolinks/utils";
+
+const instrumentSerif = Instrument_Serif({ weight: "400", subsets: ["latin"], display: "swap" });
+const inter = Inter({ subsets: ["latin"], display: "swap" });
+const jetbrainsMono = JetBrains_Mono({ subsets: ["latin"], display: "swap" });
+
+interface ServiceItem {
+  id?: string;
+  name: string;
+  price?: string | number;
+  duration?: number;
+  description?: string;
+  imageUrl?: string;
+  active?: boolean;
+}
+
+export default function ListTheme(props: {
+  negocio: any;
+  media?: any[];
+  businessId?: string;
+  sections?: any[];
+}) {
   const { negocio, media = [], businessId, sections = [] } = props;
   const config = negocio?.layoutConfig || {};
-  const primary = negocio?.primaryColor || "#ec4899";
-  const secondary = negocio?.secondaryColor || "#db2777";
+  const primary = negocio?.primaryColor || "#0A0A0A";
+  const secondary = negocio?.secondaryColor || "#6B6B6B";
   const accent = negocio?.accentColor || primary;
-  const fontFamily = negocio?.fontFamily || "sans";
   const bgType = negocio?.backgroundType || "color";
-  const scaleHero = (config.fontSizeHero || 100) / 100;
-  const scaleTitles = (config.fontSizeTitles || 100) / 100;
-  const scaleBody = (config.fontSizeBody || 100) / 100;
-  
-  const getItems = () => {
-    if (negocio.type === "barberia") return config.barberiaServices || [];
-    if (negocio.type === "estetica") return config.esteticaServicios || [];
-    if (negocio.type === "clinica") return config.clinicaEspecialidades || [];
-    if (negocio.type === "taller") return config.tallerServices || [];
-    if (negocio.type === "restaurante" || negocio.type === "menu") return config.menuCategorias?.flatMap((c: any) => c.items) || [];
-    return config.items || [];
-  };
-  
-  const items = getItems().filter((s:any) => s.active !== false);
-  const gallery = media.filter((m: any) => m.type === "image") || [];
-  
-  const [expandedItem, setExpandedItem] = useState<number | null>(null);
 
-  const getBackground = () => {
-    if (bgType === "image" && negocio.backgroundImageUrl) {
-      return { backgroundImage: `url(${negocio.backgroundImageUrl})`, backgroundSize: "cover", backgroundPosition: "center", backgroundAttachment: "scroll" as const };
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [scrolled, setScrolled] = useState(false);
+
+  // Monitor scroll for sticky mini-header
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 180);
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const items: ServiceItem[] = useMemo(() => {
+    if (!negocio) return [];
+    let rawList: any[] = [];
+    if (negocio.type === "barberia") rawList = config.barberiaServices || [];
+    else if (negocio.type === "estetica") rawList = config.esteticaServicios || [];
+    else if (negocio.type === "clinica") rawList = config.clinicaEspecialidades || [];
+    else if (negocio.type === "taller") rawList = config.tallerServices || [];
+    else if (negocio.type === "restaurante" || negocio.type === "menu") {
+      rawList = config.menuCategorias?.flatMap((c: any) => c.items || []) || [];
+    } else {
+      rawList = config.items || [];
+    }
+    return rawList.filter((s: any) => s && s.active !== false);
+  }, [negocio, config]);
+
+  const gallery = useMemo(() => {
+    return media.filter((m: any) => m && m.type === "image") || [];
+  }, [media]);
+
+  const getBackgroundStyle = () => {
+    if (bgType === "image" && negocio?.backgroundImageUrl) {
+      return {
+        backgroundImage: `url(${negocio.backgroundImageUrl})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+      };
     }
     if (bgType === "gradient") {
-      return { background: `linear-gradient(135deg, ${primary}15, ${secondary}25)`, backgroundColor: "#f8fafc" };
+      return {
+        background: `linear-gradient(135deg, ${primary}12, ${secondary}18), #FDFCF8`,
+      };
     }
-    return { backgroundColor: "#f8fafc" };
+    return { backgroundColor: "#FDFCF8" };
+  };
+
+  const businessName = negocio?.name || "Boutique & Estudio";
+  const initialLetter = businessName.trim().charAt(0) || "B";
+
+  const scrollToBooking = (e?: React.MouseEvent) => {
+    if (e) e.preventDefault();
+    document.getElementById("booking")?.scrollIntoView({ behavior: "smooth" });
   };
 
   return (
-    <div className="min-h-screen text-slate-800 pb-20" style={{ fontFamily, ...getBackground(), ["--primary" as any]: primary, ["--accent" as any]: accent, ["--secondary" as any]: secondary }}>
-      
-      {/* ─── CENTRADO TIPO LINKTREE ─── */}
-      <div className="max-w-xl mx-auto px-4 pt-16 flex flex-col items-center">
+    <div
+      className={`${inter.className} min-h-screen text-[#0A0A0A] relative overflow-x-hidden selection:bg-[#0A0A0A] selection:text-[#FDFCF8]`}
+      style={{
+        ...getBackgroundStyle(),
+        paddingTop: "max(1rem, env(safe-area-inset-top))",
+        paddingBottom: "max(5rem, calc(4rem + env(safe-area-inset-bottom)))",
+      }}
+    >
+      {/* ─── Micro Noise Texture Overlay ─── */}
+      <div
+        className="fixed inset-0 pointer-events-none opacity-[0.025] z-0"
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
+        }}
+        aria-hidden="true"
+      />
+
+      {/* ─── Sticky Mini-Header (Scroll > 180px) ─── */}
+      <header
+        className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 border-b border-[#E8E6E1] bg-[#FDFCF8]/90 backdrop-blur-xl ${
+          scrolled ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-full pointer-events-none"
+        }`}
+      >
+        <div className="max-w-xl mx-auto px-4 h-14 flex items-center justify-between">
+          <div className="flex items-center gap-3 min-w-0">
+            {negocio?.logoUrl ? (
+              <img
+                src={negocio.logoUrl}
+                alt={businessName}
+                className="w-8 h-8 rounded-full object-cover border border-[#E8E6E1]"
+              />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-[#0A0A0A] text-white flex items-center justify-center text-xs font-bold">
+                {initialLetter}
+              </div>
+            )}
+            <span className="font-semibold text-sm truncate text-[#0A0A0A]">
+              {businessName}
+            </span>
+          </div>
+
+          <button
+            onClick={scrollToBooking}
+            className="px-4 py-1.5 rounded-full bg-[#0A0A0A] text-white text-xs font-semibold hover:bg-black transition-all hover:scale-[1.02] active:scale-[0.98] shadow-sm flex items-center gap-1.5"
+          >
+            <span>Reservar</span>
+            <ArrowRight className="w-3 h-3" />
+          </button>
+        </div>
+      </header>
+
+      {/* ─── Main Content Container (Quiet Luxury Centered Column) ─── */}
+      <main className="max-w-xl mx-auto px-4 pt-10 sm:pt-16 flex flex-col items-center relative z-10">
         
-        {/* LOGO O AVATAR */}
-        <div className="relative mb-6">
-          <div className="absolute inset-0 bg-white rounded-full blur-xl opacity-50"></div>
-          {negocio.logoUrl ? (
-            <img src={negocio.logoUrl} alt="Logo" className="relative z-10 w-28 h-28 rounded-full object-cover shadow-2xl border-4 border-white" />
+        {/* Avatar / Logo */}
+        <div className="relative mb-6 group">
+          <div className="absolute -inset-1 rounded-full bg-gradient-to-b from-[#E8E6E1] to-transparent opacity-60 blur-sm group-hover:opacity-100 transition-opacity" />
+          {negocio?.logoUrl ? (
+            <img
+              src={negocio.logoUrl}
+              alt={businessName}
+              className="relative z-10 w-24 h-24 sm:w-28 sm:h-28 rounded-full object-cover shadow-[0_12px_32px_rgba(10,10,10,0.08)] border-4 border-[#FFFFFF] ring-1 ring-[#E8E6E1]"
+            />
           ) : (
-            <div className="relative z-10 w-28 h-28 rounded-full bg-white shadow-2xl border-4 border-white flex items-center justify-center text-4xl font-black" style={{ color: primary }}>
-              {negocio.name.charAt(0)}
+            <div
+              className="relative z-10 w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-[#FFFFFF] shadow-[0_12px_32px_rgba(10,10,10,0.08)] border-4 border-[#FFFFFF] ring-1 ring-[#E8E6E1] flex items-center justify-center text-3xl font-bold"
+              style={{ color: primary }}
+            >
+              {initialLetter}
             </div>
           )}
         </div>
-        
-        {/* INFO BÁSICA */}
-        <h1 className="text-3xl font-extrabold text-center mb-2 tracking-tight text-slate-900 drop-shadow-sm" style={{ color: config.heroTitleColor || "" }}>
-          <span style={{ fontSize: `${scaleHero}em` }}>{config.heroTitle || negocio.name}</span>
-        </h1>
-        <p className="text-center text-slate-600 font-medium max-w-sm mb-6 leading-relaxed">
-          <span style={{ fontSize: `${scaleBody}em` }}>{config.heroText || negocio.description || "Tu mejor opción."}</span>
-        </p>
-        
-        {/* REDES SOCIALES (ICONOS RAPIDOS) */}
-        <div className="flex gap-4 mb-10">
-          {negocio.instagram && (
-            <a href={negocio.instagram} target="_blank" className="w-12 h-12 rounded-full bg-white shadow-lg flex items-center justify-center hover:-translate-y-1 transition-transform" style={{ color: primary }}>
-              <Ico n="instagram" s={20} />
-            </a>
-          )}
-          {negocio.whatsapp && (
-            <a href={`https://wa.me/${negocio.whatsapp.replace(/\D/g,'')}`} target="_blank" className="w-12 h-12 rounded-full bg-white shadow-lg flex items-center justify-center hover:-translate-y-1 transition-transform" style={{ color: primary }}>
-              <Ico n="phone" s={20} />
-            </a>
-          )}
-          {negocio.facebook && (
-            <a href={negocio.facebook} target="_blank" className="w-12 h-12 rounded-full bg-white shadow-lg flex items-center justify-center hover:-translate-y-1 transition-transform" style={{ color: primary }}>
-              <Ico n="facebook" s={20} />
-            </a>
-          )}
+
+        {/* Business Title & Verified Indicator */}
+        <div className="text-center mb-3">
+          <h1
+            className={`${instrumentSerif.className} text-4xl sm:text-5xl text-[#0A0A0A] tracking-[-0.02em] leading-[1.05] drop-shadow-sm`}
+          >
+            {config.heroTitle || businessName}
+          </h1>
         </div>
-        
-        {/* ─── SERVICIOS LISTA (ACCORDION) ─── */}
-        {items.length > 0 && (
-          <div className="w-full space-y-3 mb-10">
-            <h2 className="text-sm font-black uppercase tracking-widest text-slate-400 text-center mb-4">
-              <span style={{ fontSize: `${scaleTitles}em` }}>Servicios & Precios</span>
-            </h2>
-            
-            {items.map((item: any, i: number) => {
-              const isExpanded = expandedItem === i;
-              return (
-                <div key={i} className="bg-white/80 backdrop-blur-md rounded-2xl shadow-sm hover:shadow-md transition-all overflow-hidden border border-white/50">
-                  <button 
-                    onClick={() => setExpandedItem(isExpanded ? null : i)}
-                    className="w-full p-4 flex items-center justify-between text-left"
-                  >
-                    <div className="flex items-center gap-4">
-                      {item.imageUrl ? (
-                        <img src={item.imageUrl} alt={item.name} className="w-12 h-12 rounded-xl object-cover" />
-                      ) : (
-                        <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${primary}15`, color: primary }}>
-                          <Ico n="star" s={20} />
-                        </div>
-                      )}
-                      <div>
-                        <h3 className="font-bold text-slate-800"><span style={{ fontSize: `${scaleBody}em` }}>{item.name}</span></h3>
-                        <p className="text-xs font-bold mt-1" style={{ color: primary }}>{item.price ? `$${item.price}` : "Consultar"}</p>
-                      </div>
-                    </div>
-                    <div className="text-slate-400">
-                      <Ico n={isExpanded ? "chevron-up" : "chevron-down"} s={20} />
-                    </div>
-                  </button>
-                  
-                  {isExpanded && (
-                    <div className="px-4 pb-4 pt-2 border-t border-slate-100 bg-white/50 text-sm text-slate-600">
-                      <p className="mb-4"><span style={{ fontSize: `${scaleBody}em` }}>{item.description || "Sin descripción disponible."}</span></p>
-                      <a href="#booking" className="inline-flex items-center justify-center w-full py-2.5 rounded-xl text-white font-bold text-sm shadow-md" style={{ backgroundColor: primary }}>
-                        Reservar esto
-                      </a>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+
+        {/* Description / Bio */}
+        <p className="text-center text-[#6B6B6B] text-sm sm:text-base font-normal max-w-sm mb-6 leading-relaxed">
+          {config.heroText || negocio?.description || "Atención exclusiva, curada y personalizada."}
+        </p>
+
+        {/* Address & Verified Info Snippet */}
+        {negocio?.address && (
+          <div className="flex items-center gap-1.5 text-xs text-[#8A8880] mb-6 tracking-wide">
+            <MapPin className="w-3.5 h-3.5 text-[#0A0A0A]" />
+            <span>{negocio.address}</span>
           </div>
         )}
 
-        {/* ─── BOOKING ─── */}
-        <div id="booking" className="w-full backdrop-blur-xl rounded-[2rem] shadow-2xl p-6 md:p-8 border border-white/50 mb-10" style={{ backgroundColor: config.bookingBgColor || "rgba(255,255,255,0.9)" }}>
-          <h2 className="text-2xl font-black text-center text-slate-900 mb-2">
-            <span style={{ fontSize: `${scaleTitles}em` }}>Reservar Turno</span>
-          </h2>
-          <p className="text-center text-slate-500 text-sm mb-6"><span style={{ fontSize: `${scaleBody}em` }}>Completa el formulario para agendar.</span></p>
-          <BookingForm 
-            businessId={businessId || negocio.id} 
-            services={items.map((s:any) => s.name)} 
-            primaryColor={primary}
-          />
+        {/* ─── Social Links (Minimalist Hairline Circles) ─── */}
+        <div className="flex items-center gap-3.5 mb-10">
+          {negocio?.instagram && (
+            <a
+              href={formatSocialUrl("instagram", negocio.instagram)}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Instagram"
+              className="w-11 h-11 rounded-full bg-[#FFFFFF] border border-[#E8E6E1] shadow-[0_4px_16px_rgba(10,10,10,0.04)] flex items-center justify-center text-[#0A0A0A] hover:bg-[#0A0A0A] hover:text-white hover:-translate-y-0.5 transition-all"
+            >
+              <InstagramIcon className="w-4 h-4" />
+            </a>
+          )}
+          {negocio?.whatsapp && (
+            <a
+              href={formatSocialUrl("whatsapp", negocio.whatsapp)}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="WhatsApp"
+              className="w-11 h-11 rounded-full bg-[#FFFFFF] border border-[#E8E6E1] shadow-[0_4px_16px_rgba(10,10,10,0.04)] flex items-center justify-center text-[#0A0A0A] hover:bg-[#0A0A0A] hover:text-white hover:-translate-y-0.5 transition-all"
+            >
+              <Phone className="w-4 h-4" />
+            </a>
+          )}
+          {negocio?.facebook && (
+            <a
+              href={formatSocialUrl("facebook", negocio.facebook)}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Facebook"
+              className="w-11 h-11 rounded-full bg-[#FFFFFF] border border-[#E8E6E1] shadow-[0_4px_16px_rgba(10,10,10,0.04)] flex items-center justify-center text-[#0A0A0A] hover:bg-[#0A0A0A] hover:text-white hover:-translate-y-0.5 transition-all"
+            >
+              <FacebookIcon className="w-4 h-4" />
+            </a>
+          )}
         </div>
 
-        {/* ─── VIDEO ─── */}
-        <VideoSection
-          videoUrl={config.videoUrl || (sections.find((s: any) => s.id === "video")?.config?.youtubeUrl)}
-          accentColor={primary}
-          theme="light"
-          className="p-0 mb-10"
-        />
+        {/* ─── Services Accordion List ─── */}
+        {items.length > 0 && (
+          <section className="w-full mb-12" aria-labelledby="services-heading">
+            <div className="flex items-center justify-between mb-4 px-1">
+              <h2
+                id="services-heading"
+                className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#8A8880]"
+              >
+                Servicios & Experiencias
+              </h2>
+              <span className={`${jetbrainsMono.className} text-[11px] text-[#8A8880]`}>
+                {items.length} {items.length === 1 ? "opción" : "opciones"}
+              </span>
+            </div>
 
-        {/* ─── GALERIA RAPIDA (MINI) ─── */}
+            <div className="w-full space-y-2.5">
+              {items.map((item, idx) => {
+                const itemId = item.id || `srv-${idx}`;
+                const isExpanded = expandedId === itemId;
+
+                return (
+                  <div
+                    key={itemId}
+                    className="bg-[#FFFFFF] rounded-2xl border border-[#E8E6E1] shadow-[0_2px_12px_rgba(10,10,10,0.03)] hover:shadow-[0_8px_24px_rgba(10,10,10,0.06)] hover:border-[#D4D2CD] transition-all overflow-hidden"
+                  >
+                    <button
+                      onClick={() => setExpandedId(isExpanded ? null : itemId)}
+                      aria-expanded={isExpanded}
+                      aria-controls={`content-${itemId}`}
+                      id={`heading-${itemId}`}
+                      className="w-full p-4 flex items-center justify-between text-left gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0A0A0A]"
+                    >
+                      <div className="flex items-center gap-3.5 min-w-0">
+                        {item.imageUrl ? (
+                          <img
+                            src={item.imageUrl}
+                            alt={item.name}
+                            className="w-12 h-12 rounded-xl object-cover border border-[#E8E6E1] flex-shrink-0"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div
+                            className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 bg-[#F6F5F0] text-[#0A0A0A]"
+                          >
+                            <Star className="w-4 h-4 opacity-70" />
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <h3 className="font-semibold text-sm sm:text-base text-[#0A0A0A] truncate">
+                            {item.name}
+                          </h3>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span
+                              className={`${jetbrainsMono.className} text-xs font-semibold text-[#0A0A0A]`}
+                            >
+                              {item.price ? `$${item.price}` : "A consultar"}
+                            </span>
+                            {item.duration && (
+                              <span className="text-[11px] text-[#8A8880] tracking-tight">
+                                • {item.duration} min
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="w-8 h-8 rounded-full bg-[#F6F5F0] flex items-center justify-center text-[#0A0A0A] flex-shrink-0">
+                        {isExpanded ? (
+                          <ChevronUp className="w-4 h-4" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4" />
+                        )}
+                      </div>
+                    </button>
+
+                    {/* Accordion Drawer */}
+                    {isExpanded && (
+                      <div
+                        id={`content-${itemId}`}
+                        role="region"
+                        aria-labelledby={`heading-${itemId}`}
+                        className="px-4 pb-4 pt-2 border-t border-[#F0EEEA] bg-[#FCFBF8] text-sm text-[#6B6B6B]"
+                      >
+                        <p className="mb-4 leading-relaxed text-xs sm:text-sm">
+                          {item.description || "Atención personalizada y profesional cuidando cada detalle."}
+                        </p>
+                        <button
+                          onClick={scrollToBooking}
+                          className="w-full py-2.5 rounded-xl bg-[#0A0A0A] text-white font-medium text-xs tracking-wider uppercase flex items-center justify-center gap-2 hover:bg-black transition-transform active:scale-[0.99] shadow-sm"
+                        >
+                          <span>Reservar este turno</span>
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* ─── Gallery Carousel / Grid ─── */}
         {gallery.length > 0 && (
-          <div className="w-full mb-10">
-            <h2 className="text-sm font-black uppercase tracking-widest text-slate-400 text-center mb-4">
-              <span style={{ fontSize: `${scaleTitles}em` }}>Nuestros Trabajos</span>
+          <section className="w-full mb-12" aria-labelledby="gallery-heading">
+            <h2
+              id="gallery-heading"
+              className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#8A8880] text-center mb-4"
+            >
+              Galería & Trabajos
             </h2>
-            <div className="flex overflow-x-auto gap-3 pb-4 snap-x snap-mandatory custom-scrollbar">
+            <div className="flex overflow-x-auto gap-3 pb-3 snap-x snap-mandatory scrollbar-none px-1">
               {gallery.map((img: any, i: number) => (
-                <img key={i} src={img.url} alt="Gallery" className="w-48 h-48 object-cover rounded-2xl flex-shrink-0 snap-center shadow-sm" />
+                <div
+                  key={img.id || i}
+                  className="w-40 sm:w-48 aspect-square rounded-2xl overflow-hidden border border-[#E8E6E1] flex-shrink-0 snap-center shadow-sm group"
+                >
+                  <img
+                    src={img.url}
+                    alt={`Galería ${businessName} ${i + 1}`}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    loading="lazy"
+                  />
+                </div>
               ))}
             </div>
-          </div>
+          </section>
         )}
 
-        <p className="text-xs font-medium" style={{ color: config.footerTextColor || "#94a3b8" }}>
-          © {new Date().getFullYear()} {negocio.name}.
-        </p>
-      </div>
-      
+        {/* ─── Video Section ─── */}
+        {config.videoUrl && (
+          <section className="w-full mb-12">
+            <VideoSection
+              videoUrl={config.videoUrl || (sections.find((s: any) => s.id === "video")?.config?.youtubeUrl)}
+              accentColor={primary}
+              theme="light"
+              className="p-0 rounded-2xl overflow-hidden border border-[#E8E6E1] shadow-sm"
+            />
+          </section>
+        )}
+
+        {/* ─── Booking Card (Editorial Quiet Luxury) ─── */}
+        <section
+          id="booking"
+          className="w-full rounded-[2rem] bg-[#FFFFFF] border border-[#E8E6E1] shadow-[0_16px_48px_rgba(10,10,10,0.05)] p-6 sm:p-8 mb-12 scroll-mt-20"
+        >
+          <div className="text-center mb-6">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#F6F5F0] text-[10px] uppercase font-bold tracking-widest text-[#0A0A0A] mb-2">
+              <Calendar className="w-3 h-3 text-[#0A0A0A]" />
+              <span>Agenda Online</span>
+            </div>
+            <h2 className={`${instrumentSerif.className} text-3xl sm:text-4xl text-[#0A0A0A]`}>
+              Reservá tu Lugar
+            </h2>
+            <p className="text-xs sm:text-sm text-[#6B6B6B] mt-1">
+              Elegí día y horario disponible. Confirmación instantánea.
+            </p>
+          </div>
+
+          <BookingForm
+            businessId={businessId || negocio?.id}
+            services={items.map((s) => s.name)}
+            primaryColor="#0A0A0A"
+            secondaryColor="#6B6B6B"
+            theme="light"
+          />
+
+          <div className="mt-6 pt-4 border-t border-[#F0EEEA] flex items-center justify-center gap-6 text-[11px] text-[#8A8880]">
+            <div className="flex items-center gap-1.5">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Sin cargos de gestión</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Cancelación flexible</span>
+            </div>
+          </div>
+        </section>
+
+        {/* ─── Minimalist Footer ─── */}
+        <footer className="w-full text-center py-6 border-t border-[#E8E6E1]/60 text-xs text-[#8A8880]">
+          <p>© {new Date().getFullYear()} {businessName}. Todos los derechos reservados.</p>
+          <p className="text-[10px] mt-1 text-[#A8A6A0]">Creado con MiniWebs</p>
+        </footer>
+      </main>
     </div>
   );
 }

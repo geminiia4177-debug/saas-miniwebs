@@ -1,0 +1,332 @@
+/* ─── Barbería Siglo XX (1920-1950) CSS Module ─── */
+
+.wrapper {
+  --primary-walnut: #1A0F0A;
+  --bg-cream: #F5F1E8;
+  --card-ivory: #FFFCF5;
+  --brass-gold: #C8A96E;
+  --barber-red: #8B1A1A;
+  --english-green: #0F2F3A;
+  --leather-dark: #120906;
+}
+
+/* ─── Noise Grain Overlay ─── */
+.noiseOverlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.04;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  z-index: 1;
+}
+
+/* ─── Checkerboard (Damero) Patterns ─── */
+.dameroBar {
+  height: 8px;
+  width: 100%;
+  background-image: repeating-linear-gradient(90deg, #1A0F0A 0, #1A0F0A 8px, #F5F1E8 8px, #F5F1E8 16px);
+  opacity: 0.9;
+}
+
+.dameroDarkBar {
+  height: 8px;
+  width: 100%;
+  background-image: repeating-linear-gradient(90deg, #0A0503 0, #0A0503 8px, #C8A96E 8px, #C8A96E 16px);
+  opacity: 0.85;
+}
+
+.dameroSubtle {
+  background-image: 
+    linear-gradient(45deg, rgba(200, 169, 110, 0.04) 25%, transparent 25%), 
+    linear-gradient(-45deg, rgba(200, 169, 110, 0.04) 25%, transparent 25%), 
+    linear-gradient(45deg, transparent 75%, rgba(200, 169, 110, 0.04) 75%), 
+    linear-gradient(-45deg, transparent 75%, rgba(200, 169, 110, 0.04) 75%);
+  background-size: 24px 24px;
+  background-position: 0 0, 0 12px, 12px -12px, -12px 0px;
+}
+
+/* ─── Barber Pole Animated Ribbon ─── */
+.barberPoleHorizontal {
+  height: 12px;
+  width: 100%;
+  background: repeating-linear-gradient(
+    135deg,
+    #8B1A1A,
+    #8B1A1A 14px,
+    #FFFCF5 14px,
+    #FFFCF5 28px,
+    #0F2F3A 28px,
+    #0F2F3A 42px,
+    #FFFCF5 42px,
+    #FFFCF5 56px
+  );
+  background-size: 80px 80px;
+  animation: barberPoleSlide 3s linear infinite;
+  border-top: 1px solid rgba(200, 169, 110, 0.5);
+  border-bottom: 1px solid rgba(200, 169, 110, 0.5);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.35);
+}
+
+@keyframes barberPoleSlide {
+  0% { background-position: 0 0; }
+  100% { background-position: 80px 0; }
+}
+
+/* ─── Gold Lines & Dividers ─── */
+.goldDoubleDivider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  width: 100%;
+  height: 16px;
+}
+.goldDoubleDivider::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 4px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--brass-gold, #C8A96E), transparent);
+  opacity: 0.8;
+}
+.goldDoubleDivider::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 4px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--brass-gold, #C8A96E), transparent);
+  opacity: 0.8;
+}
+
+.goldDoubleBorder {
+  border: 3px double var(--brass-gold, #C8A96E);
+}
+
+.goldDoubleBorderBottom {
+  border-bottom: 3px double var(--brass-gold, #C8A96E);
+}
+
+/* ─── Scroll Progress ─── */
+.scrollProgress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: var(--brass-gold, #C8A96E);
+  transform-origin: left;
+  z-index: 9999;
+  will-change: transform;
+}
+
+/* ─── Vintage Beveled Buttons ─── */
+.btnVintage {
+  position: relative;
+  background-color: var(--brass-gold, #C8A96E);
+  color: #1A0F0A;
+  letter-spacing: 0.16em;
+  font-weight: 700;
+  text-transform: uppercase;
+  border: 3px double #1A0F0A;
+  clip-path: polygon(6px 0, calc(100% - 6px) 0, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0 calc(100% - 6px), 0 6px);
+  box-shadow: 0 4px 14px rgba(26, 15, 10, 0.25), inset 0 1px 1px rgba(255, 255, 255, 0.4);
+  transition: all 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.btnVintage:hover {
+  background-color: #D9BE84;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(200, 169, 110, 0.45), inset 0 1px 2px rgba(255, 255, 255, 0.6);
+}
+
+.btnVintageOutline {
+  position: relative;
+  background-color: transparent;
+  color: var(--brass-gold, #C8A96E);
+  letter-spacing: 0.16em;
+  font-weight: 700;
+  text-transform: uppercase;
+  border: 2px solid var(--brass-gold, #C8A96E);
+  clip-path: polygon(6px 0, calc(100% - 6px) 0, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0 calc(100% - 6px), 0 6px);
+  transition: all 0.35s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.btnVintageOutline:hover {
+  background-color: rgba(200, 169, 110, 0.15);
+  color: #FFFCF5;
+  border-color: #FFFCF5;
+}
+
+/* ─── Hero Title Art Deco ─── */
+.heroTitleVintage {
+  letter-spacing: 0.08em;
+  color: #FFFCF5;
+  text-shadow: 
+    -1px -1px 0 #C8A96E,
+    1px -1px 0 #C8A96E,
+    -1px 1px 0 #C8A96E,
+    1px 1px 0 #C8A96E,
+    3px 3px 0 #1A0F0A,
+    6px 6px 16px rgba(0, 0, 0, 0.9);
+}
+
+/* ─── Service Card (Ivory Paper + Brass Details) ─── */
+.serviceCard {
+  background-color: #FFFCF5;
+  border: 3px double rgba(200, 169, 110, 0.45);
+  box-shadow: 0 8px 24px -4px rgba(26, 15, 10, 0.08), 0 2px 6px -1px rgba(26, 15, 10, 0.04);
+  position: relative;
+  transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  color: #1A0F0A;
+}
+.serviceCard:hover {
+  transform: translateY(-4px);
+  border-color: var(--brass-gold, #C8A96E);
+  box-shadow: 0 16px 36px -8px rgba(26, 15, 10, 0.18), 0 0 24px rgba(200, 169, 110, 0.15);
+}
+
+/* ─── Brass Rivets ─── */
+.rivet {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #FFE9B3, #C8A96E 60%, #7A5A28 100%);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.8);
+  z-index: 5;
+}
+.rivetTl { top: 6px; left: 6px; }
+.rivetTr { top: 6px; right: 6px; }
+.rivetBl { bottom: 6px; left: 6px; }
+.rivetBr { bottom: 6px; right: 6px; }
+
+/* ─── Apothecary Product Card ─── */
+.productCard {
+  background-color: #FFFCF5;
+  border: 2px solid #C8A96E;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.35);
+  position: relative;
+  transition: all 0.4s ease;
+  color: #1A0F0A;
+}
+.productCard:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 18px 35px -5px rgba(0, 0, 0, 0.45), 0 0 18px rgba(200, 169, 110, 0.3);
+}
+
+/* ─── Gallery Vintage Frame ─── */
+.vintageFrame {
+  border: 5px solid #C8A96E;
+  outline: 2px solid #1A0F0A;
+  outline-offset: -3px;
+  box-shadow: 0 12px 30px -5px rgba(0,0,0,0.5), inset 0 0 15px rgba(0,0,0,0.5);
+  position: relative;
+  overflow: hidden;
+  background: #1A0F0A;
+  transition: transform 0.5s ease, box-shadow 0.5s ease;
+}
+.vintageFrame:hover {
+  transform: scale(1.02);
+  box-shadow: 0 20px 40px -5px rgba(0,0,0,0.7), 0 0 25px rgba(200, 169, 110, 0.3);
+}
+.vintageSepiaImg {
+  filter: sepia(0.35) contrast(1.1) brightness(0.95);
+  transition: filter 0.6s ease, transform 0.6s ease;
+}
+.vintageFrame:hover .vintageSepiaImg {
+  filter: sepia(0.08) contrast(1.05) brightness(1.02);
+  transform: scale(1.05);
+}
+
+/* ─── Vintage TV/Radio Cabinet ─── */
+.tvCabinet {
+  background: linear-gradient(145deg, #2D1A10, #170C06);
+  border: 8px solid #3A2012;
+  border-radius: 28px;
+  box-shadow: 0 25px 60px -15px rgba(0,0,0,0.8), inset 0 2px 6px rgba(255,255,255,0.1), inset 0 -4px 10px rgba(0,0,0,0.8);
+  position: relative;
+}
+.brassKnob {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #FFE7A3, #C8A96E 50%, #6E4E1C 100%);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.6), inset 0 1px 1px rgba(255,255,255,0.8);
+  border: 1px solid #4A3312;
+  position: relative;
+}
+.brassKnob::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 12px;
+  width: 2px;
+  height: 8px;
+  background: #2D1A10;
+  border-radius: 1px;
+}
+
+/* ─── Appointment Card (Booking) ─── */
+.appointmentCard {
+  background-color: #FFFCF5;
+  border: 4px double #C8A96E;
+  position: relative;
+  box-shadow: 0 15px 45px -10px rgba(26, 15, 10, 0.15), 0 4px 12px rgba(26, 15, 10, 0.08);
+  color: #1A0F0A;
+}
+.vintageStamp {
+  border: 2px dashed #8B1A1A;
+  color: #8B1A1A;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: 4px 12px;
+  transform: rotate(-6deg);
+  display: inline-block;
+}
+
+/* ─── Scroll & Reveal Animations ─── */
+.animateOnScroll {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94), transform 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+:global(.animate-visible) {
+  opacity: 1 !important;
+  transform: translateY(0) !important;
+}
+
+@keyframes fadeInVintage {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animateFadeIn {
+  animation: fadeInVintage 0.8s ease forwards;
+}
+.delay100 { animation-delay: 0.1s; opacity: 0; }
+.delay200 { animation-delay: 0.2s; opacity: 0; }
+.delay300 { animation-delay: 0.3s; opacity: 0; }
+.delay400 { animation-delay: 0.4s; opacity: 0; }
+
+/* ─── Rotating Circular Seal ─── */
+.rotatingSeal {
+  animation: rotateStamp 36s linear infinite;
+  transform-origin: center center;
+}
+@keyframes rotateStamp {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* ─── Safe Area for Mobile Bottom CTA ─── */
+.bottomSafe {
+  padding-bottom: max(1.25rem, env(safe-area-inset-bottom, 1.25rem));
+}

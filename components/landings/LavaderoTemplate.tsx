@@ -1,10 +1,14 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import { Outfit, Plus_Jakarta_Sans } from "next/font/google";
 import BookingForm from "@/app/[subdomain]/BookingForm";
 import styles from "./LavaderoTemplate.module.css";
-import { extractYouTubeId } from "@/components/ui/VideoSection";
+import VideoSection, { extractYouTubeId } from "@/components/ui/VideoSection";
 import { formatSocialUrl } from "@/components/landings/biolinks/utils";
+
+const outfit = Outfit({ subsets: ["latin"], display: "swap" });
+const plusJakarta = Plus_Jakarta_Sans({ subsets: ["latin"], display: "swap" });
 
 export default function LavaderoTemplate(props: { negocio: any; media?: any[]; businessId?: string; sections?: any[] }) {
   const { negocio, media = [], businessId } = props;
@@ -80,7 +84,7 @@ export default function LavaderoTemplate(props: { negocio: any; media?: any[]; b
 
       // Active section detection
       const sections = ["servicios", "productos", "galeria", "booking", "contacto"];
-      for (const id of sections.reverse()) {
+      for (const id of [...sections].reverse()) {
         const el = document.getElementById(id);
         if (el && el.getBoundingClientRect().top <= 150) {
           setActiveSection(id);
@@ -112,22 +116,12 @@ export default function LavaderoTemplate(props: { negocio: any; media?: any[]; b
 
   const getBackgroundStyle = () => {
     if (negocio?.backgroundType === "image" && negocio?.backgroundImageUrl) {
-      return { backgroundImage: `url(${negocio.backgroundImageUrl})`, backgroundSize: "cover", backgroundPosition: "center", backgroundAttachment: "scroll" as const };
+      return { backgroundImage: `url(${negocio.backgroundImageUrl})`, backgroundSize: "cover", backgroundPosition: "center" };
     }
-    return { backgroundColor: "#09090b" }; // Fuerza oscuro premium
+    return { backgroundColor: "#09090b" };
   };
 
-  const googleFontUrl = negocio?.fontFamily && negocio.fontFamily.includes("'")
-    ? `https://fonts.googleapis.com/css2?family=${negocio.fontFamily.split("'")[1].replace(/ /g, '+')}:wght@300;400;600;700;800;900&display=swap`
-    : null;
-
   const fontStyle = {
-    fontFamily: negocio?.fontFamily && negocio.fontFamily.includes("'")
-      ? negocio.fontFamily
-      : negocio?.fontFamily === "serif" ? "Georgia,serif" :
-        negocio?.fontFamily === "mono" ? "monospace" :
-        negocio?.fontFamily === "rounded" ? "'Nunito',system-ui,sans-serif" :
-        "system-ui,sans-serif",
     ["--scale-hero" as any]: (negocio?.layoutConfig?.fontSizeHero || 100) / 100,
     ["--scale-titles" as any]: (negocio?.layoutConfig?.fontSizeTitles || 100) / 100,
     ["--scale-body" as any]: (negocio?.layoutConfig?.fontSizeBody || 100) / 100,
@@ -156,11 +150,8 @@ export default function LavaderoTemplate(props: { negocio: any; media?: any[]; b
   return (
     <>
       <style>{`
-        ${googleFontUrl ? `@import url('${googleFontUrl}');` : ''}
-        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
-        
-        .font-display { font-family: 'Outfit', sans-serif; }
-        .font-body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .font-display { font-family: ${outfit.style.fontFamily}, sans-serif; }
+        .font-body { font-family: ${plusJakarta.style.fontFamily}, sans-serif; }
 
         /* ─── Base Dark Theme Overrides ─── */
         body { background-color: #09090b; color: #ffffff; }
@@ -410,33 +401,19 @@ export default function LavaderoTemplate(props: { negocio: any; media?: any[]; b
               const currentVideoUrl = s.config?.youtubeUrl || s.config?.videoUrl || videoUrl;
               const videoTitle = s.config?.title || s.label || "Video Institucional";
               const videoDesc = s.config?.description || s.config?.subtitle;
-              return <React.Fragment key={s.id}>
-        {/* ─── VIDEO ─── */}
-        {currentVideoUrl && extractYouTubeId(currentVideoUrl) && (
-          <section className="relative py-24 px-4 sm:px-6 md:px-12 max-w-6xl mx-auto z-10 border-t border-white/5">
-            <div className="text-center mb-10">
-              {videoDesc && (
-                <p className="text-xs uppercase tracking-widest font-bold mb-2" style={{ color: accent }}>
-                  {videoDesc}
-                </p>
-              )}
-              <h2 className="font-display text-3xl sm:text-4xl md:text-5xl font-bold text-white uppercase tracking-tight">
-                {videoTitle}
-              </h2>
-            </div>
-            <div className={`aspect-video rounded-3xl overflow-hidden border border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.8)] relative ${styles.animateOnScroll} group bg-black`}>
-              <div className="absolute inset-0 bg-[var(--accent)] opacity-20 blur-[100px] -z-10 mix-blend-screen"></div>
-              <iframe
-                src={`https://www.youtube.com/embed/${extractYouTubeId(currentVideoUrl)}?controls=1&rel=0`}
-                className="w-full h-full border-none relative z-10"
-                allowFullScreen
-                title="Video del negocio"
-                loading="lazy"
-              />
-            </div>
-          </section>
-        )}
-        </React.Fragment>;
+              if (!currentVideoUrl) return null;
+              return (
+                <React.Fragment key={s.id}>
+                  <VideoSection
+                    videoUrl={currentVideoUrl}
+                    title={videoTitle}
+                    subtitle={videoDesc}
+                    accentColor={accent}
+                    theme="dark"
+                    className="border-t border-white/5"
+                  />
+                </React.Fragment>
+              );
             }
 
             case 'booking': return <React.Fragment key={s.id}>
@@ -491,7 +468,7 @@ export default function LavaderoTemplate(props: { negocio: any; media?: any[]; b
                     <h3 className="text-white font-display text-2xl font-bold mb-4">Reservas por WhatsApp</h3>
                     <p className="text-white/50 font-body mb-8">Escribinos para coordinar tu turno.</p>
                     {negocio?.whatsapp && (
-                      <a href={`https://wa.me/${negocio.whatsapp.replace(/\D/g,'')}`} target="_blank" rel="noreferrer" className={`${styles.btnReserva} inline-flex items-center gap-3 px-8 py-4 text-sm font-bold tracking-[0.15em] uppercase rounded-full`}>
+                      <a href={formatSocialUrl("whatsapp", negocio.whatsapp)} target="_blank" rel="noreferrer" className={`${styles.btnReserva} inline-flex items-center gap-3 px-8 py-4 text-sm font-bold tracking-[0.15em] uppercase rounded-full`}>
                         <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981z"/></svg>
                         Contactar
                       </a>
@@ -509,12 +486,12 @@ export default function LavaderoTemplate(props: { negocio: any; media?: any[]; b
         })}
         
         {/* ─── FOOTER / CONTACTO ─── */}
-        <footer id="contacto" className="border-t border-white/5 py-16 px-4 sm:px-6 md:px-12 bg-black relative mt-20 z-10">
+        <footer id="contacto" className="border-t border-white/5 pt-16 pb-28 md:pb-16 px-4 sm:px-6 md:px-12 bg-black relative mt-20 z-10">
           <div className={`absolute inset-0 ${styles.cyberGrid} opacity-20 pointer-events-none`}></div>
           <div className="max-w-7xl mx-auto relative z-10">
             {mapUrl && (
               <div className="mb-16 rounded-3xl overflow-hidden border border-white/10 h-64 sm:h-80 shadow-2xl grayscale hover:grayscale-0 transition-all duration-700">
-                <iframe src={mapUrl} className="w-full h-full border-none" allowFullScreen loading="lazy" title="Ubicación"></iframe>
+                <iframe src={mapUrl} className="w-full h-full border-none" allowFullScreen loading="lazy" title="Ubicación del lavadero"></iframe>
               </div>
             )}
 
@@ -583,7 +560,10 @@ export default function LavaderoTemplate(props: { negocio: any; media?: any[]; b
         </footer>
 
         {/* Floating Mobile Button */}
-        <div className="md:hidden fixed bottom-0 left-0 w-full px-6 z-[100] pb-6 bg-gradient-to-t from-zinc-950 via-zinc-950/80 to-transparent pt-12 pointer-events-none">
+        <div
+          className="md:hidden fixed bottom-0 left-0 w-full px-6 z-[100] pb-6 bg-gradient-to-t from-zinc-950 via-zinc-950/80 to-transparent pt-12 pointer-events-none"
+          style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom, 1.5rem))' }}
+        >
           <button onClick={handleReservarClick} className={`${styles.btnReserva} w-full py-4 text-sm font-bold tracking-[0.2em] uppercase rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.5)] flex items-center justify-center gap-3 pointer-events-auto`}>
             Reservar Turno
             <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>

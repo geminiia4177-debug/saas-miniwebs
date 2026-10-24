@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
+import { Instrument_Serif, Inter } from "next/font/google";
 import { StoreProduct, StoreShipping, StorePayment } from "@/lib/types";
 import { CartItem, DEMO_PRODUCTS } from "./tienda/tiendaTypes";
 import { StoreHeader } from "./tienda/StoreHeader";
@@ -12,6 +13,21 @@ import { CheckoutModal } from "./tienda/CheckoutModal";
 import { OrderSuccessModal } from "./tienda/OrderSuccessModal";
 import { FloatingCartButton } from "./tienda/FloatingCartButton";
 import { Truck, Check, Sparkles, MessageCircle } from "lucide-react";
+import { formatSocialUrl } from "@/components/landings/biolinks/utils";
+
+const fontSerif = Instrument_Serif({
+  subsets: ["latin"],
+  weight: "400",
+  variable: "--font-tienda-serif",
+  display: "swap",
+});
+
+const fontSans = Inter({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-tienda-sans",
+  display: "swap",
+});
 
 export default function TiendaTemplate({
   negocio,
@@ -41,23 +57,26 @@ export default function TiendaTemplate({
   const rawProducts: StoreProduct[] = useMemo(() => {
     const list = layoutConfig.tiendaProductos || layoutConfig.products || [];
     if (list.length > 0) return list;
-    // D10: Demo products only in preview/editor mode; never on public live sites
     return isPreviewMode ? DEMO_PRODUCTS : [];
   }, [layoutConfig.tiendaProductos, layoutConfig.products, isPreviewMode]);
 
-  const enviosConfig: StoreShipping = layoutConfig.tiendaEnvios || {
-    permitirEnvio: true,
-    costoEnvio: 0,
-    envioGratisDesde: null,
-    textoEnvio: "Envíos a todo el país y retiros en tienda",
-    permitirRetiro: true,
-    direccionRetiro: negocio?.address || "Retiro por nuestro showroom",
-  };
+  const enviosConfig: StoreShipping = useMemo(() => {
+    return layoutConfig.tiendaEnvios || {
+      permitirEnvio: true,
+      costoEnvio: 0,
+      envioGratisDesde: null,
+      textoEnvio: "Envíos a todo el país y retiros en tienda",
+      permitirRetiro: true,
+      direccionRetiro: negocio?.address || "Retiro por nuestro showroom",
+    };
+  }, [layoutConfig.tiendaEnvios, negocio?.address]);
 
-  const pagosConfig: StorePayment = layoutConfig.tiendaPagos || {
-    acordarVendedor: true,
-    instruccionesAcordar: "Coordinamos el pago (efectivo o transferencia) y entrega directamente por WhatsApp.",
-  };
+  const pagosConfig: StorePayment = useMemo(() => {
+    return layoutConfig.tiendaPagos || {
+      acordarVendedor: true,
+      instruccionesAcordar: "Coordinamos el pago (efectivo o transferencia) y entrega directamente por WhatsApp.",
+    };
+  }, [layoutConfig.tiendaPagos]);
 
   // State
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
@@ -191,9 +210,9 @@ export default function TiendaTemplate({
     color?: string | null,
     qty = 1
   ) => {
-    const chosenTalle = talle || (product.talles && product.talles[0]) || null;
-    const chosenColor = color || (product.colores && product.colores[0]) || null;
-    const key = `${product.id}_${chosenTalle || "none"}_${chosenColor || "none"}`;
+    const chosenTalle = (talle || (product.talles && product.talles[0]) || "none").toLowerCase().trim();
+    const chosenColor = (color || (product.colores && product.colores[0]) || "none").toLowerCase().trim();
+    const key = `${product.id}::${chosenTalle}::${chosenColor}`;
 
     const maxStock = product.stock != null ? Number(product.stock) : Infinity;
 
@@ -215,8 +234,8 @@ export default function TiendaTemplate({
           nombre: product.nombre || product.name || "Producto",
           precio: Number(product.precio || product.price || 0),
           imagen: product.imagen || product.imageUrl || (product.imagenes && product.imagenes[0]),
-          talle: chosenTalle,
-          color: chosenColor,
+          talle: chosenTalle !== "none" ? chosenTalle : null,
+          color: chosenColor !== "none" ? chosenColor : null,
           qty,
         },
       ];
@@ -300,7 +319,7 @@ export default function TiendaTemplate({
         body: JSON.stringify(orderPayload),
       });
 
-      const resData = await res.json();
+      const resData = await res.json().catch(() => ({}));
 
       if (!res.ok) {
         throw new Error(resData.error || "No se pudo procesar el pedido.");
@@ -319,7 +338,7 @@ export default function TiendaTemplate({
 
   return (
     <div
-      className="min-h-screen bg-[#070B14] text-slate-100 font-sans selection:bg-indigo-500/30 selection:text-white"
+      className={`${fontSerif.variable} ${fontSans.variable} min-h-screen bg-[#05070F] text-slate-100 font-['Inter'] selection:bg-indigo-500/30 selection:text-white pb-28 sm:pb-12`}
       style={
         {
           "--store-primary": primary,
@@ -342,55 +361,55 @@ export default function TiendaTemplate({
       />
 
       {/* ── Hero Promo Banner ── */}
-      <section className="relative overflow-hidden py-10 sm:py-16 px-4 sm:px-6 lg:px-8 border-b border-white/5">
-        <div className="absolute inset-0 bg-gradient-to-br from-indigo-950/40 via-[#070B14] to-purple-950/20 pointer-events-none" />
+      <section className="relative overflow-hidden py-12 sm:py-20 px-4 sm:px-6 lg:px-8 border-b border-white/5">
+        <div className="absolute inset-0 bg-gradient-to-br from-indigo-950/40 via-[#05070F] to-violet-950/20 pointer-events-none" />
         {bannerUrl && (
           <div
             className="absolute inset-0 bg-cover bg-center opacity-15 pointer-events-none"
             style={{ backgroundImage: `url(${bannerUrl})` }}
           />
         )}
-        <div className="relative max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-8">
+        <div className="relative max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-10">
           <div className="max-w-2xl text-center md:text-left">
-            <span className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 mb-4">
+            <span className="inline-flex items-center gap-1.5 text-xs font-bold px-3.5 py-1 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 mb-5">
               <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-              <span>Catálogo Actualizado</span>
+              <span>Colección Nocturnal Atelier</span>
             </span>
-            <h2 className="text-3xl sm:text-5xl font-black text-white tracking-tight leading-tight">
-              {layoutConfig.heroTitle || "Encuentra tus productos favoritos"}
+            <h2 className="text-4xl sm:text-6xl font-normal text-white tracking-tight leading-[0.95] font-['Instrument_Serif']">
+              {layoutConfig.heroTitle || "Estilo y distinción en cada detalle"}
             </h2>
-            <p className="mt-3 text-sm sm:text-base text-slate-400 leading-relaxed">
+            <p className="mt-4 text-sm sm:text-base text-slate-400 leading-relaxed max-w-xl">
               {layoutConfig.heroSubtitle ||
-                "Explora nuestras colecciones exclusivas con entrega directa y atención personalizada."}
+                "Explora nuestras colecciones exclusivas con entrega directa, stock en tiempo real y atención personalizada."}
             </p>
 
             {/* Badges */}
-            <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 mt-6 text-xs text-slate-300">
-              <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-3 py-1.5 rounded-xl">
-                <Truck className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Envíos rápidos</span>
+            <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 mt-8 text-xs text-slate-300">
+              <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-3.5 py-2 rounded-xl backdrop-blur-sm">
+                <Truck className="w-4 h-4 text-emerald-400" />
+                <span>Envíos a todo el país</span>
               </div>
-              <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-3 py-1.5 rounded-xl">
-                <Check className="w-3.5 h-3.5 text-indigo-400" />
-                <span>Stock asegurado</span>
+              <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-3.5 py-2 rounded-xl backdrop-blur-sm">
+                <Check className="w-4 h-4 text-indigo-400" />
+                <span>Garantía oficial</span>
               </div>
-              <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-3 py-1.5 rounded-xl">
-                <MessageCircle className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Pedido directo a WhatsApp</span>
+              <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-3.5 py-2 rounded-xl backdrop-blur-sm">
+                <MessageCircle className="w-4 h-4 text-emerald-400" />
+                <span>Atención por WhatsApp</span>
               </div>
             </div>
           </div>
 
           {/* Quick Stats / Guarantee Card */}
-          <div className="bg-gradient-to-br from-white/10 to-white/5 border border-white/10 rounded-3xl p-6 backdrop-blur-xl shadow-2xl flex flex-col gap-3 sm:min-w-[280px]">
-            <p className="text-xs font-bold text-indigo-300 uppercase tracking-wider">
+          <div className="bg-gradient-to-br from-white/10 to-white/5 border border-white/10 rounded-3xl p-7 backdrop-blur-2xl shadow-2xl flex flex-col gap-3 sm:min-w-[300px]">
+            <p className="text-xs font-bold text-indigo-300 uppercase tracking-widest">
               Compra 100% Segura
             </p>
-            <div className="text-2xl font-black text-white">
-              {rawProducts.length}+ Productos
+            <div className="text-3xl font-black text-white font-['Instrument_Serif']">
+              {rawProducts.length}+ Artículos
             </div>
-            <p className="text-xs text-slate-400">
-              Elige tu talle, color y forma de pago. Recibimos tu pedido al instante.
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Seleccioná tus variantes favoritas, coordiná la entrega y recibí confirmación inmediata.
             </p>
           </div>
         </div>
@@ -507,16 +526,17 @@ export default function TiendaTemplate({
       />
 
       {/* ── Footer ── */}
-      <footer className="border-t border-white/5 py-12 px-4 sm:px-6 lg:px-8 bg-[#050811] text-center text-xs text-slate-500">
+      <footer className="border-t border-white/5 py-12 px-4 sm:px-6 lg:px-8 bg-[#05070F] text-center text-xs text-slate-500">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <p>© {new Date().getFullYear()} {storeName}. Todos los derechos reservados.</p>
-          <div className="flex items-center gap-4 text-slate-400">
+          <div className="flex items-center gap-5 text-slate-400">
             {negocio?.instagram && (
               <a
-                href={negocio.instagram.startsWith("http") ? negocio.instagram : `https://instagram.com/${negocio.instagram.replace("@", "")}`}
+                href={formatSocialUrl("instagram", negocio.instagram)}
                 target="_blank"
-                rel="noreferrer"
+                rel="noopener noreferrer"
                 className="hover:text-white transition-colors"
+                aria-label="Instagram de la tienda"
               >
                 Instagram
               </a>
@@ -525,8 +545,9 @@ export default function TiendaTemplate({
               <a
                 href={`https://wa.me/${merchantPhone.replace(/\D/g, "")}`}
                 target="_blank"
-                rel="noreferrer"
+                rel="noopener noreferrer"
                 className="hover:text-white transition-colors"
+                aria-label="WhatsApp de la tienda"
               >
                 WhatsApp
               </a>

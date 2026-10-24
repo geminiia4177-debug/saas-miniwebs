@@ -25,7 +25,10 @@ import {
   ChevronRight,
   UploadCloud,
   X,
+  RotateCcw,
+  Sparkles,
 } from "lucide-react";
+import { CopilotModal } from "./CopilotModal";
 
 export interface EditorShellProps {
   biz: Biz;
@@ -54,10 +57,27 @@ export const EditorShell: React.FC<EditorShellProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<EditorTabId | null>("design");
   const [activeSection, setActiveSection] = useState<Section | null>(null);
-  const [previewDevice, setPreviewDevice] = useState<"desktop" | "tablet" | "mobile">("desktop");
+  const [previewDevice, setPreviewDevice] = useState<"desktop" | "tablet" | "mobile">("mobile");
   const [isPublishDiffOpen, setIsPublishDiffOpen] = useState(false);
+  const [isCopilotOpen, setIsCopilotOpen] = useState(false);
   const [isPanelCollapsed, setIsPanelCollapsed] = useState(false);
   const [mobileMode, setMobileMode] = useState<"edit" | "preview">("edit");
+
+  // Botón de Pánico: Restaura la última versión publicada estable
+  const handlePanicRevert = () => {
+    if ((biz as any).publishedConfig) {
+      setBiz((prev: any) => ({
+        ...prev,
+        layoutConfig: JSON.parse(JSON.stringify((biz as any).publishedConfig)),
+      }));
+      showToast("¡Listo! Tu web volvió a como estaba publicada ✓", "success");
+    } else if (canUndo) {
+      undo();
+      showToast("Se deshicieron los últimos cambios ✓", "info");
+    } else {
+      showToast("No hay versión previa para restaurar", "warn");
+    }
+  };
 
   // Undo / Redo history engine
   const { canUndo, canRedo, undo, redo } = useEditorHistory(
@@ -184,8 +204,30 @@ export const EditorShell: React.FC<EditorShellProps> = ({
           />
         </div>
 
-        {/* Right: Preview link & Publish CTA */}
+        {/* Right: Panic Revert, Copilot IA, Preview link & Publish CTA */}
         <div className="flex items-center gap-2">
+          {hasUnpublished && (
+            <button
+              type="button"
+              onClick={handlePanicRevert}
+              className="hidden lg:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 text-xs font-semibold transition-colors"
+              title="Restaurar la última versión publicada"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Restaurar</span>
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={() => setIsCopilotOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-md transition-all active:scale-95"
+            title="Copiloto IA: Dile qué cambiar"
+          >
+            <Sparkles className="w-3.5 h-3.5 animate-pulse" />
+            <span className="hidden sm:inline">Copiloto IA</span>
+          </button>
+
           <a
             href={publicUrl}
             target="_blank"
@@ -360,6 +402,15 @@ export const EditorShell: React.FC<EditorShellProps> = ({
           setActiveTab(panel as EditorTabId);
           setIsPanelCollapsed(false);
         }}
+      />
+
+      {/* ── COPILOTO IA MODAL ── */}
+      <CopilotModal
+        isOpen={isCopilotOpen}
+        onClose={() => setIsCopilotOpen(false)}
+        biz={biz}
+        setBiz={setBiz}
+        showToast={showToast}
       />
     </div>
   );

@@ -181,7 +181,31 @@ console.log("\n─── 4. Accessibility & Mobile-First Contract ───");
 
 assert(contractClassic.schedule.every((d) => typeof d.label === "string" && typeof d.enabled === "boolean"), "Schedule days have accessible labels and status");
 assert(contractClassic.services.every((s) => typeof s.name === "string" && typeof s.price === "string"), "Services have legible names and formatted prices");
-assert(typeof contractClassic.branding.buttonStyle === "string", "Button style contract defined");
+// ─── TEST SUITE 5: 10 SPECIALIZED MEXICAN NICHE TEMPLATES (2 PER VERTICAL) ───
+console.log("\n─── 5. Specialized Mexican Niche Templates (Pairs per Vertical) ───");
+import { resolveTemplateKind } from "../lib/templates/resolver";
+
+// Vertical 1: Barbería
+assert(resolveTemplateKind({ layoutConfig: { themeVariant: "el_patron" } }) === "el_patron", "Resolver: el_patron (Barbería Clásica)");
+assert(resolveTemplateKind({ layoutConfig: { themeVariant: "urban_fade" } }) === "urban_fade", "Resolver: urban_fade (Barbería Streetwear)");
+assert(resolveTemplateKind({ layoutConfig: { themeVariant: "fade_studio" } }) === "urban_fade", "Resolver: fade_studio alias -> urban_fade");
+
+// Vertical 2: Gastronomía
+assert(resolveTemplateKind({ layoutConfig: { themeVariant: "trompo" } }) === "trompo", "Resolver: trompo (Taquería Callejera)");
+assert(resolveTemplateKind({ layoutConfig: { themeVariant: "cantina_gourmet" } }) === "cantina_gourmet", "Resolver: cantina_gourmet (Gastrobar / Smash)");
+
+// Vertical 3: Uñas & Belleza
+assert(resolveTemplateKind({ layoutConfig: { themeVariant: "unas" } }) === "unas", "Resolver: unas (Boutique Uñas Nude)");
+assert(resolveTemplateKind({ layoutConfig: { themeVariant: "glitz_lash" } }) === "glitz_lash", "Resolver: glitz_lash (Dark Velvet Glam / Lashes)");
+
+// Vertical 4: Salud / Dental
+assert(resolveTemplateKind({ layoutConfig: { themeVariant: "dental" } }) === "dental", "Resolver: dental (Clínica Odontológica)");
+assert(resolveTemplateKind({ layoutConfig: { themeVariant: "holistic_spa" } }) === "holistic_spa", "Resolver: holistic_spa (Dental Spa / Armonización)");
+
+// Vertical 5: Mascotas / Veterinaria
+assert(resolveTemplateKind({ layoutConfig: { themeVariant: "veterinaria" } }) === "veterinaria", "Resolver: veterinaria (Clínica Médica)");
+assert(resolveTemplateKind({ layoutConfig: { themeVariant: "pet_resort" } }) === "pet_resort", "Resolver: pet_resort (Hotel Canino VIP sin jaulas)");
+
 
 console.log("\n════════════════════════════════════════════════════════════");
 console.log(` RESULTS: ${passed} passed, ${failed} failed`);

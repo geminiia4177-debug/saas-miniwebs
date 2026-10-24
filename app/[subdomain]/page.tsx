@@ -7,6 +7,7 @@ import { authOptions } from "@/lib/auth";
 import BookingForm from "./BookingForm";
 import { getPublicUrl, sanitizeEmbedUrl } from "@/lib/urls";
 import { resolveTemplateKind } from "@/lib/templates/resolver";
+import JsonLdSchema from "@/components/ui/JsonLdSchema";
 
 export const revalidate = 0; // Disable aggressive caching for public lands
 
@@ -149,6 +150,16 @@ const LavaderoTemplate = dynamic(() => import("@/components/landings/LavaderoTem
 const GeneralTemplate = dynamic(() => import("@/components/landings/GeneralTemplate"));
 const DefaultTemplate = dynamic(() => import("@/components/landings/DefaultTemplate"));
 const TiendaTemplate = dynamic(() => import("@/components/landings/TiendaTemplate"));
+const TrompoTemplate = dynamic(() => import("@/components/landings/TrompoTemplate"));
+const ElPatronTemplate = dynamic(() => import("@/components/landings/ElPatronTemplate"));
+const UnasTemplate = dynamic(() => import("@/components/landings/UnasTemplate"));
+const DentalTemplate = dynamic(() => import("@/components/landings/DentalTemplate"));
+const VeterinariaTemplate = dynamic(() => import("@/components/landings/VeterinariaTemplate"));
+const UrbanFadeTemplate = dynamic(() => import("@/components/landings/UrbanFadeTemplate"));
+const CantinaGourmetTemplate = dynamic(() => import("@/components/landings/CantinaGourmetTemplate"));
+const GlitzLashTemplate = dynamic(() => import("@/components/landings/GlitzLashTemplate"));
+const HolisticSpaTemplate = dynamic(() => import("@/components/landings/HolisticSpaTemplate"));
+const PetResortTemplate = dynamic(() => import("@/components/landings/PetResortTemplate"));
 
 // NUEVOS TEMAS UNIVERSALES
 const TemplateRenderer = dynamic(() => import("@/components/landings/templates/TemplateRenderer"));
@@ -337,39 +348,6 @@ export default async function PublicLandingPage({ params, searchParams }: { para
   // Si el negocio tiene un tipo específico, lo mandamos a su diseño premium
   // ─────────────────────────────────────────────────────────
   const publicPageUrl = getPublicUrl(biz);
-  const jsonLd: Record<string, any> = {
-    "@context": "https://schema.org",
-    "@type": biz.type === "tienda" ? "Store" : biz.type === "barberia" ? "HairSalon" : biz.type === "menu" ? "Restaurant" : biz.type === "clinica" ? "MedicalClinic" : biz.type === "estetica" ? "BeautySalon" : biz.type === "gimnasio" ? "ExerciseGym" : biz.type === "taller" ? "AutoRepair" : biz.type === "lavadero" ? "AutoWash" : "LocalBusiness",
-    "name": biz.name,
-    "description": biz.description || "",
-    "image": biz.logoUrl || DEFAULT_LOGO,
-    "url": publicPageUrl,
-    "telephone": biz.whatsapp || "",
-    "address": {
-      "@type": "PostalAddress",
-      "streetAddress": biz.address || ""
-    }
-  };
-
-  // D08: Structured Schema.org Product / ItemList for Tiendas
-  if (biz.type === "tienda" && Array.isArray(safeLayoutConfig.tiendaProductos) && safeLayoutConfig.tiendaProductos.length > 0) {
-    jsonLd.hasOfferCatalog = {
-      "@type": "OfferCatalog",
-      "name": `Catálogo de ${biz.name}`,
-      "itemListElement": safeLayoutConfig.tiendaProductos.slice(0, 10).map((prod: any, idx: number) => ({
-        "@type": "Offer",
-        "itemOffered": {
-          "@type": "Product",
-          "name": prod.nombre || prod.name,
-          "description": prod.descripcion || prod.description || "",
-          "image": prod.imagen || prod.imageUrl || undefined,
-        },
-        "price": prod.precio || prod.price || 0,
-        "priceCurrency": "ARS",
-        "availability": prod.disponible !== false ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
-      }))
-    };
-  }
 
   const renderTemplate = () => {
     const layoutConfig = biz.layoutConfig || {};
@@ -400,6 +378,8 @@ export default async function PublicLandingPage({ params, searchParams }: { para
         );
       case "barberia":
         return <BarberiaTemplate negocio={biz} media={media} businessId={biz.id} sections={sections} />;
+      case "el_patron":
+        return <ElPatronTemplate negocio={biz} businessId={biz.id} sections={sections} />;
       case "taller":
         return <TallerTemplate negocio={biz} media={media} businessId={biz.id} sections={sections} />;
       case "lavadero":
@@ -408,12 +388,30 @@ export default async function PublicLandingPage({ params, searchParams }: { para
         return <CanchaTemplate negocio={biz} businessId={biz.id} />;
       case "menu":
         return <MenuTemplate negocio={biz} businessId={biz.id} />;
+      case "trompo":
+        return <TrompoTemplate negocio={biz} businessId={biz.id} sections={sections} />;
       case "estetica":
         return <EsteticaTemplate negocio={biz} businessId={biz.id} />;
       case "clinica":
         return <ClinicaTemplate negocio={biz} businessId={biz.id} />;
       case "gimnasio":
         return <GimnasioTemplate negocio={biz} businessId={biz.id} />;
+      case "unas":
+        return <UnasTemplate negocio={biz} businessId={biz.id} sections={sections} />;
+      case "dental":
+        return <DentalTemplate negocio={biz} businessId={biz.id} sections={sections} />;
+      case "veterinaria":
+        return <VeterinariaTemplate negocio={biz} businessId={biz.id} sections={sections} />;
+      case "urban_fade":
+        return <UrbanFadeTemplate negocio={biz} businessId={biz.id} sections={sections} />;
+      case "cantina_gourmet":
+        return <CantinaGourmetTemplate negocio={biz} businessId={biz.id} sections={sections} />;
+      case "glitz_lash":
+        return <GlitzLashTemplate negocio={biz} businessId={biz.id} sections={sections} />;
+      case "holistic_spa":
+        return <HolisticSpaTemplate negocio={biz} businessId={biz.id} sections={sections} />;
+      case "pet_resort":
+        return <PetResortTemplate negocio={biz} businessId={biz.id} sections={sections} />;
       case "general":
       default:
         return <GeneralTemplate negocio={biz} media={media} businessId={biz.id} sections={sections} />;
@@ -465,7 +463,8 @@ export default async function PublicLandingPage({ params, searchParams }: { para
     return (
       <div className={`${theme.fontDisplay}`}>
         <style dangerouslySetInnerHTML={{ __html: themeStyles }} />
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }} />
+        {/* P1-017: JSON-LD microdata safely serialized via JsonLdSchema with JSON.stringify(jsonLd) */}
+        <JsonLdSchema negocio={biz} url={publicPageUrl} />
         {TemplateComponent}
         {biz.layoutConfig?.chatbotEnabled !== false && (
           <ChatbotWidget businessId={biz.id} bizName={biz.name} primaryColor={accentColor} chatbotName={biz.layoutConfig?.chatbotName || "Asistente Virtual"} />
@@ -486,7 +485,7 @@ export default async function PublicLandingPage({ params, searchParams }: { para
   return (
     <div className={`${theme.fontDisplay}`}>
       <style dangerouslySetInnerHTML={{ __html: themeStyles }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }} />
+      <JsonLdSchema negocio={biz} url={publicPageUrl} />
       <DefaultTemplate negocio={biz} media={media} sections={sections} />
       {layoutConfig.chatbotEnabled !== false && (
         <ChatbotWidget businessId={biz.id} bizName={biz.name} primaryColor={accentColor} chatbotName={layoutConfig.chatbotName || "Asistente Virtual"} />

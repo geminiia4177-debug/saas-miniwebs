@@ -25,11 +25,19 @@ export function getTextColor(config: any): string {
   return getContrastColor(config.primaryColor || "#1e1b4b");
 }
 
-export function formatSocialUrl(platform: "instagram" | "tiktok" | "facebook" | "twitter" | "youtube", handleOrUrl?: string | null): string {
+export function formatSocialUrl(platform: "instagram" | "tiktok" | "facebook" | "twitter" | "youtube" | "whatsapp", handleOrUrl?: string | null): string {
   if (!handleOrUrl) return "#";
   const trimmed = handleOrUrl.trim();
   if (!trimmed) return "#";
   
+  if (platform === "whatsapp") {
+    if (trimmed.includes("wa.me") || trimmed.includes("whatsapp.com")) {
+      return trimmed.startsWith("http") ? trimmed : `https://${trimmed}`;
+    }
+    const cleanNumber = trimmed.replace(/\D/g, "");
+    return `https://wa.me/${cleanNumber}`;
+  }
+
   if (trimmed.includes(".com") || trimmed.includes("http://") || trimmed.includes("https://")) {
     if (/^https?:\/\//i.test(trimmed)) {
       return trimmed;

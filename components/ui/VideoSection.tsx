@@ -25,6 +25,7 @@ interface VideoSectionProps {
   accentColor?: string;
   theme?: "dark" | "light";
   className?: string;
+  posterUrl?: string | null;
 }
 
 export default function VideoSection({
@@ -34,6 +35,7 @@ export default function VideoSection({
   accentColor = "#6366f1",
   theme = "dark",
   className = "",
+  posterUrl,
 }: VideoSectionProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const videoId = extractYouTubeId(videoUrl);
@@ -41,6 +43,8 @@ export default function VideoSection({
   if (!videoId) return null;
 
   const isDark = theme === "dark";
+  const defaultPoster = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
+  const fallbackPoster = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
 
   return (
     <section className={`py-16 px-4 sm:px-6 md:px-12 max-w-5xl mx-auto w-full relative z-10 ${className}`}>
@@ -71,41 +75,57 @@ export default function VideoSection({
         }}
       >
         {!isPlaying ? (
-          <div
+          <button
+            type="button"
             onClick={() => setIsPlaying(true)}
-            className="w-full h-full cursor-pointer relative flex items-center justify-center group"
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                setIsPlaying(true);
+              }
+            }}
+            aria-label={`Reproducir video: ${title}`}
+            className="w-full h-full cursor-pointer relative flex items-center justify-center group border-0 p-0 m-0 bg-transparent text-left focus:outline-none focus:ring-4 focus:ring-offset-2"
+            style={{ outlineColor: accentColor }}
           >
             <img
-              src={`https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`}
-              alt="Video Thumbnail"
+              src={posterUrl || defaultPoster}
+              alt={`Miniatura del video ${title}`}
+              loading="lazy"
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
               onError={(e) => {
-                // Fallback to hqdefault if maxresdefault doesn't exist
-                (e.target as HTMLImageElement).src = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+                // Fallback to hqdefault if maxresdefault doesn't exist or custom poster fails
+                (e.target as HTMLImageElement).src = fallbackPoster;
               }}
             />
             <div className="absolute inset-0 bg-black/40 group-hover:bg-black/25 transition-colors flex items-center justify-center">
               <div
                 className="w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center pl-1 shadow-2xl transition-transform duration-300 group-hover:scale-110"
-                style={{ backgroundColor: accentColor, color: "#fff" }}
+                style={{
+                  backgroundColor: accentColor,
+                  color: "#ffffff",
+                  boxShadow: `0 0 35px ${accentColor}80`,
+                }}
               >
                 <svg
                   width="28"
                   height="28"
                   viewBox="0 0 24 24"
                   fill="currentColor"
+                  aria-hidden="true"
                 >
                   <path d="M8 5v14l11-7z" />
                 </svg>
               </div>
             </div>
-          </div>
+          </button>
         ) : (
           <iframe
             src={`https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1`}
             className="w-full h-full border-none"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
+            loading="lazy"
             title={title}
           />
         )}

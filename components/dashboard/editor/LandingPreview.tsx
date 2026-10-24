@@ -18,6 +18,16 @@ import TallerTemplate from "@/components/landings/TallerTemplate";
 import LavaderoTemplate from "@/components/landings/LavaderoTemplate";
 import GeneralTemplate from "@/components/landings/GeneralTemplate";
 import TiendaTemplate from "@/components/landings/TiendaTemplate";
+import TrompoTemplate from "@/components/landings/TrompoTemplate";
+import ElPatronTemplate from "@/components/landings/ElPatronTemplate";
+import UnasTemplate from "@/components/landings/UnasTemplate";
+import DentalTemplate from "@/components/landings/DentalTemplate";
+import VeterinariaTemplate from "@/components/landings/VeterinariaTemplate";
+import UrbanFadeTemplate from "@/components/landings/UrbanFadeTemplate";
+import CantinaGourmetTemplate from "@/components/landings/CantinaGourmetTemplate";
+import GlitzLashTemplate from "@/components/landings/GlitzLashTemplate";
+import HolisticSpaTemplate from "@/components/landings/HolisticSpaTemplate";
+import PetResortTemplate from "@/components/landings/PetResortTemplate";
 
 export interface LandingPreviewProps {
   biz: Biz;
@@ -108,6 +118,8 @@ export const LandingPreview = ({
         );
       case "barberia":
         return <BarberiaTemplate negocio={biz as any} media={media} businessId={biz.id} sections={sections} />;
+      case "el_patron":
+        return <ElPatronTemplate negocio={biz as any} businessId={biz.id} sections={sections} />;
       case "taller":
         return <TallerTemplate negocio={biz as any} media={media} businessId={biz.id} sections={sections} />;
       case "lavadero":
@@ -116,12 +128,30 @@ export const LandingPreview = ({
         return <CanchaTemplate negocio={biz as any} />;
       case "menu":
         return <MenuTemplate negocio={biz as any} />;
+      case "trompo":
+        return <TrompoTemplate negocio={biz as any} businessId={biz.id} sections={sections} />;
       case "estetica":
         return <EsteticaTemplate negocio={biz as any} />;
       case "clinica":
         return <ClinicaTemplate negocio={biz as any} />;
       case "gimnasio":
         return <GimnasioTemplate negocio={biz as any} />;
+      case "unas":
+        return <UnasTemplate negocio={biz as any} businessId={biz.id} sections={sections} />;
+      case "dental":
+        return <DentalTemplate negocio={biz as any} businessId={biz.id} sections={sections} />;
+      case "veterinaria":
+        return <VeterinariaTemplate negocio={biz as any} businessId={biz.id} sections={sections} />;
+      case "urban_fade":
+        return <UrbanFadeTemplate negocio={biz as any} businessId={biz.id} sections={sections} isPreview={true} />;
+      case "cantina_gourmet":
+        return <CantinaGourmetTemplate negocio={biz as any} businessId={biz.id} sections={sections} isPreview={true} />;
+      case "glitz_lash":
+        return <GlitzLashTemplate negocio={biz as any} businessId={biz.id} sections={sections} isPreview={true} />;
+      case "holistic_spa":
+        return <HolisticSpaTemplate negocio={biz as any} businessId={biz.id} sections={sections} isPreview={true} />;
+      case "pet_resort":
+        return <PetResortTemplate negocio={biz as any} businessId={biz.id} sections={sections} isPreview={true} />;
       case "general":
       default:
         return <GeneralTemplate negocio={biz as any} media={media} businessId={biz.id} sections={sections} />;

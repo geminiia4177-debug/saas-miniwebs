@@ -47,3 +47,14 @@ auth_info_baileys_*/
 .wadata/
 .wadata*/
 scratch/
+
+# Temporary audit reports & roundtable artifacts
+oxion-*
+scripts/*roundtable*
+scripts/*output*
+scripts/*verdict*
+scripts/*audit*
+scripts/kimi-*
+scripts/opus-*
+scripts/oxion-*
+scripts/final-roundtable*

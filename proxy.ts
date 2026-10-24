@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 
-export async function middleware(req: NextRequest) {
+/**
+ * Next.js 16 Proxy convention (formerly middleware.ts)
+ * Handles subdomain rewrites, multi-tenant routing, and password change enforcements.
+ */
+export async function proxy(req: NextRequest) {
   const url = req.nextUrl;
   
   // Si la ruta ya empieza con /api, /_next, etc., la ignoramos
@@ -65,6 +69,10 @@ export async function middleware(req: NextRequest) {
     new URL(`/${hostNoPort}${url.pathname}${url.search}`, req.url)
   );
 }
+
+// Backward compatibility for environments checking middleware export
+export const middleware = proxy;
+export default proxy;
 
 // Esto evita que el proxy rompa imágenes o archivos del sistema
 export const config = {

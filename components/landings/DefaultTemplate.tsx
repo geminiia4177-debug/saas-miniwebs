@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import BookingForm from "@/app/[subdomain]/BookingForm";
 import { ChevronDown, MapPin, MessageCircle } from "lucide-react";
-import { extractYouTubeId } from "@/components/ui/VideoSection";
+import VideoSection, { extractYouTubeId } from "@/components/ui/VideoSection";
 
 export default function DefaultTemplate({ negocio, media, sections }: { negocio: any; media: any[]; sections: any[] }) {
   const [scrolled, setScrolled] = useState(false);
@@ -241,27 +241,18 @@ export default function DefaultTemplate({ negocio, media, sections }: { negocio:
           if (section.id === "video") {
             const currentVideoUrl = section.config?.youtubeUrl || section.config?.videoUrl || negocio?.layoutConfig?.videoUrl;
             if (currentVideoUrl) {
-              const videoId = extractYouTubeId(currentVideoUrl);
-              if (videoId) {
-                const videoTitle = section.config?.title || section.label || "Conocenos";
-                const videoDesc = section.config?.description || section.config?.subtitle;
-                return (
-                  <section key="video" className="px-6 py-24 max-w-5xl mx-auto">
-                    <div className="text-center mb-16">
-                      {videoDesc && (
-                        <p className="text-sm font-semibold uppercase tracking-wider mb-2" style={{ color: primary }}>
-                          {videoDesc}
-                        </p>
-                      )}
-                      <h2 className="text-4xl font-black text-slate-900 mb-4 tracking-tight">{videoTitle}</h2>
-                      <div className="w-24 h-1 mx-auto rounded-full" style={{ backgroundColor: primary }}></div>
-                    </div>
-                    <div className="aspect-video rounded-3xl overflow-hidden shadow-2xl bg-slate-900 border border-slate-200">
-                      <iframe src={`https://www.youtube.com/embed/${videoId}?rel=0`} className="w-full h-full border-none" allowFullScreen loading="lazy" />
-                    </div>
-                  </section>
-                );
-              }
+              const videoTitle = section.config?.title || section.label || "Conocenos";
+              const videoDesc = section.config?.description || section.config?.subtitle;
+              return (
+                <VideoSection
+                  key="video"
+                  videoUrl={currentVideoUrl}
+                  title={videoTitle}
+                  subtitle={videoDesc}
+                  accentColor={primary}
+                  theme="light"
+                />
+              );
             }
           }
 
