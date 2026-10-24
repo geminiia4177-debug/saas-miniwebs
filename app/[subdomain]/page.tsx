@@ -163,9 +163,6 @@ const PetResortTemplate = dynamic(() => import("@/components/landings/PetResortT
 
 // NUEVOS TEMAS UNIVERSALES
 const TemplateRenderer = dynamic(() => import("@/components/landings/templates/TemplateRenderer"));
-const ModernTheme = dynamic(() => import("@/components/landings/themes/ModernTheme"));
-const DarkEleganceTheme = dynamic(() => import("@/components/landings/themes/DarkEleganceTheme"));
-const ListTheme = dynamic(() => import("@/components/landings/themes/ListTheme"));
 const ChatbotWidget = dynamic(() => import("@/components/landings/ChatbotWidget"));
 
 // Como es Next.js 15, los params son asíncronos

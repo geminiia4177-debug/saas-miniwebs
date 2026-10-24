@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Scissors, Flame, Clock, MapPin, Phone, ShieldCheck, Zap, Sparkles, Award } from "lucide-react";
+import { Scissors, Clock, MapPin, Phone, ShieldCheck, Zap, Sparkles } from "lucide-react";
 import LoyaltyCard from "@/components/ui/LoyaltyCard";
 
 interface UrbanFadeTemplateProps {
@@ -12,7 +12,6 @@ interface UrbanFadeTemplateProps {
 }
 
 export default function UrbanFadeTemplate({ negocio, businessId }: UrbanFadeTemplateProps) {
-  const [selectedFade, setSelectedFade] = useState<string>("todos");
   const [selectedBarber, setSelectedBarber] = useState<string>("cualquiera");
 
   const cfg = negocio?.layoutConfig || {};

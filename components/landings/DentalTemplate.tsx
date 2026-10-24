@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { ShieldCheck, Stethoscope, Clock, MapPin, Phone, Calendar, Award, CheckCircle2, AlertCircle } from "lucide-react";
+import { ShieldCheck, Stethoscope, Clock, MapPin, Phone, Calendar, Award, CheckCircle2 } from "lucide-react";
 
 interface DentalTemplateProps {
   negocio: any;
@@ -10,8 +10,7 @@ interface DentalTemplateProps {
   isPreview?: boolean;
 }
 
-export default function DentalTemplate({ negocio, businessId }: DentalTemplateProps) {
-  const [selectedSpecialty, setSelectedSpecialty] = useState<string>("todos");
+export default function DentalTemplate({ negocio }: DentalTemplateProps) {
 
   const cfg = negocio?.layoutConfig || {};
   const colors = cfg.colors || {};

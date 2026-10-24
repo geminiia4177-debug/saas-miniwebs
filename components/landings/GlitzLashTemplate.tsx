@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Sparkles, Calendar, Clock, MapPin, Heart, ShieldCheck, Gem, Phone, Award } from "lucide-react";
+import { Sparkles, Calendar, Clock, Heart, ShieldCheck, Gem, Award } from "lucide-react";
 import LoyaltyCard from "@/components/ui/LoyaltyCard";
 
 interface GlitzLashTemplateProps {

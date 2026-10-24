@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Sparkles, Clock, MapPin, Phone, Heart, CheckCircle2, Calendar, ShieldCheck, Gift } from "lucide-react";
+import { Sparkles, Clock, MapPin, Phone, Heart, Calendar, ShieldCheck } from "lucide-react";
 import LoyaltyCard from "@/components/ui/LoyaltyCard";
 
 interface UnasTemplateProps {
@@ -13,7 +13,6 @@ interface UnasTemplateProps {
 
 export default function UnasTemplate({ negocio, businessId }: UnasTemplateProps) {
   const [selectedCategory, setSelectedCategory] = useState<string>("todos");
-  const [selectedService, setSelectedService] = useState<any | null>(null);
 
   const cfg = negocio?.layoutConfig || {};
   const colors = cfg.colors || {};

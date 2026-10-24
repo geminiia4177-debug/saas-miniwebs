@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Utensils, Flame, Clock, MapPin, ShoppingBag, Beer, Sparkles, Plus, Minus, Check } from "lucide-react";
+import { Utensils, Flame, Clock, MapPin, ShoppingBag, Beer, Sparkles, Plus, Minus } from "lucide-react";
 import LoyaltyCard from "@/components/ui/LoyaltyCard";
 
 interface CantinaGourmetTemplateProps {

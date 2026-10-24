@@ -13,6 +13,9 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
     "scratch/**",
+    "scripts/**",
+    "server.js",
+    "public/sw.js",
   ]),
   {
     rules: {
@@ -21,6 +24,7 @@ const eslintConfig = defineConfig([
       "@typescript-eslint/no-unused-vars": ["warn", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_", "ignoreRestSiblings": true }],
       "prefer-const": "warn",
       "react-hooks/rules-of-hooks": "error",
+      "react-hooks/preserve-manual-memoization": "off",
       "react-hooks/set-state-in-effect": "off",
       "react-hooks/static-components": "off",
       "react-hooks/immutability": "off",

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Sparkles, Smile, ShieldCheck, Clock, MapPin, Calendar, CheckCircle2, ChevronRight, Award, Camera } from "lucide-react";
+import { Sparkles, Smile, ShieldCheck, Clock, Calendar, Award, Camera } from "lucide-react";
 
 interface HolisticSpaTemplateProps {
   negocio: any;
@@ -10,9 +10,8 @@ interface HolisticSpaTemplateProps {
   isPreview?: boolean;
 }
 
-export default function HolisticSpaTemplate({ negocio, businessId }: HolisticSpaTemplateProps) {
+export default function HolisticSpaTemplate({ negocio }: HolisticSpaTemplateProps) {
   const [activeBeforeAfter, setActiveBeforeAfter] = useState<number>(0);
-  const [selectedTreatment, setSelectedTreatment] = useState<string>("carillas");
 
   const cfg = negocio?.layoutConfig || {};
   const colors = cfg.colors || {};

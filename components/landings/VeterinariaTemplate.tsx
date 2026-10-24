@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Sparkles, Clock, MapPin, Phone, Calendar, Heart, ShieldCheck } from "lucide-react";
+import { Sparkles, Clock, MapPin, Phone, Calendar, ShieldCheck } from "lucide-react";
 import LoyaltyCard from "@/components/ui/LoyaltyCard";
 
 interface VeterinariaTemplateProps {
@@ -12,7 +12,6 @@ interface VeterinariaTemplateProps {
 }
 
 export default function VeterinariaTemplate({ negocio, businessId }: VeterinariaTemplateProps) {
-  const [petType, setPetType] = useState<string>("perro");
 
   const cfg = negocio?.layoutConfig || {};
   const colors = cfg.colors || {};

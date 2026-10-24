@@ -1,4 +1,3 @@
-import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { notifyWaitlistOnCancellation } from "@/lib/anti-no-show";
 import crypto from "crypto";

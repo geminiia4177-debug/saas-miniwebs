@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { Lilita_One, Nunito } from "next/font/google";
-import { MapPin, Clock, Phone, Flame, ShoppingBag, Utensils, Sparkles } from "lucide-react";
+import { MapPin, Clock, Phone, Flame, ShoppingBag, Utensils } from "lucide-react";
 import LoyaltyCard from "@/components/ui/LoyaltyCard";
 
 const lilita = Lilita_One({ weight: "400", subsets: ["latin"], display: "swap" });

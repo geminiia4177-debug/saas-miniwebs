@@ -268,7 +268,8 @@ export default function MenuTemplate(props: { negocio: any; businessId?: string 
   const address = negocio?.address || negocio?.layoutConfig?.address || "";
   
   // Configs
-  const rawCats = negocio?.layoutConfig?.menuCategorias || DEMO_CATEGORIES;
+  const menuCats = negocio?.layoutConfig?.menuCategorias;
+  const rawCats = menuCats || DEMO_CATEGORIES;
   
   const categoriasRaw: MenuCategoria[] = useMemo(() => {
     return rawCats.map((c: any) => ({
@@ -281,8 +282,8 @@ export default function MenuTemplate(props: { negocio: any; businessId?: string 
   }, [rawCats]);
 
   const productosRaw: MenuProduct[] = useMemo(() => {
-    if (negocio?.layoutConfig?.menuCategorias) {
-      return negocio.layoutConfig.menuCategorias.flatMap((c: any) => 
+    if (menuCats) {
+      return menuCats.flatMap((c: any) => 
         (c.products || []).map((p: any) => ({
           id: String(p.id),
           categoriaId: String(c.id),
@@ -298,7 +299,7 @@ export default function MenuTemplate(props: { negocio: any; businessId?: string 
       );
     }
     return DEMO_PRODUCTS;
-  }, [negocio?.layoutConfig?.menuCategorias]);
+  }, [menuCats]);
 
   const promosRaw = negocio?.layoutConfig?.menuPromos || [];
   const modosDisponibles: string[] = negocio?.layoutConfig?.modosDisponibles || ['local', 'delivery', 'llevar'];

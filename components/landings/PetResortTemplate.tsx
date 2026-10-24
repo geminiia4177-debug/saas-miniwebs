@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Dog, Sun, ShieldCheck, Clock, MapPin, Calendar, Heart, Camera, CheckCircle2, Sparkles, Phone } from "lucide-react";
+import { Dog, Sun, ShieldCheck, Clock, Calendar, Heart, Camera, Sparkles } from "lucide-react";
 import LoyaltyCard from "@/components/ui/LoyaltyCard";
 
 interface PetResortTemplateProps {

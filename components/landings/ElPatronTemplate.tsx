@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { Bebas_Neue, Inter } from "next/font/google";
-import { Scissors, Clock, MapPin, Phone, ShieldCheck, Calendar, CheckCircle2 } from "lucide-react";
+import { Scissors, Clock, MapPin, Phone, ShieldCheck, Calendar } from "lucide-react";
 import LoyaltyCard from "@/components/ui/LoyaltyCard";
 
 const bebas = Bebas_Neue({ weight: "400", subsets: ["latin"], display: "swap" });
@@ -16,7 +16,6 @@ interface ElPatronTemplateProps {
 }
 
 export default function ElPatronTemplate({ negocio, businessId }: ElPatronTemplateProps) {
-  const [selectedService, setSelectedService] = useState<any>(null);
   const cfg = negocio?.layoutConfig || {};
 
   const services =
@@ -31,7 +30,6 @@ export default function ElPatronTemplate({ negocio, businessId }: ElPatronTempla
     ];
 
   const handleBookService = (service: any) => {
-    setSelectedService(service);
     const msg =
       `💈 *¡Hola ${negocio?.name || "Barbería El Patrón"}! Quiero agendar una cita:*\n\n` +
       `✂️ *Servicio:* ${service.name} ($${service.price} MXN)\n` +
