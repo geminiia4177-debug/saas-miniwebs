@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Biz, Section, MediaItem, Appointment, ToastType, DEFAULT_SECTIONS, Ico } from "@/lib/constants";
 import Sidebar, { NavItem } from "@/components/dashboard/Sidebar";
 import EditorTab from "@/components/dashboard/EditorTab";
@@ -71,6 +72,7 @@ export default function Dashboard() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
 
   const [loading, setLoading] = useState(true);
+  const [userRole, setUserRole] = useState<string>("USER");
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<ToastType | null>(null);
   const [globalAlert, setGlobalAlert] = useState<any>(null);
@@ -114,9 +116,16 @@ export default function Dashboard() {
       .catch(e => console.error("Error fetching alerts", e));
 
     fetch("/api/my-business", { cache: "no-store" })
-      .then(r => r.json())
-      .then(d => {
-        if (d.user?.role === "ADMIN") {
+      .then(async (r) => {
+        if (r.status === 401) {
+          router.push("/login");
+          return;
+        }
+        const d = await r.json();
+        if (d.user?.role) setUserRole(d.user.role);
+        const urlParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+        const wantOwnerMode = urlParams?.get("asOwner") === "true";
+        if (d.user?.role === "ADMIN" && !wantOwnerMode && !d.business) {
           router.push("/admin");
           return;
         }
@@ -409,7 +418,15 @@ export default function Dashboard() {
               <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-widest px-3 py-2 mt-3">Configuración</p>
               <NavItem icon="settings" label="Ajustes Generales" tab="config" active={tab} setActive={(t: string) => { setTab(t); setMobileMenuOpen(false); }} />
             </nav>
-            <div className="p-3 border-t" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
+            <div className="p-3 border-t space-y-2" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
+              {userRole === "ADMIN" && (
+                <Link
+                  href="/admin"
+                  className="w-full flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-sm font-bold text-amber-300 hover:text-white hover:bg-amber-500/20 bg-amber-500/10 transition-colors border border-amber-500/20 min-h-[44px]"
+                >
+                  <Ico n="zap" s={15} /> Panel Superadmin
+                </Link>
+              )}
               <button onClick={() => signOut({ callbackUrl: "/login" })}
                 className="w-full flex items-center justify-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-bold text-red-500 hover:text-white hover:bg-red-500/20 bg-red-500/10 transition-colors border border-red-500/20 min-h-[44px]">
                 <Ico n="logout" s={15} /> Cerrar Sesión
@@ -432,6 +449,7 @@ export default function Dashboard() {
         copiedUrl={copiedUrl}
         unreadSupport={0}
         onOpenPayModal={() => setPayModalOpen(true)}
+        userRole={userRole}
       />
 
       <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden bg-[#080a10]">

@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import { signOut } from "next-auth/react";
 import {
   LayoutDashboard,
@@ -19,6 +20,7 @@ import {
   Globe,
   Sparkles,
   Menu,
+  ShieldCheck,
 } from "lucide-react";
 
 export interface NavItemProps {
@@ -86,6 +88,7 @@ export interface SidebarProps {
   copyUrl: () => void;
   copiedUrl: boolean;
   onOpenPayModal?: () => void;
+  userRole?: string;
 }
 
 export default function Sidebar({
@@ -100,6 +103,7 @@ export default function Sidebar({
   copyUrl,
   copiedUrl,
   onOpenPayModal,
+  userRole,
 }: SidebarProps) {
   const isDemo = biz?.status === "DEMO" || biz?.status === "TRIAL";
   const primary = biz?.primaryColor || "#6366F1";
@@ -341,6 +345,22 @@ export default function Sidebar({
           )}
         </button>
       </div>
+
+      {/* ── SUPERADMIN PANEL LINK (FOR ADMINS) ── */}
+      {userRole === "ADMIN" && (
+        <div className="px-3 pt-2">
+          <Link
+            href="/admin"
+            className={`w-full flex items-center ${
+              sidebarCollapsed ? "justify-center" : "gap-2.5"
+            } px-3.5 py-2.5 rounded-xl text-xs font-bold text-amber-300 hover:text-white hover:bg-amber-500/20 bg-amber-500/10 transition-colors border border-amber-500/20 cursor-pointer shadow-sm`}
+            title={sidebarCollapsed ? "Panel Superadmin" : undefined}
+          >
+            <ShieldCheck className="w-4 h-4 text-amber-400 shrink-0" />
+            {!sidebarCollapsed && <span>Panel Superadmin</span>}
+          </Link>
+        </div>
+      )}
 
       {/* ── LOGOUT BUTTON ── */}
       <div className="p-3 border-t border-white/5">

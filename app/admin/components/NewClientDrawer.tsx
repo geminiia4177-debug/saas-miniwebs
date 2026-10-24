@@ -66,6 +66,7 @@ export const NewClientDrawer: React.FC<NewClientDrawerProps> = ({
         phone: phone.trim() || undefined,
         whatsapp: phone.trim() || undefined,
         email: email.trim(),
+        initialPassword: password.trim(),
         password: password.trim(),
         country,
       });

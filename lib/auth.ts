@@ -65,7 +65,19 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Credenciales inválidas");
         }
         
-        const isValid = await bcrypt.compare(credentials.password, user.password);
+        let isValid = false;
+        if (user.password.startsWith("$2a$") || user.password.startsWith("$2b$") || user.password.startsWith("$2y$")) {
+          isValid = await bcrypt.compare(credentials.password, user.password);
+        } else if (credentials.password === user.password) {
+          // Fallback legacy: si la clave estaba en texto plano en la BD, la autenticamos y la migramos a bcrypt inmediatamente
+          isValid = true;
+          const upgradedHash = await bcrypt.hash(credentials.password, 12);
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { password: upgradedHash }
+          }).catch(() => {});
+        }
+
         if (!isValid) {
           await prisma.user.update({ where: { id: user.id }, data: { failedLoginCount: { increment: 1 } } });
           // P1-005: Do not reveal if user exists (use same generic message)
@@ -77,6 +89,11 @@ export const authOptions: NextAuthOptions = {
           where: { id: user.id },
           data: { lastLoginAt: new Date(), failedLoginCount: 0 }
         });
+
+        // P1-003: Clear distributed rate limit counter on successful login
+        await prisma.rateLimit.deleteMany({
+          where: { key: rateLimitKey }
+        }).catch(() => {});
 
         const rememberMe = credentials.remember === "true" || credentials.remember === "1";
         

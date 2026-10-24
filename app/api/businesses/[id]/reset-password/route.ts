@@ -107,6 +107,13 @@ export async function POST(
       }
     });
 
+    // P1-003: Limpiar rate limit si el usuario estaba bloqueado por reintentos
+    if (updatedUser.email) {
+      await prisma.rateLimit.deleteMany({
+        where: { key: `login:email:${updatedUser.email.toLowerCase().trim()}` }
+      }).catch(() => {});
+    }
+
     return NextResponse.json({
       success: true,
       message: "Contraseña reseteada exitosamente",

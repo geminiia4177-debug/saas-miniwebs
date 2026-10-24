@@ -150,10 +150,11 @@ export async function POST(req: Request) {
     });
 
     let temporaryPassword: string | null = null;
+    const explicitPassword = (data.initialPassword || data.password)?.trim();
 
     if (!clientUser) {
       // Usar contraseña provista por admin o generar una clave segura aleatoria
-      temporaryPassword = data.initialPassword?.trim() || crypto.randomBytes(9).toString("base64url");
+      temporaryPassword = explicitPassword || crypto.randomBytes(9).toString("base64url");
       const hashedPassword = await bcrypt.hash(temporaryPassword, 12);
       
       clientUser = await prisma.user.create({
@@ -164,9 +165,9 @@ export async function POST(req: Request) {
           mustChangePassword: true,
         }
       });
-    } else if (data.initialPassword?.trim()) {
+    } else if (explicitPassword) {
       // Si el usuario ya existía y el admin indicó una contraseña inicial explícita
-      temporaryPassword = data.initialPassword.trim();
+      temporaryPassword = explicitPassword;
       const hashedPassword = await bcrypt.hash(temporaryPassword, 12);
       clientUser = await prisma.user.update({
         where: { id: clientUser.id },

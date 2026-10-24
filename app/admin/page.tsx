@@ -20,6 +20,7 @@ import {
   Check,
   AlertCircle,
   ShieldCheck,
+  LayoutDashboard,
 } from "lucide-react";
 
 export default function AdminPage() {
@@ -161,8 +162,17 @@ export default function AdminPage() {
           </button>
         </div>
 
-        {/* Actions: New Client & Logout */}
+        {/* Actions: New Client, Mi Dashboard & Logout */}
         <div className="flex items-center gap-3">
+          <Link
+            href="/dashboard?asOwner=true"
+            className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white font-bold text-xs flex items-center gap-1.5 border border-white/10 transition-all cursor-pointer shadow-sm"
+            title="Ir a mi Dashboard de Negocio"
+          >
+            <LayoutDashboard className="w-4 h-4 text-indigo-400" />
+            <span className="hidden sm:inline">Mi Dashboard</span>
+          </Link>
+
           <button
             type="button"
             onClick={() => setIsNewClientOpen(true)}

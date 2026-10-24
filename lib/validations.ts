@@ -439,6 +439,7 @@ export const businessSchema = z.object({
     .transform((val) => Number(val)),
   paymentStatus: PaymentStatusEnum.optional().default("pending"),
   initialPassword: z.string().min(6).max(100).optional().nullable(),
+  password: z.string().min(6).max(100).optional().nullable(),
 });
 
 export const ownerBusinessUpdateSchema = z.object({
